@@ -3,6 +3,8 @@
 
 The tool is written in Python and requires no additional library.
 
+For further information, see the [project Home Page](http://medialab.di.unipi.it/wiki/Wikipedia_Extractor) or the [Wiki](wiki)
+
 The current beta version of WikiExtrctor.py is capable of performing template expansion to some extent.
 
 ## Usage
