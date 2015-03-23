@@ -57,7 +57,7 @@ import codecs
 from htmlentitydefs import name2codepoint
 import Queue, threading, multiprocessing
 
-#=========================================================================== 
+#===========================================================================
 
 # Program version
 version = '2.11'
@@ -115,10 +115,10 @@ def get_url(urlbase, id):
 
 # xml-char = %x9 / %xA / %xD / %x20-D7FF / %xE000-FFFD / %x10000-10FFFF
 # sptab = SP / HTAB
- 
+
 # ; everything except ">" (%x3E)
 # attr-char = %x9 / %xA / %xD / %x20-3D / %x3F-D7FF / %xE000-FFFD / %x10000-10FFFF
- 
+
 # literal         = *xml-char
 # title           = wikitext-L3
 # part-name       = wikitext-L3
@@ -128,18 +128,18 @@ def get_url(urlbase, id):
 # tplarg          = "{{{" parts "}}}"
 # template        = "{{" parts "}}"
 # link            = "[[" wikitext-L3 "]]"
- 
+
 # comment         = "<!--" literal "-->"
 # unclosed-comment = "<!--" literal END
 # ; the + in the line-eating-comment rule was absent between MW 1.12 and MW 1.22
 # line-eating-comment = LF LINE-START *SP +( comment *SP ) LINE-END
- 
+
 # attr            = *attr-char
 # nowiki-element  = "<nowiki" attr ( "/>" / ( ">" literal ( "</nowiki>" / END ) ) )
 
 # wikitext-L2     = heading / wikitext-L3 / *wikitext-L2
-# wikitext-L3     = literal / template / tplarg / link / comment / 
-#                   line-eating-comment / unclosed-comment / xmlish-element / 
+# wikitext-L3     = literal / template / tplarg / link / comment /
+#                   line-eating-comment / unclosed-comment / xmlish-element /
 #                   *wikitext-L3
 
 #------------------------------------------------------------------------------
@@ -440,7 +440,7 @@ def templateParams(parameters, depth):
 
             parameterName = m.group(1)
             parameterValue = m.group(2)
-          
+
             parameterName = parameterName.strip()
             if ']]' not in parameterValue: # if the value does not contain a link, trim whitespace
                 parameterValue = parameterValue.strip()
@@ -522,7 +522,7 @@ def findBalanced(text, openDelim, closeDelim, openPatterns=None,
     else:
         openPat = '|'.join([re.escape(x) for x in openDelim])
     # patter for delimiters expected after each opening delimiter
-    afterPat = { o:re.compile(openPat+'|'+c, re.DOTALL) for o,c in izip(openDelim, closeDelim)} 
+    afterPat = { o:re.compile(openPat+'|'+c, re.DOTALL) for o,c in izip(openDelim, closeDelim)}
     stack = []
     start = 0
     cur = 0
@@ -751,7 +751,7 @@ def expandTemplate(templateInvocation, depth):
         # part            = ( part-name "=" part-value ) / ( part-value )
         # part-name       = wikitext-L3
         # part-value      = wikitext-L3
-        # wikitext-L3     = literal / template / tplarg / link / comment / 
+        # wikitext-L3     = literal / template / tplarg / link / comment /
         #                   line-eating-comment / unclosed-comment /
         #		    xmlish-element / *wikitext-L3
 
@@ -771,7 +771,7 @@ def expandTemplate(templateInvocation, depth):
         # resolve ambiguities like this:
         # {{{{ }}}} -> { {{{ }}} }
         # {{{{{ }}}}} -> {{ {{{ }}} }}
-        # 
+        #
         # :see: https://en.wikipedia.org/wiki/Help:Template#Handling_parameters
 
         # Evaluate parameters.
@@ -948,7 +948,7 @@ def sharp_expr(expr):
 def sharp_if(testValue, valueIfTrue, valueIfFalse=None, *args):
     if testValue.strip():
         # The {{#if:}} function is an if-then-else construct.
-        # The applied condition is: "The condition string is non-empty". 
+        # The applied condition is: "The condition string is non-empty".
         valueIfTrue = valueIfTrue.strip()
         if valueIfTrue:
             return valueIfTrue
@@ -986,7 +986,7 @@ def sharp_switch(primary, *templateParams):
 
     # {{#switch: comparison string
     #  | case1 = result1
-    #  | case2 
+    #  | case2
     #  | case4 = result2
     #  | #default = result3
     # }}
@@ -1087,7 +1087,7 @@ def callParserFunction(functionName, args):
 
     http://meta.wikimedia.org/wiki/Help:ParserFunctions
     """
-  
+
     try:
        # if functionName == '#invoke':
        #     # special handling of frame
@@ -1625,7 +1625,7 @@ def process_dump(input_file, template_file, outdir, file_size, file_compress, th
 
     nextFile = NextFile(lock, outdir)
 
-    # start worker threads    
+    # start worker threads
     workers = []
     for _ in xrange(max(1, threads - 1)): # keep one for master
         output_splitter = OutputSplitter(nextFile, file_size, file_compress)
@@ -1677,7 +1677,7 @@ def process_dump(input_file, template_file, outdir, file_size, file_compress, th
             page = []
 
     # wait for empty queue
-    queue.join()        
+    queue.join()
 
     input.close()
 
@@ -1723,7 +1723,7 @@ class ExtractorThread(threading.Thread):
         threading.Thread.__init__(self)
         self.setDaemon(True)  # let the process die when main thread is killed
         self.start()
-        
+
     def run(self):
         while True:
             job = self._queue.get()
@@ -1780,7 +1780,7 @@ def main():
                         help="print program version")
 
     args = parser.parse_args()
-    
+
     keepLinks = args.links
     keepSections = args.sections
     expand_templates = args.no_templates

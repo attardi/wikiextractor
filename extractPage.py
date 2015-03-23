@@ -118,7 +118,7 @@ def main():
                         help="print program version")
 
     args = parser.parse_args()
-    
+
     process_data(args.input, args.id, args.template)
 
 if __name__ == '__main__':
