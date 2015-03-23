@@ -1750,7 +1750,7 @@ def main():
     parser.add_argument("-o", "--output", default="text",
                         help="output directory")
     parser.add_argument("-b", "--bytes", default="1M",
-                        help="put specified bytes per output file (default is %(default)s)", metavar="n[KM]")
+                        help="put specified bytes per output file (default is %(default)s)", metavar="n[KMGTPEZY]")
     parser.add_argument("-B", "--base",
                         help="base URL for the Wikipedia pages")
     parser.add_argument("-c", "--compress", action="store_true",
@@ -1789,10 +1789,9 @@ def main():
         urlbase = args.base
 
     try:
-        if args.bytes[-1] in 'kK':
-            file_size = int(args.bytes[:-1]) * 1024
-        elif args.bytes[-1] in 'mM':
-            file_size = int(args.bytes[:-1]) * 1024 * 1024
+        power = ('kmgtpezy'.find(args.bytes[-1].lower()) + 1) * 10
+        if power:
+            file_size = int(args.bytes[:-1]) * 2 ** power
         else:
             file_size = int(args.bytes)
         if file_size < minFileSize: raise ValueError()

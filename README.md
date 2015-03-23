@@ -22,7 +22,7 @@ whole dump and extracting template definitions.
       -h, --help            show this help message and exit
       -o OUTPUT, --output OUTPUT
                             output directory
-      -b n[KM], --bytes n[KM]
+      -b n[KMGTPEZY], --bytes n[KMGTPEZY]
                         put specified bytes per output file (default is 1M)
       -B BASE, --base BASE  base URL for the Wikipedia pages
       -c, --compress        compress output files using bzip
