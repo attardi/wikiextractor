@@ -270,20 +270,17 @@ dots = re.compile(r'\.{4,}')
 #----------------------------------------------------------------------
 # Expand templates
 
-# Derived from:
-# wikiprep.pl - Preprocess Wikipedia XML dumps
-# Copyright (C) 2007 Evgeniy Gabrilovich
-
 maxTemplateRecursionLevels = 16
 maxParameterRecursionLevels = 10
 
 # check for template beginning
 reOpen = re.compile('(?<!{){{(?!{)', re.DOTALL)
 
-def expandTemplates(text, frame=[]):
+def expandTemplates(text, depth=0):
     """
     :param frame: contains pairs (title, args) of previous invocations.
     Template definitions can span several lines.
+    :param depth: recursion level.
 
     Templates are frequently nested. Occasionally, parsing mistakes may cause
     template insertion to enter an infinite loop, for instance when trying to
@@ -299,14 +296,7 @@ def expandTemplates(text, frame=[]):
     Therefore, we limit the number of iterations of nested template inclusion.
     """
 
-    # This evaluates expressions outside in.
-    # Recursion:
-    #   expandTemplates(text, l)
-    #     repeat maxTemplateRecursionLevels
-    #        for templ_i in text
-    #            replace templ_i with expandTemplate(templ_i)
-    #                                    expandTemplates(instantatiated templ_i, l+1)
-    #        until no templates present
+    # template        = "{{" parts "}}"
 
     for l in xrange(maxTemplateRecursionLevels):
         res = ''
@@ -314,7 +304,7 @@ def expandTemplates(text, frame=[]):
         # look for matching {{...}}
         for s,e in findMatchingBraces(text, '{{', 2):
             res += text[cur:s]
-            res += expandTemplate(text[s+2:e-2], frame)
+            res += expandTemplate(text[s+2:e-2], depth+l)
             cur = e
 
         if cur == 0:
@@ -390,20 +380,20 @@ def splitParameters(paramsList, sep='|'):
 
     return parameters
 
-def templateParams(parameters):
+def templateParams(parameters, frame):
     """
-    Build a dictionary with positional or name key to parameters.
+    Build a dictionary with positional or name key to expanded parameters.
+    :param parameters: the parts[1:] of a template, i.e. all except the title.
     """
     templateParams = {}
 
     if not parameters:
         return templateParams
 
-    # evaluate parameters, sice they may contain templates, including the
+    # evaluate parameters, since they may contain templates, including the
     # symbol "=".
     # {{#ifexpr: {{{1}}} = 1 }}
-    for i,p in enumerate(parameters):
-        parameters[i] = expandTemplates(p)
+    parameters = [expandTemplates(p, frame) for p in parameters]
 
     # Parameters can be either named or unnamed. In the latter case, their
     # name is defined by their ordinal position (1, 2, 3, ...).
@@ -457,9 +447,35 @@ def templateParams(parameters):
     return templateParams
 
 def findMatchingBraces(text, openDelim, ldelim):
+    """
+    :param openDelim: RE matching opening delimiter.
+    :param ldelim: number of braces in openDelim.
+    """
+    # Parsing is done with respect to pairs of double braces {{..}} delimiting
+    # a template, and pairs of triple braces {{{..}}} delimiting a tplarg. If
+    # double opening braces are followed by triple closing braces or
+    # conversely, this is taken as delimiting a template, with one left-over
+    # brace outside it, taken as plain text. For any pattern of braces this
+    # defines a set of templates and tplargs such that any two are either
+    # separate or nested (not overlapping).
+
+    # Unmatched double rectangular closing brackets can be in a template or
+    # tplarg, but unmatched double rectangular opening brackets
+    # cannot. Unmatched double or triple closing braces inside a pair of
+    # double rectangular brackets are treated as plain text.
+    # Other formulation: in ambiguity between template or tplarg on one hand,
+    # and a link on the other hand, the structure with the rightmost opening
+    # takes precedence, even if this is the opening of a link without any
+    # closing, so not producing an actual link.
+
+    # In the case of more than three opening braces the last three are assumed
+    # to belong to a tplarg, unless there is no matching triple of closing
+    # braces, in which case the last two opening braces are are assumed to
+    # belong to a template.
+
     reOpen = re.compile(openDelim)
     cur = 0
-    # scan text after {{ looking for matching }}
+    # scan text after {{ (openDelim) looking for matching }}
     while True:
         m = reOpen.search(text, cur)
         if m:
@@ -634,17 +650,59 @@ magicWords = set([
 
 substWords = 'subst:|safesubst:'
 
-def expandTemplate(templateInvocation, frame):
+def expandTemplate(templateInvocation, depth):
     """
     Expands template invocation.
-    :see braceSubstitution at
+    :param templateInvocation: the parts of a template.
+    :param depth: recursion depth.
+
+    :see http://meta.wikimedia.org/wiki/Help:Expansion for an explanation of
+    the process.
+
+    See in particular: Expansion of names and values
+    http://meta.wikimedia.org/wiki/Help:Expansion#Expansion_of_names_and_values
+
+    For most parser functions all names and values are expanded, regardless of
+    what is relevant for the result. The branching functions (#if, #ifeq,
+    #iferror, #ifexist, #ifexpr, #switch) are exceptions.
+
+    All names in a template call are expanded, and the titles of the tplargs
+    in the template body, after which it is determined which values must be
+    expanded, and for which tplargs in the template body the first part
+    (default).
+
+    In the case of a tplarg, any parts beyond the first are never expanded.
+    The possible name and the value of the first part is expanded if the title
+    does not match a name in the template call.
+
+    :see code for braceSubstitution at
     https://doc.wikimedia.org/mediawiki-core/master/php/html/Parser_8php_source.html#3397:
+
     """
 
-    #logging.info('INVOCATION ' + templateInvocation) # DEBUG
+    # Templates and tplargs are decomposed in the same way, with pipes as
+    # separator, even though eventually any parts in a tplarg after the first
+    # (the parameter default) are ignored, and an equals sign in the first
+    # part is treated as plain text.
+    # Pipes inside inner templates and tplargs, or inside double rectangular
+    # brackets within the template or tplargs are not taken into account in
+    # this decomposition.
+    # The first part is called title, the other parts are simply called parts.
+
+    # If a part has one or more equals signs in it, the first equals sign
+    # determines the division into name = value. Equals signs inside inner
+    # templates and tplargs, or inside double rectangular brackets within the
+    # part are not taken into account in this decomposition. Parts without
+    # equals sign are indexed 1, 2, .., given as attribute in the <name> tag.
+
+    logging.debug('INVOCATION ' + templateInvocation)
+
+    if depth > maxTemplateRecursionLevels:
+        return ''
+
     parts = splitParameters(templateInvocation)
     # part1 is the portion before the first |
-    part1 = expandTemplates(parts[0].strip(), frame)
+    part1 = expandTemplates(parts[0].strip(), depth + 1)
 
     # SUBST
     if re.match(substWords, part1):
@@ -663,7 +721,7 @@ def expandTemplate(templateInvocation, frame):
     if colon > 1:
         funct = part1[:colon]
         parts[0] = part1[colon+1:].strip() # side-effect (parts[0] not used later)
-        ret = callParserFunction(funct, parts, frame)
+        ret = callParserFunction(funct, parts)
         if ret is not None:
             return ret
 
@@ -677,10 +735,18 @@ def expandTemplate(templateInvocation, frame):
         # Perform parameter substitution
 
         template = templates[title]
-        #logging.info('TEMPLATE ' + template) # DEBUG
+        logging.debug('TEMPLATE ' + template)
 
-        # A parameter reference ( {{{...}}} ) may contain other parameters
-        # as well as templates, e.g.:
+        # tplarg          = "{{{" parts "}}}"
+        # parts           = [ title *( "|" part ) ]
+        # part            = ( part-name "=" part-value ) / ( part-value )
+        # part-name       = wikitext-L3
+        # part-value      = wikitext-L3
+        # wikitext-L3     = literal / template / tplarg / link / comment / 
+        #                   line-eating-comment / unclosed-comment /
+        #		    xmlish-element / *wikitext-L3
+
+        # A tplarg may contain other parameters as well as templates, e.g.:
         #  {{{text|{{{quote|{{{1|{{error|Error: No text given}}}}}}}}}}}
         # hence no simple RE like this would work:
         # '{{{((?:(?!{{{).)*?)}}}'
@@ -690,17 +756,31 @@ def expandTemplate(templateInvocation, frame):
         # {{{appointe{{#if:{{{appointer14|}}}|r|d}}14|}}}
 
         # Because of the multiple uses of double-brace and triple-brace
-        # syntax, expressions can sometimes be ambiguous. It may be helpful or
-        # necessary to include spaces to resolve such ambiguity, for example
-        # by writing {{ {{{xxx}}} }} or {{{ {{xxx}} }}}, rather than typing
-        # five consecutive braces.
+        # syntax, expressions can sometimes be ambiguous.
+        # Precedence rules specifed here:
+        # http://www.mediawiki.org/wiki/Preprocessor_ABNF#Ideal_precedence
+        # resolve ambiguities like this:
+        # {{{{ }}}} -> { {{{ }}} }
+        # {{{{{ }}}}} -> {{ {{{ }}} }}
+        # 
         # :see: https://en.wikipedia.org/wiki/Help:Template#Handling_parameters
 
-        params = templateParams(parts[1:])
+        # build a dict of name-values for the expanded parameters
+        params = templateParams(parts[1:], depth)
 
         # We perform substitution iteratively.
         # We also limit the maximum number of iterations to avoid too long or
         # even endless loops (in case of malformed input).
+
+        # :see: http://meta.wikimedia.org/wiki/Help:Expansion#Distinction_between_variables.2C_parser_functions.2C_and_templates
+        #
+        # Parameter values are assigned to parameters in two (?) passes.
+        # Therefore a parameter name in a template can depend on the value of
+        # another parameter of the same template, regardless of the order in
+        # which they are specified in the template call, for example, using
+        # Template:ppp containing "{{{{{{p}}}}}}", {{ppp|p=q|q=r}} and even
+        # {{ppp|q=r|p=q}} gives r, but using Template:tvvv containing
+        # "{{{{{{{{{p}}}}}}}}}", {{tvvv|p=q|q=r|r=s}} gives s.
 
         for i in xrange(maxParameterRecursionLevels):
             result = ''
@@ -713,7 +793,7 @@ def expandTemplate(templateInvocation, frame):
             for s,e in findBalanced(template, ['{{{', '{{'], ['}}}', '}}'],
                                     ['(?<!{){{{', '{{'], 0):
                 result += template[start:s] + substParameter(template[s+3:e-3],
-                                                             params)
+                                                             params, i)
                 start = e
                 n += 1
             if n == 0:          # no match
@@ -723,12 +803,9 @@ def expandTemplate(templateInvocation, frame):
         else:
             logging.warn('Reachead maximum parameter recursions: '
                          + str(maxParameterRecursionLevels))
-        l = len(frame)
-        if l < maxTemplateRecursionLevels:
-            #logging.info('instantiated ' + str(l) + ' ' + template) # DEBUG
-            frame.append((title, params))
-            ret =  expandTemplates(template, frame)
-            frame.pop()
+        if depth < maxTemplateRecursionLevels:
+            logging.debug('instantiated ' + str(depth) + ' ' + template)
+            ret = expandTemplates(template, depth + 1)
             return ret
         else:
             logging.warn('Reached max template recursion: '
@@ -739,9 +816,13 @@ def expandTemplate(templateInvocation, frame):
         # The page being included could not be identified
         return ""
 
-def substParameter(parameter, templateParams):
+def substParameter(parameter, templateParams, depth):
+    """
+    :param parameter: the parts of a tplarg.
+    :param templateParams: dict of name-values template parameters.
+    """
 
-    # the parameter name itself might contain parameters, e.g.:
+    # the parameter name itself might contain templates, e.g.:
     # appointe{{#if:{{{appointer14|}}}|r|d}}14|
 
     if '{{{' in parameter:
@@ -749,15 +830,18 @@ def substParameter(parameter, templateParams):
         start = 0
         for s,e in findMatchingBraces(parameter, '(?<!{){{{(?!{)', 3):
             subst += parameter[start:s] + substParameter(parameter[s+3:e-3],
-                                                         templateParams)
+                                                         templateParams,
+                                                         depth + 1)
             start = e
         parameter = subst + parameter[start:]
 
     if '{{' in parameter:
-        # FIXME: pass frame to limit recursion
-        parameter = expandTemplates(parameter)
+        parameter = expandTemplates(parameter, depth + 1)
 
-    m = re.match('([^|]*)\|(.*)', parameter, flags=re.DOTALL)
+    # any parts in a tplarg after the first (the parameter default) are
+    # ignored, and an equals sign in the first part is treated as plain text.
+
+    m = re.match('([^|]*)\|([^|]*)', parameter, flags=re.DOTALL)
     if m:
         # This parameter has a default value
         paramName = m.group(1)
@@ -779,8 +863,7 @@ def substParameter(parameter, templateParams):
         # case we drop them.
         return ''
     # Surplus parameters - i.e., those assigned values in template
-    # invocation but not used in the template body - are simply
-    # ignored.
+    # invocation but not used in the template body - are simply ignored.
 
 def ucfirst(string):
     """:return: a string with its first character uppercase"""
@@ -924,20 +1007,21 @@ def sharp_switch(primary, *templateParams):
         return default
     return ''
 
-def sharp_invoke(module, function, frame):
-    functions = modules.get(module)
-    if functions:
-        funct = functions.get(function)
-        if funct:
-            templateTitle = fullyQualifiedTemplateTitle(function)
-            # find parameters in frame whose title is the one of the original
-            # template invocation
-            pair = next((x for x in frame if x[0] == templateTitle), None)
-            if pair:
-                return funct(*pair[1].values())
-            else:
-                return funct()
-    return None
+# Extension Scribuntu
+# def sharp_invoke(module, function, frame):
+#     functions = modules.get(module)
+#     if functions:
+#         funct = functions.get(function)
+#         if funct:
+#             templateTitle = fullyQualifiedTemplateTitle(function)
+#             # find parameters in frame whose title is the one of the original
+#             # template invocation
+#             pair = next((x for x in frame if x[0] == templateTitle), None)
+#             if pair:
+#                 return funct(*pair[1].values())
+#             else:
+#                 return funct()
+#     return None
 
 parserFunctions = {
 
@@ -981,7 +1065,7 @@ parserFunctions = {
 
 }
 
-def callParserFunction(functionName, args, frame):
+def callParserFunction(functionName, args):
     """
     Parser functions have similar syntax as templates, except that
     the first argument is everything after the first colon.
@@ -990,9 +1074,9 @@ def callParserFunction(functionName, args, frame):
     """
   
     try:
-       if functionName == '#invoke':
-           # special handling of frame
-           return sharp_invoke(args[0].strip(), args[1].strip(), frame)
+       # if functionName == '#invoke':
+       #     # special handling of frame
+       #     return sharp_invoke(args[0].strip(), args[1].strip(), frame)
        if functionName in parserFunctions:
            return parserFunctions[functionName](*args)
     except:
@@ -1632,6 +1716,8 @@ def main():
                         help="accepted namespaces")
     parser.add_argument("-q", "--quiet", action="store_true",
                         help="suppress reporting progress info")
+    parser.add_argument("--debug", action="store_true",
+                        help="print debug info")
     parser.add_argument("-s", "--sections", action="store_true",
                         help="preserve sections")
     parser.add_argument("-a", "--article", action="store_true",
@@ -1667,8 +1753,11 @@ def main():
     if args.namespaces:
         acceptedNamespaces = set(args.ns.split(','))
 
+    logger = logging.getLogger()
     if not args.quiet:
-        logging.basicConfig(level=logging.INFO)
+        logger.setLevel(logging.INFO)
+    if args.debug:
+        logger.setLevel(logging.DEBUG)
 
     input_file = args.input
 

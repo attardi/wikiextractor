@@ -1,0 +1,210 @@
+2015-04-09  Giuseppe Attardi  <attardi@di.unipi.it>
+
+	* WikiExtractor.py (expandTemplates): replaced frame parameter with
+	depth, used to limit max template recursion.
+
+2015-04-07  Giuseppe Attardi  <attardi@di.unipi.it>
+
+	* WikiExtractor.py (main): added --debug option.
+
+2015-01-24  Giuseppe Attardi  <attardi@di.unipi.it>
+
+	* WikiExtractor.py (splitParameters): rewritten template
+	processing by performing proper parsing of all balanced
+	expressions in templates invocation and expansion, using iterator
+	findBalanced().
+
+2015-01-18  Giuseppe Attardi  <attardi@di.unipi.it>
+
+	* WikiExtractor.py (expandTemplates): template expansion now working.
+
+2015-01-11  Giuseppe Attardi  <attardi@di.unipi.it>
+
+	* WikiExtractor.py (externalLink): replaced .* with appropriate
+	[^x]* here and elsewhere.
+
+2015-01-10  Giuseppe Attardi  <attardi@di.unipi.it>
+
+	* WikiExtractor.py (main): added option --article for processing a
+	single article.
+	(main): get dump rm file rather than frpm stdin, so that
+	preprocessing does not need to save data to temp file.
+
+2014-02-25  Giuseppe Attardi  <attardi@di.unipi.it>
+
+	* WikiExtractor.py (ignoreTag): make / optional.
+
+2013-12-15  Giuseppe Attardi  <attardi@di.unipi.it>
+
+	* WikiExtractor.py (clean): added template expansion
+
+2013-10-14  Giuseppe Attardi  <attardi@di.unipi.it>
+
+	* WikiExtractor.py: added wiktionary and wikt to the namespaces
+	(used e.g. in http://en.wikipedia.org/wiki?curid=12)
+
+2013-05-09  Giuseppe Attardi  <attardi@di.unipi.it>
+
+	* WikiExtractor.py (main): handle properly keepLinks option.
+
+2013-04-05  Giuseppe Attardi  <attardi@di.unipi.it>
+
+	* WikiExtractor.py (compact): keep lines ending with ':'.
+
+2013-04-02  Giuseppe Attardi  <attardi@di.unipi.it>
+
+	* WikiExtractor.py: obtain prefix from dump.
+
+2013-01-27  Giuseppe Attardi  <attardi@di.unipi.it>
+
+	* WikiExtractor.py (WikiDocument): add newline after <doc>.
+	Release version 2.3.
+
+2012-12-30  Giuseppe Attardi  <attardi@di.unipi.it>
+
+	* WikiExtractor.py (process_data): added patch by Humberto
+	Pereira, who claims a 10x improvement in speed.
+	(main): added option to set acceptedNamespaces
+
+2012-11-01  Giuseppe Attardi  <attardi@di.unipi.it>
+
+	* WikiExtractor.py (get_url): create URL from Id instead than from title.
+
+2012-06-28  Giuseppe Attardi  <attardi@di.unipi.it>
+
+	* WikiExtractor.py (OutputSplitter.reserve): added method to
+	invoke before writing.
+	(WikiDocument): use reserve() before writing whole page.
+	(main): added version number and option -v.
+
+2012-05-17  Giuseppe Attardi  <attardi@di.unipi.it>
+
+	* WikiExtractor.py (main): added option to preserve sections as
+	HTML headers and lists as <LI>.
+
+2012-05-08  Giuseppe Attardi  <attardi@di.unipi.it>
+
+	* WikiExtractor.py: Released version 2.0.
+
+	* test/test.xml: added sample to test hard cases for extractor.
+
+	* WikiExtractor.py (dropNested): Completely rewritten to be more
+	compliant to WikiMedia Markup language.
+	Use proper parsing fuctions to handle nested structures.
+	Improved performance by reducing creation of lists and strings.
+	Use htmlentitydefs instead of hand crafted list.
+	Added parameter -b to set URL for site.
+	Extensive use of RegExpr instead of specific string tests.
+	Deal with preformatted text.
+	Added parameter accepetedNamespaces to select namespaces to retain
+	in page titles or wiki links.
+	TODO:
+	1. handle Template expansion. See WikiPrep
+	   (http://www.cs.technion.ac.il/~gabr/resources/code/wikiprep/)
+	2. Use full parser in order to better deal with nested and
+	   unbalanced expressions.
+
+2011-02-10  Giuseppe Attardi  <attardi@di.unipi.it>
+
+	* WikiExtractor.py: added Copyright.
+
+2012-02-15  Stefano Dei Rossi  <deirossi@semawiki.di.unipi.it>
+
+	* WikiExtractor.py (WikiExtractor): &nbsp; replaced with a simple space
+	instead of u'\u00A0'.
+
+2009-11-03  Antonio Fuschetto  <fuschett@di.unipi.it>
+
+	* WikiExtractor.py: updated version to 1.6 (Oct 17).
+
+2009-10-17  Giuseppe Attardi  <attardi@di.unipi.it>
+
+	* WikiExtractor.py: turned prefix into a parameter.
+
+2009-07-29  Antonio Fuschetto  <fuschett@di.unipi.it>
+
+	* WikiExtractor.py (init): fixed bugs in apostrophe_bold_pattern and
+	apostrophe_italic_pattern.
+
+2009-07-28  Antonio Fuschetto  <fuschett@di.unipi.it>
+
+	* WikiExtractor.py (__garbage_namespaces): added "file" namespace to
+	remove list.
+
+2009-07-10  Antonio Fuschetto  <fuschett@di.unipi.it>
+
+	* WikiExtractor.py (get_wiki_document_url): changed the handling of
+	URL prefix (anchors don't use prefix but a relative URLs).
+
+2009-06-26  Antonio Fuschetto  <fuschett@di.unipi.it>
+
+	* WikiExtractor.py (extract_document): changed the handling of
+	wikilinks, adding an anchor tag for each link with a reference to the
+	Wikipedia document.
+
+	* WikiExtractor.py (WikiExtractor): changed the handling of
+	placeholders: from "[Formula 12]" to "formula_12".
+
+2009-04-06  Antonio Fuschetto  <fuschett@di.unipi.it>
+
+	* WikiExtractor.py (init): fixed bugs in apostrophe_bold_pattern and
+	apostrophe_italic_pattern.
+
+	* WikiExtractor.py (compact): drop lines ending with ':'
+	(these are sentences preceding list items); fixed some bugs.
+
+	* WikiExtractor.py: released version 1.1.
+
+2009-03-12  Antonio Fuschetto  <fuschett@di.unipi.it>
+
+	* wiki-extractor.py (main): removed the sentence splitting option.
+
+	* wiki-extractor.py: fixed some bugs; released version 1.0; changed
+	filename to "Wiki-Extractor.py" according to Tanl module names.
+
+2009-03-01  Antonio Fuschetto  <fuschett@di.unipi.it>
+
+	* wiki-extractor.py (main): added cross platform path management.
+
+2008-12-12  Antonio Fuschetto  <fuschett@di.unipi.it>
+
+	* wiki-extractor.py: fixed a wrong cleaning of apostrophes prior
+	italic and bold text.
+
+2008-10-27  Antonio Fuschetto  <fuschett@di.unipi.it>
+
+	* wiki-extractor.py: script complete rewriting (ver 0.8).
+
+2008-10-27  Giuseppe Attardi  <attardi@di.unipi.it>
+
+	* wiki-extractor.py: added CopyLeft.
+
+2008-07-20  Giuseppe Attardi  <attardi@di.unipi.it>
+
+	* wiki-extractor.py (main): renamed option gzip to bzip.
+
+	* wiki-extractor.py (Document.__str__): removed global variables.
+
+	* wiki-extractor.py (Document): turned split_sentences, clean_document,
+	print_document into methods.
+
+2008-07-15  Antonio Fuschetto  <fuschett@di.unipi.it>
+
+	* wiki-extractor.py: changed object serialization using standard
+	pickle module.
+
+2008-06-28  Antonio Fuschetto  <fuschett@di.unipi.it>
+
+	* wiki-extractor.py: added the management of italics with a bad format.
+
+2008-06-27  Antonio Fuschetto  <fuschett@di.unipi.it>
+
+	* wiki-extractor.py: fixed a wrong use of conversion between conding;
+	added the management of wikilink with a bad format; added the
+	menagement of unicode character (numeric entity); added the management
+	of italics like quoted text.
+
+2008-06-26  Giuseppe Attardi  <attardi@di.unipi.it>
+
+	* wiki-extractor.py (main): turned global variables _infile and
+	_outfile into locals.
