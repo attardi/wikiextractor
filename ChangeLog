@@ -4,6 +4,13 @@
 	to control depth of parameter expansion, separately from depth,
 	used for template expansion.
 
+	* WikiExtractor.py (templateParams): fix pattern to match
+	parameter name.
+
+	* WikiExtractor.py (substParameter): use splitParameters()
+
+	* WikiExtractor.py (main): added --no-templates option.
+
 2015-04-10  Giuseppe Attardi  <attardi@di.unipi.it>
 
 	* WikiExtractor.py (callParserFunction): return '' also in case of

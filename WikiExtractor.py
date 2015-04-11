@@ -103,19 +103,41 @@ discardElements = set([
 #=========================================================================
 #
 # MediaWiki Markup Grammar
+# https://www.mediawiki.org/wiki/Preprocessor_ABNF
+
+# xml-char = %x9 / %xA / %xD / %x20-D7FF / %xE000-FFFD / %x10000-10FFFF
+# sptab = SP / HTAB
  
-# Template = "{{" [ "msg:" | "msgnw:" ] PageName { "|" [ ParameterName "=" AnyText | AnyText ] } "}}" ;
-# Extension = "<" ? extension ? ">" AnyText "</" ? extension ? ">" ;
-# NoWiki = "<nowiki />" | "<nowiki>" ( InlineText | BlockText ) "</nowiki>" ;
-# Parameter = "{{{" ParameterName { Parameter } [ "|" { AnyText | Parameter } ] "}}}" ;
-# Comment = "<!--" InlineText "-->" | "<!--" BlockText "//-->" ;
-#
-# ParameterName = ? uppercase, lowercase, numbers, no spaces, some special chars ? ;
-#
+# ; everything except ">" (%x3E)
+# attr-char = %x9 / %xA / %xD / %x20-3D / %x3F-D7FF / %xE000-FFFD / %x10000-10FFFF
+ 
+# literal         = *xml-char
+# title           = wikitext-L3
+# part-name       = wikitext-L3
+# part-value      = wikitext-L3
+# part            = ( part-name "=" part-value ) / ( part-value )
+# parts           = [ title *( "|" part ) ]
+# tplarg          = "{{{" parts "}}}"
+# template        = "{{" parts "}}"
+# link            = "[[" wikitext-L3 "]]"
+ 
+# comment         = "<!--" literal "-->"
+# unclosed-comment = "<!--" literal END
+# ; the + in the line-eating-comment rule was absent between MW 1.12 and MW 1.22
+# line-eating-comment = LF LINE-START *SP +( comment *SP ) LINE-END
+ 
+# attr            = *attr-char
+# nowiki-element  = "<nowiki" attr ( "/>" / ( ">" literal ( "</nowiki>" / END ) ) )
+
+# wikitext-L2     = heading / wikitext-L3 / *wikitext-L2
+# wikitext-L3     = literal / template / tplarg / link / comment / 
+#                   line-eating-comment / unclosed-comment / xmlish-element / 
+#                   *wikitext-L3
+
 #=========================================================================== 
 
 # Program version
-version = '2.8'
+version = '2.9'
 
 ##### Main function ###########################################################
 
@@ -397,7 +419,7 @@ def templateParams(parameters, depth):
 
     if not parameters:
         return templateParams
-   #logging.debug('<templateParams: ' + str(depth) + ' ' + '|'.join(parameters))
+    logging.debug('<templateParams: ' + str(depth) + ' ' + '|'.join(parameters))
 
     # evaluate parameters, since they may contain templates, including the
     # symbol "=".
@@ -432,7 +454,8 @@ def templateParams(parameters, depth):
         # Don't use DOTALL here since parameters may be tags with
         # attributes, e.g. <div class="templatequotecite">
 
-        m = re.match('([^=]*)=(.*)$', param)
+        # The '=' might occurr within an HTML attribute: "&lt;ref name=value".
+        m = re.match('([^= ]*)=(.*)$', param)
         if m:
             # This is a named parameter.  This case also handles parameter
             # assignments like "2=xxx", where the number of an unnamed
@@ -453,7 +476,7 @@ def templateParams(parameters, depth):
             if ']]' not in param: # if the value does not contain a link, trim whitespace
                 param = param.strip()
             templateParams[str(unnamedParameterCounter)] = param
-    #logging.debug('   templateParams> ' + str(depth))
+    logging.debug('   templateParams> ' + str(depth) + ' ' + '|'.join(templateParams.values()))
     return templateParams
 
 def findMatchingBraces(text, openDelim, ldelim):
@@ -855,11 +878,11 @@ def substParameter(parameter, templateParams, depth, param_depth=0):
     # any parts in a tplarg after the first (the parameter default) are
     # ignored, and an equals sign in the first part is treated as plain text.
 
-    m = re.match('([^|]*)\|([^|]*)', parameter, flags=re.DOTALL)
-    if m:
+    parts = splitParameters(parameter)
+    if len(parts) > 1:
         # This parameter has a default value
-        paramName = m.group(1)
-        defaultValue = m.group(2)
+        paramName = parts[0]
+        defaultValue = parts[1]
 
         if paramName in templateParams:
             return templateParams[paramName]  # use parameter value specified in template invocation
@@ -1264,11 +1287,14 @@ def make_anchor_tag(match):
 
 # ----------------------------------------------------------------------
 
+expand_templates = True
+
 def clean(text):
 
-    # expand templates
-    # See: http://www.mediawiki.org/wiki/Help:Templates
-    text = expandTemplates(text)
+    if (expand_templates):
+        # expand templates
+        # See: http://www.mediawiki.org/wiki/Help:Templates
+        text = expandTemplates(text)
 
     # Drop transclusions (template, parser functions)
     text = dropNested(text, r'{{', r'}}')
@@ -1550,9 +1576,7 @@ def process_data(input_file, template_file, output):
     global prefix
     global knownNamespaces
     global templateNamespace
-
-    # preprocess
-    logging.info("Preprocessing dump to collect template definitions: this may take some time.")
+    global expand_templates
 
     if input_file.lower().endswith("bz2"):
         opener = bz2.BZ2File
@@ -1580,18 +1604,20 @@ def process_data(input_file, template_file, output):
         elif tag == '/siteinfo':
             break
 
-    if template_file and os.path.exists(template_file):
-        input.close()
-        with open(template_file) as file:
-            load_templates(file)
-    else:
-        load_templates(input, template_file)
-        input.close()
+    if expand_templates:
+        # preprocess
+        logging.info("Preprocessing dump to collect template definitions: this may take some time.")
+        if template_file and os.path.exists(template_file):
+            input.close()
+            with open(template_file) as file:
+                load_templates(file)
+        else:
+            load_templates(input, template_file)
+            input.close()
+        input = opener(input_file)
 
     # process pages
     logging.info("Starting processing pages from %s." % input_file)
-
-    input = opener(input_file)
 
     page = []
     id = None
@@ -1711,6 +1737,7 @@ minFileSize = 200 * 1024
 
 def main():
     global keepLinks, keepSections, prefix, acceptedNamespaces
+    global expand_templates
 
     parser = argparse.ArgumentParser(prog=os.path.basename(sys.argv[0]),
         formatter_class=argparse.RawDescriptionHelpFormatter,
@@ -1741,6 +1768,8 @@ def main():
     #                     help="choose output format default is %(default)s")
     parser.add_argument("--templates",
                         help="use or create file containing templates")
+    parser.add_argument("--no-templates", action="store_false",
+                        help="Do not expand templates")
     parser.add_argument("-v", "--version", action="version",
                         version='%(prog)s ' + version,
                         help="print program version")
@@ -1749,6 +1778,7 @@ def main():
     
     keepLinks = args.links
     keepSections = args.sections
+    expand_templates = args.no_templates
 
     if args.base:
         prefix = args.base
