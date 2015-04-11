@@ -4,6 +4,11 @@
 	to control depth of parameter expansion, separately from depth,
 	used for template expansion.
 
+	* WikiExtractor.py (selfClosingTags): added nowiki.
+
+	* WikiExtractor.py (bold_italic, bold): allow single quote inside,
+	e.g. '''[[Chinese New Year|New Year's Eve]]'''.
+
 	* WikiExtractor.py (templateParams): fix pattern to match
 	parameter name.
 

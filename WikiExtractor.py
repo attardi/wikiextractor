@@ -137,7 +137,7 @@ discardElements = set([
 #=========================================================================== 
 
 # Program version
-version = '2.9'
+version = '2.10'
 
 ##### Main function ###########################################################
 
@@ -164,15 +164,15 @@ def get_url(prefix, id):
 
 #------------------------------------------------------------------------------
 
-selfClosingTags = [ 'br', 'hr', 'nobr', 'ref', 'references' ]
+selfClosingTags = [ 'br', 'hr', 'nobr', 'ref', 'references', 'nowiki' ]
 
 # These tags are dropped, keeping their content.
 # handle 'a' separately, depending on keepLinks
 ignoredTags = [
-        'b', 'big', 'blockquote', 'center', 'cite', 'div', 'em',
-        'font', 'h1', 'h2', 'h3', 'h4', 'hiero', 'i', 'kbd', 'nowiki',
-        'p', 'plaintext', 's', 'small', 'span', 'strike', 'strong',
-        'sub', 'sup', 'tt', 'u', 'var'
+    'b', 'big', 'blockquote', 'center', 'cite', 'div', 'em',
+    'font', 'h1', 'h2', 'h3', 'h4', 'hiero', 'i', 'kbd', 'nowiki',
+    'p', 'plaintext', 's', 'small', 'span', 'strike', 'strong',
+    'sub', 'sup', 'tt', 'u', 'var'
 ]
 
 placeholder_tags = {'math':'formula', 'code':'codice'}
@@ -242,10 +242,7 @@ def unescape(text):
 comment = re.compile(r'<!--.*?-->', re.DOTALL)
 
 # Match elements to ignore
-discard_element_patterns = []
-for tag in discardElements:
-    pattern = re.compile(r'<\s*%s\b[^>]*>.*?<\s*/\s*%s>' % (tag, tag), re.DOTALL | re.IGNORECASE)
-    discard_element_patterns.append(pattern)
+discard_element_patterns = [re.compile(r'<\s*%s\b[^>]*>.*?<\s*/\s*%s>' % (tag, tag), re.DOTALL | re.IGNORECASE) for tag in discardElements]
 
 # Match ignored tags
 ignored_tag_patterns = []
@@ -258,16 +255,15 @@ for tag in ignoredTags:
     ignoreTag(tag)
 
 # Match selfClosing HTML tags
-selfClosing_tag_patterns = []
-for tag in selfClosingTags:
-    pattern = re.compile(r'<\s*%s\b[^/]*/\s*>' % tag, re.DOTALL | re.IGNORECASE)
-    selfClosing_tag_patterns.append(pattern)
+selfClosing_tag_patterns = [
+    re.compile(r'<\s*%s\b[^/]*/\s*>' % tag, re.DOTALL | re.IGNORECASE) for tag in selfClosingTags
+]
 
 # Match HTML placeholder tags
-placeholder_tag_patterns = []
-for tag, repl in placeholder_tags.items():
-    pattern = re.compile(r'<\s*%s(\s*| [^>]+?)>.*?<\s*/\s*%s\s*>' % (tag, tag), re.DOTALL | re.IGNORECASE)
-    placeholder_tag_patterns.append((pattern, repl))
+placeholder_tag_patterns = [
+    (re.compile(r'<\s*%s(\s*| [^>]+?)>.*?<\s*/\s*%s\s*>' % (tag, tag), re.DOTALL | re.IGNORECASE),
+     repl) for tag, repl in placeholder_tags.items()
+]
 
 # Match preformatted lines
 preformatted = re.compile(r'^ .*?$', re.MULTILINE)
@@ -277,10 +273,10 @@ externalLink = re.compile(r'\[\w+[^ ]*? (.*?)]')
 externalLinkNoAnchor = re.compile(r'\[\w+[&\]]*\]')
 
 # Matches bold/italic
-bold_italic = re.compile(r"'''''([^']*?)'''''")
-bold = re.compile(r"'''([^']*?)'''")
+bold_italic = re.compile(r"'''''(.*?)'''''")
+bold = re.compile(r"'''(.*?)'''")
 italic_quote = re.compile(r"''\"([^\"]*?)\"''")
-italic = re.compile(r"''([^']*)''")
+italic = re.compile(r"''(.*?)''")
 quote_quote = re.compile(r'""([^"]*?)""')
 
 # Matches space
@@ -768,7 +764,7 @@ def expandTemplate(templateInvocation, depth):
         # Perform parameter substitution
 
         template = templates[title]
-        #logging.debug('TEMPLATE ' + template)
+        logging.debug('TEMPLATE ' + template)
 
         # tplarg          = "{{{" parts "}}}"
         # parts           = [ title *( "|" part ) ]
