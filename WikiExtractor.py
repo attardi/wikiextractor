@@ -298,6 +298,12 @@ def expandTemplates(text, depth=0):
 
     # template        = "{{" parts "}}"
 
+    if depth > maxTemplateRecursionLevels:
+        logging.warn('Max template recursion exceeded!')
+        return ''
+
+    logging.debug('<expandTemplates ' + str(depth))
+
     for l in xrange(maxTemplateRecursionLevels):
         res = ''
         cur = 0
@@ -308,6 +314,7 @@ def expandTemplates(text, depth=0):
             cur = e
 
         if cur == 0:
+            logging.debug('   expandTemplates> ' + str(depth))
             return text
         # leftover
         res += text[cur:]
@@ -380,20 +387,22 @@ def splitParameters(paramsList, sep='|'):
 
     return parameters
 
-def templateParams(parameters, frame):
+def templateParams(parameters, depth):
     """
     Build a dictionary with positional or name key to expanded parameters.
     :param parameters: the parts[1:] of a template, i.e. all except the title.
+    :param depth: recusion depth.
     """
     templateParams = {}
 
     if not parameters:
         return templateParams
+   #logging.debug('<templateParams: ' + str(depth) + ' ' + '|'.join(parameters))
 
     # evaluate parameters, since they may contain templates, including the
     # symbol "=".
     # {{#ifexpr: {{{1}}} = 1 }}
-    parameters = [expandTemplates(p, frame) for p in parameters]
+    parameters = [expandTemplates(p, depth) for p in parameters]
 
     # Parameters can be either named or unnamed. In the latter case, their
     # name is defined by their ordinal position (1, 2, 3, ...).
@@ -444,6 +453,7 @@ def templateParams(parameters, frame):
             if ']]' not in param: # if the value does not contain a link, trim whitespace
                 param = param.strip()
             templateParams[str(unnamedParameterCounter)] = param
+    #logging.debug('   templateParams> ' + str(depth))
     return templateParams
 
 def findMatchingBraces(text, openDelim, ldelim):
@@ -695,37 +705,37 @@ def expandTemplate(templateInvocation, depth):
     # part are not taken into account in this decomposition. Parts without
     # equals sign are indexed 1, 2, .., given as attribute in the <name> tag.
 
-    logging.debug('INVOCATION ' + templateInvocation)
-
     if depth > maxTemplateRecursionLevels:
         return ''
 
+    logging.debug('INVOCATION ' + str(depth) + ' ' + templateInvocation)
+
     parts = splitParameters(templateInvocation)
-    # part1 is the portion before the first |
-    part1 = expandTemplates(parts[0].strip(), depth + 1)
+    # title is the portion before the first |
+    #logging.debug('TITLE ' + str(depth) + ' ' + parts[0].strip())
+    title = expandTemplates(parts[0].strip(), depth + 1)
 
     # SUBST
-    if re.match(substWords, part1):
-        if part1.startswith('subst'):
+    if re.match(substWords, title):
+        if title.startswith('subst'):
             return templateInvocation
-        part1 = re.sub(substWords, '', part1)
+        title = re.sub(substWords, '', title)
 
-    if part1.lower() in magicWords:
-        if part1 == '!':
+    if title.lower() in magicWords:
+        if title == '!':
             return '|'
         return ''               # FIXME: get variable value
 
     # Parser functions
     # The first argument is everything after the first colon.
-    colon = part1.find(':')
+    colon = title.find(':')
     if colon > 1:
-        funct = part1[:colon]
-        parts[0] = part1[colon+1:].strip() # side-effect (parts[0] not used later)
-        ret = callParserFunction(funct, parts)
-        if ret is not None:
-            return ret
+        funct = title[:colon]
+        parts[0] = title[colon+1:].strip() # side-effect (parts[0] not used later)
+        # arguments after first are not evaluated
+        return callParserFunction(funct, parts)
 
-    title = fullyQualifiedTemplateTitle(part1)
+    title = fullyQualifiedTemplateTitle(title)
 
     redirected = redirects.get(title)
     if redirected:
@@ -735,7 +745,7 @@ def expandTemplate(templateInvocation, depth):
         # Perform parameter substitution
 
         template = templates[title]
-        logging.debug('TEMPLATE ' + template)
+        #logging.debug('TEMPLATE ' + template)
 
         # tplarg          = "{{{" parts "}}}"
         # parts           = [ title *( "|" part ) ]
@@ -765,8 +775,9 @@ def expandTemplate(templateInvocation, depth):
         # 
         # :see: https://en.wikipedia.org/wiki/Help:Template#Handling_parameters
 
+        # Evaluate parameters.
         # build a dict of name-values for the expanded parameters
-        params = templateParams(parts[1:], depth)
+        params = templateParams(parts[1:], depth+1)
 
         # We perform substitution iteratively.
         # We also limit the maximum number of iterations to avoid too long or
@@ -793,7 +804,7 @@ def expandTemplate(templateInvocation, depth):
             for s,e in findBalanced(template, ['{{{', '{{'], ['}}}', '}}'],
                                     ['(?<!{){{{', '{{'], 0):
                 result += template[start:s] + substParameter(template[s+3:e-3],
-                                                             params, i)
+                                                             params, depth + 1, i)
                 start = e
                 n += 1
             if n == 0:          # no match
@@ -804,24 +815,27 @@ def expandTemplate(templateInvocation, depth):
             logging.warn('Reachead maximum parameter recursions: '
                          + str(maxParameterRecursionLevels))
         if depth < maxTemplateRecursionLevels:
-            logging.debug('instantiated ' + str(depth) + ' ' + template)
+            #logging.debug('instantiated ' + str(depth) + ' ' + template)
             ret = expandTemplates(template, depth + 1)
+            logging.debug('   INVOCATION> ' + str(depth) + ' ' + ret)
             return ret
         else:
             logging.warn('Reached max template recursion: '
                          + str(maxTemplateRecursionLevels))
+            logging.debug('   INVOCATION> ' + str(depth) + ' ' + template)
             return template
 
     else:
         # The page being included could not be identified
         return ""
 
-def substParameter(parameter, templateParams, depth):
+def substParameter(parameter, templateParams, depth, param_depth=0):
     """
     :param parameter: the parts of a tplarg.
     :param templateParams: dict of name-values template parameters.
     """
 
+    #logging.debug('substParameter ' + str(depth) + ' ' + parameter)
     # the parameter name itself might contain templates, e.g.:
     # appointe{{#if:{{{appointer14|}}}|r|d}}14|
 
@@ -831,7 +845,7 @@ def substParameter(parameter, templateParams, depth):
         for s,e in findMatchingBraces(parameter, '(?<!{){{{(?!{)', 3):
             subst += parameter[start:s] + substParameter(parameter[s+3:e-3],
                                                          templateParams,
-                                                         depth + 1)
+                                                         depth, param_depth+1)
             start = e
         parameter = subst + parameter[start:]
 
@@ -855,8 +869,8 @@ def substParameter(parameter, templateParams, depth):
     elif parameter in templateParams:
         return templateParams[parameter]  # use parameter value specified in template invocation
     else:
-        # Parameter not specified in template invocation and does not
-        # have a default value.
+        # Parameter not specified in template invocation and without
+        # a default value.
         # The Wiki rules for templates
         # (see http://meta.wikimedia.org/wiki/Help:Template)
         # would require to keep the parameter in 3 braces, but in our
@@ -1069,6 +1083,7 @@ def callParserFunction(functionName, args):
     """
     Parser functions have similar syntax as templates, except that
     the first argument is everything after the first colon.
+    :return: the result of the invocation, None in case of failure.
 
     http://meta.wikimedia.org/wiki/Help:ParserFunctions
     """
@@ -1080,7 +1095,7 @@ def callParserFunction(functionName, args):
        if functionName in parserFunctions:
            return parserFunctions[functionName](*args)
     except:
-        return None             # FIXME: fix errors
+        return ""             # FIXME: fix errors
 
     return ""
 
