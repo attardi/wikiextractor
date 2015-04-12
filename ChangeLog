@@ -1,8 +1,11 @@
+2015-04-12  Giuseppe Attardi  <attardi@di.unipi.it>
+
+	* WikiExtractor.py (ExtractorThread): enabled multithread version.
+
 2015-04-11  Giuseppe Attardi  <attardi@di.unipi.it>
 
-	* WikiExtractor.py (substParameter): added parameter param_depth
-	to control depth of parameter expansion, separately from depth,
-	used for template expansion.
+	* WikiExtractor.py (sharp_switch): deal properly with #default.
+	(OutputSplitter): update to new-style classes
 
 	* WikiExtractor.py (selfClosingTags): added nowiki.
 
@@ -15,6 +18,10 @@
 	* WikiExtractor.py (substParameter): use splitParameters()
 
 	* WikiExtractor.py (main): added --no-templates option.
+
+	* WikiExtractor.py (substParameter): added parameter param_depth
+	to control depth of parameter expansion, separately from depth,
+	used for template expansion.
 
 2015-04-10  Giuseppe Attardi  <attardi@di.unipi.it>
 

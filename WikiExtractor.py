@@ -34,16 +34,16 @@
 # =============================================================================
 
 """Wikipedia Extractor:
-Extracts and cleans text from Wikipedia database dump and stores output in a
+Extracts and cleans text from a Wikipedia database dump and stores output in a
 number of files of similar size in a given directory.
-Each file contains several documents in the format:
+Each file will contain several documents in the format:
 
 	<doc id="" url="" title="">
         ...
         </doc>
 
 This version performs template expansion by preprocesssng the whole dump and
-extracting template definitions.
+collecting template definitions.
 """
 
 import sys, os.path
@@ -52,15 +52,17 @@ import argparse
 from itertools import izip
 import logging, traceback
 import urllib
-import bz2, gzip
+import bz2
 import codecs
 from htmlentitydefs import name2codepoint
 import Queue, threading, multiprocessing
 
-### PARAMS ####################################################################
+#=========================================================================== 
 
-# This is obtained from <siteinfo>
-prefix = None
+# Program version
+version = '2.11'
+
+### PARAMS ####################################################################
 
 ##
 # Defined in <siteinfo>
@@ -100,6 +102,12 @@ discardElements = set([
         'ref', 'references', 'img', 'imagemap', 'source'
         ])
 
+# This is obtained from <siteinfo>
+urlbase = None
+
+def get_url(urlbase, id):
+    return "%s?curid=%s" % (urlbase, id)
+
 #=========================================================================
 #
 # MediaWiki Markup Grammar
@@ -133,34 +141,6 @@ discardElements = set([
 # wikitext-L3     = literal / template / tplarg / link / comment / 
 #                   line-eating-comment / unclosed-comment / xmlish-element / 
 #                   *wikitext-L3
-
-#=========================================================================== 
-
-# Program version
-version = '2.10'
-
-##### Main function ###########################################################
-
-def extract(id, title, page, out):
-    """
-    :param page: a list of lines.
-    """
-    text = '\n'.join(page)
-    url = get_url(prefix, id)
-    header = '<doc id="%s" url="%s" title="%s">\n' % (id, url, title)
-    # Separate header from text with a newline.
-    header += title + '\n'
-    header = header.encode('utf-8')
-    text = clean(text)
-    footer = "\n</doc>"
-    out.reserve(len(header) + len(text) + len(footer))
-    print >> out, header
-    for line in compact(text):
-        print >> out, line.encode('utf-8')
-    print >> out, footer
-
-def get_url(prefix, id):
-    return "%s?curid=%s" % (prefix, id)
 
 #------------------------------------------------------------------------------
 
@@ -1025,18 +1005,19 @@ def sharp_switch(primary, *templateParams):
             rvalue = pair[1].strip()
             if found or lvalue == primary:
                 # Found a match, return now
-                return rvalue.strip()
-            elif lvalue.startswith('#default'):
+                return rvalue
+            elif lvalue == '#default':
                 default = rvalue
+                rvalue = None   # avoid defaulting to last case
                 # else wrong case, continue
         elif lvalue == primary:
             # If the value matches, set a flag and continue
             found = True
     # Default case
     # Check if the last item had no = sign, thus specifying the default case
-    if not rvalue:
+    if rvalue is not None:
         return lvalue
-    elif default:
+    elif default is not None:
         return default
     return ''
 
@@ -1125,7 +1106,7 @@ def callParserFunction(functionName, args):
 # def expandTemplates(text):
 #     """Expand templates invoking MediaWiki API"""
 #     text = urlib.urlencodew(text.encode('utf-8'))
-#     base = prefix[:prefix.rfind('/')]
+#     base = urlbase[:urlbase.rfind('/')]
 #     url = base + "/w/api.php?action=expandtemplates&format=json&text=" + text
 #     exp = json.loads(urllib.urlopen(url))
 #     return exp['expandtemplates']['*']
@@ -1454,60 +1435,79 @@ def handle_unicode(entity):
     return unichr(numeric_code)
 
 #------------------------------------------------------------------------------
+# Output
 
-class OutputSplitter:
-    def __init__(self, path_name=None, max_file_size=0, compress=True):
-        self.dir_index = 0
-        self.file_index = -1
-        self.compress = compress
-        self.max_file_size = max_file_size
+class NextFile(object):
+    """
+    Synchronous generation of next available file name.
+    """
+
+    filesPerDir = 100
+
+    def __init__(self, lock, path_name):
+        self.lock = lock
         self.path_name = path_name
-        if path_name:
-            self.out_file = self.open_next_file()
-        else:
-            self.out_file = sys.stdout
+        self.dir_index = -1
+        self.file_index = -1
 
-    def reserve(self, size):
-        if self.path_name:
-            cur_file_size = self.out_file.tell()
-            if cur_file_size + size > self.max_file_size:
-                self.close()
-                self.out_file = self.open_next_file()
+    def next(self):
+        with self.lock:
+            self.file_index = (self.file_index + 1) % NextFile.filesPerDir
+            if self.file_index == 0:
+                self.dir_index += 1
+            dirname = self._dirname()
+            if not os.path.isdir(dirname):
+                os.makedirs(dirname)
+            return self._filepath()
 
-    def write(self, text):
-        self.out_file.write(text)
-
-    def close(self):
-        self.out_file.close()
-
-    def open_next_file(self):
-        self.file_index += 1
-        if self.file_index == 100:
-            self.dir_index += 1
-            self.file_index = 0
-        dir_name = self._dir_name()
-        if not os.path.isdir(dir_name):
-            os.makedirs(dir_name)
-        file_name = os.path.join(dir_name, self._file_name())
-        if self.compress:
-            return bz2.BZ2File(file_name + '.bz2', 'w')
-        else:
-            return open(file_name, 'w')
-
-    def _dir_name(self):
+    def _dirname(self):
         char1 = self.dir_index % 26
         char2 = self.dir_index / 26 % 26
         return os.path.join(self.path_name, '%c%c' % (ord('A') + char2, ord('A') + char1))
 
-    def _file_name(self):
-        return 'wiki_%02d' % self.file_index
+    def _filepath(self):
+        return '%s/wiki_%02d' % (self._dirname(), self.file_index)
+
+class OutputSplitter(object):
+    """
+    File-like object, that splits output to multiple files of a given max size.
+    """
+
+    def __init__(self, nextFile, max_file_size=0, compress=True):
+        """
+        :param nextfile: a NextFile object from which to obtain filenames
+            to use.
+        :param max_file_size: the maximum size of each file.
+        :para compress: whether to write data with bzip compression.
+        """
+        self.nextFile = nextFile
+        self.compress = compress
+        self.max_file_size = max_file_size
+        self.file = self.open(self.nextFile.next())
+
+    def reserve(self, size):
+        if self.file.tell() + size > self.max_file_size:
+            self.close()
+            self.file = self.open(self.nextFile.next())
+
+    def write(self, data):
+        self.file.write(data)
+
+    def close(self):
+        self.file.close()
+
+    def open(self, filename):
+        if self.compress:
+            return bz2.BZ2File(filename + '.bz2', 'w')
+        else:
+            return open(filename, 'w')
 
 # ----------------------------------------------------------------------
 # READER
 
 tagRE = re.compile(r'(.*?)<(/?\w+)[^>]*>(?:([^<]*)(<.*?>)?)?')
+#                    1     2               3      4
 #tagRE = re.compile(r'(.*?)<(/?\w+)[^>]*>([^<]*)')
-#                    1     2            3
 
 def load_templates(file, output_file=None):
     """
@@ -1563,13 +1563,15 @@ def load_templates(file, output_file=None):
             if articles % 10000 == 0:
                 logging.info("Preprocessed: %d pages" % articles)
 
-def process_data(input_file, template_file, output):
+def process_dump(input_file, template_file, outdir, file_size, file_compress, threads):
     """
     :param input_file: name of the wikipedia dump file.
     :param template_file: optional file with template definitions.
-    :param output: name of the directory where to store extracted files.
+    :param outdir: name of the directory where to store extracted files.
+    :param file_size: max size of each extracted file.
+    :param file_compress: whether to compress files with bzip.
     """
-    global prefix
+    global urlbase
     global knownNamespaces
     global templateNamespace
     global expand_templates
@@ -1589,10 +1591,10 @@ def process_data(input_file, template_file, output):
             continue
         tag = m.group(2)
         if tag == 'base':
-            # discover prefix from the xml dump file
+            # discover urlbase from the xml dump file
             # /mediawiki/siteinfo/base
             base = m.group(3)
-            prefix = base[:base.rfind("/")]
+            urlbase = base[:base.rfind("/")]
         elif tag == 'namespace':
             knownNamespaces.add(m.group(3))
             if re.search('key="10"', line):
@@ -1614,6 +1616,21 @@ def process_data(input_file, template_file, output):
 
     # process pages
     logging.info("Starting processing pages from %s." % input_file)
+
+    # initialize jobs queue
+    #threads = multiprocessing.cpu_count()
+    logging.info("Using %d CPUs." % threads)
+    queue = Queue.Queue(maxsize=2 * threads)
+    lock = threading.Lock()  # for protecting shared state.
+
+    nextFile = NextFile(lock, outdir)
+
+    # start worker threads    
+    workers = []
+    for _ in xrange(max(1, threads - 1)): # keep one for master
+        output_splitter = OutputSplitter(nextFile, file_size, file_compress)
+        extractor = ExtractorThread(queue, output_splitter)
+        workers.append(extractor)
 
     page = []
     id = None
@@ -1655,76 +1672,66 @@ def process_data(input_file, template_file, output):
             if (colon < 0 or title[:colon] in acceptedNamespaces) and \
                     not redirect and not title.startswith(templateNamespace):
                 logging.info("%s\t%s" % (id, title))
-                extract(id, title, page, output)
+                queue.put(Extractor(id, title, page), True) # block if full
             id = None
             page = []
 
+    # wait for empty queue
+    queue.join()        
+
     input.close()
 
-# ----------------------------------------------------------------------
+#======================================================================
 # Multithread version
 
+class Extractor(object):
+    """
+    An extraction task on a article.
+    """
+
+    def __init__(self, id, title, page):
+        """
+        :param page: a list of lines.
+        """
+        self.id = id
+        self.title = title
+        self.page = page
+
+    def extract(self, out):
+        text = '\n'.join(self.page)
+        url = get_url(urlbase, id)
+        header = '<doc id="%s" url="%s" title="%s">\n' % (id, url, self.title)
+        # Separate header from text with a newline.
+        header += self.title + '\n\n'
+        header = header.encode('utf-8')
+        text = clean(text)
+        footer = "\n</doc>\n"
+        out.reserve(len(header) + len(text) + len(footer))
+        out.write(header)
+        for line in compact(text):
+            out.write(line.encode('utf-8'))
+            out.write('\n')
+        out.write(footer)
+
 class ExtractorThread(threading.Thread):
-    
-    _filename_lock = threading.RLock()    
-    
-    def __init__(self, queue, outputdir, maxfilesize, prefix, compress):
-        threading.Thread.__init__(self)
+    """
+    Extractor thread.
+    """
+    def __init__(self, queue, splitter):
         self._queue = queue
-        self._maxfilesize = maxfilesize
-        self._prefix = prefix
-        self._compress = compress
-        self._outputdir = outputdir
-        if not os.path.exists(outputdir):
-            os.mkdir(outputdir)
-        self._outfile = None
+        self._splitter = splitter
+        threading.Thread.__init__(self)
+        self.setDaemon(True)  # let the process die when main thread is killed
+        self.start()
         
-    @classmethod
-    def _get_file(cls, outputdir, compress=False):
-        with cls._filename_lock:
-            fpath = None
-            while not fpath or os.path.exists(fpath):
-                fname = ''.join([random.choice(string.letters) for _ in range(16)])
-                ext = ".txt" if not compress else ".txt.bz2"
-                fpath = os.path.join(outputdir, fname + ext)    
-                
-            if compress:
-                return bz2.BZ2File(fpath, 'w')
-                
-            return open(fpath, 'w')
-            
-    def _get_url(self, prefix, id):
-        return "%s?curid=%s" % (prefix, id)        
-    
-    def _write(self, id, title, text):
-        if not self._outfile:
-            self._outfile = self._get_file(self._outputdir, self._compress)
-        
-        logging.info(("[%s] [%s]" % (id, title)).encode('utf-8'))
-        
-        url = self._get_url(self._prefix, id)    
-        
-        header = '<doc id="%s" url="%s" title="%s">%s\n' % (id, url, title, title)
-        footer = "\n</doc>"
-        self._outfile.write(header.encode("utf-8")) 
-        for line in compact(clean(text)):
-            self._outfile.write(line.encode("utf-8"))
-        self._outfile.write(footer)        
-    
     def run(self):
         while True:
-            try:
-                page = self._queue.get(timeout=1)
-                if page:
-                    self._write(page)
-            except Queue.Empty:
-                break
-            except:
-                logging.error(traceback.format_exc())
-            finally:
+            job = self._queue.get()
+            if job:
+                job.extract(self._splitter)
                 self._queue.task_done()
-                    
-        logging.info("%s done" % self.name)
+            else:
+                break
 
 # ----------------------------------------------------------------------
 
@@ -1732,7 +1739,7 @@ class ExtractorThread(threading.Thread):
 minFileSize = 200 * 1024
 
 def main():
-    global keepLinks, keepSections, prefix, acceptedNamespaces
+    global keepLinks, keepSections, urlbase, acceptedNamespaces
     global expand_templates
 
     parser = argparse.ArgumentParser(prog=os.path.basename(sys.argv[0]),
@@ -1766,6 +1773,8 @@ def main():
                         help="use or create file containing templates")
     parser.add_argument("--no-templates", action="store_false",
                         help="Do not expand templates")
+    parser.add_argument("--threads", type=int, default=8,
+                        help="Number of threads to use (default 8)")
     parser.add_argument("-v", "--version", action="version",
                         version='%(prog)s ' + version,
                         help="print program version")
@@ -1777,7 +1786,7 @@ def main():
     expand_templates = args.no_templates
 
     if args.base:
-        prefix = args.base
+        urlbase = args.base
 
     try:
         if args.bytes[-1] in 'kK':
@@ -1830,9 +1839,8 @@ def main():
             logging.error('Could not create: %s' % output_dir)
             return
 
-    output_splitter = OutputSplitter(output_dir, file_size, args.compress)
-    process_data(input_file, args.templates, output_splitter)
-    output_splitter.close()
+    process_dump(input_file, args.templates, output_dir, file_size,
+                 args.compress, args.threads)
 
 if __name__ == '__main__':
     main()
