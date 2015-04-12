@@ -42,3 +42,5 @@ whole dump and extracting template definitions.
 Saving templates to a file will speed up performing extraction the next time,
 assuming template definitions have not changed.
 
+Option --no-templates significantly speeds up the extractor, avoiding the cost of expanding [MediaWiki templates](https://www.mediawiki.org/wiki/Help:Templates).
+
