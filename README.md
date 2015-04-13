@@ -17,12 +17,12 @@ whole dump and extracting template definitions.
 
     Usage:
      WikiExtractor.py [options] xml-dump-file
-      
+
     optional arguments:
       -h, --help            show this help message and exit
       -o OUTPUT, --output OUTPUT
                             output directory
-      -b n[KM], --bytes n[KM]
+      -b n[KMGTPEZY], --bytes n[KMGTPEZY]
                         put specified bytes per output file (default is 1M)
       -B BASE, --base BASE  base URL for the Wikipedia pages
       -c, --compress        compress output files using bzip
@@ -43,4 +43,3 @@ Saving templates to a file will speed up performing extraction the next time,
 assuming template definitions have not changed.
 
 Option --no-templates significantly speeds up the extractor, avoiding the cost of expanding [MediaWiki templates](https://www.mediawiki.org/wiki/Help:Templates).
-
