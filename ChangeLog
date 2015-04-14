@@ -1,6 +1,22 @@
+2015-04-14  Giuseppe Attardi  <attardi@di.unipi.it>
+
+	* WikiExtractor.py (clean): moved removal of preformatted as last step.
+	(discardElements) added 'small'.
+	(ignoredTags) removed 'small'.
+	(make_anchor_tag): fixed RE for wikiLink.
+
+2015-04-13  Giuseppe Attardi  <attardi@di.unipi.it>
+
+	* WikiExtractor.py (findMatchingBraces): rewritten to handle
+	ambiguities.
+	(substParameter): only evaluate name and default.
+	(main): fixed option --article.
+
 2015-04-12  Giuseppe Attardi  <attardi@di.unipi.it>
 
 	* WikiExtractor.py (ExtractorThread): enabled multithread version.
+	(findMatchingBraces): handle isolated braces.
+	(expandTemplates): recurse on result from expandTemplate().
 
 2015-04-11  Giuseppe Attardi  <attardi@di.unipi.it>
 
