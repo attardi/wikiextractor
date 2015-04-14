@@ -269,7 +269,7 @@ dots = re.compile(r'\.{4,}')
 #----------------------------------------------------------------------
 # Expand templates
 
-maxTemplateRecursionLevels = 16
+maxTemplateRecursionLevels = 30
 maxParameterRecursionLevels = 10
 
 # check for template beginning
@@ -733,7 +733,7 @@ def expandTemplate(body, depth):
     parts = splitParameters(body)
     # title is the portion before the first |
     #logging.debug('TITLE ' + str(depth) + ' ' + parts[0].strip())
-    title = expandTemplates(parts[0].strip(), depth + 1)
+    title = expandTemplates(parts[0].strip(), depth)
 
     # SUBST
     if re.match(substWords, title):
@@ -754,7 +754,7 @@ def expandTemplate(body, depth):
         parts[0] = title[colon+1:].strip() # side-effect (parts[0] not used later)
         # arguments after first are not evaluated
         ret = callParserFunction(funct, parts)
-        return expandTemplates(ret, depth+1)
+        return expandTemplates(ret, depth)
 
     title = fullyQualifiedTemplateTitle(title)
 
@@ -805,7 +805,7 @@ def expandTemplate(body, depth):
     # Perform parameter substitution
     instantiated = substParameters(template, params, depth)
     #logging.debug('instantiated ' + str(depth) + ' ' + template)
-    value = expandTemplates(instantiated, depth + 1)
+    value = expandTemplates(instantiated, depth)
     logging.debug('   INVOCATION> ' + str(depth) + ' ' + value)
     return value
 
@@ -830,8 +830,10 @@ def substParameters(body, params, depth, subst_depth=0):
     # {{ppp|q=r|p=q}} gives r, but using Template:tvvv containing
     # "{{{{{{{{{p}}}}}}}}}", {{tvvv|p=q|q=r|r=s}} gives s.
 
+    logging.debug('substParameters (%d, %d) %s' % (depth, subst_depth, body))
+
     result = ''
-    if depth > maxParameterRecursionLevels:
+    if subst_depth > maxParameterRecursionLevels:
         logging.warn('Reachead maximum parameter recursions: %d' %
                  maxParameterRecursionLevels)
         return result
@@ -865,16 +867,16 @@ def substParameter(parameter, params, depth, subst_depth):
     parts = splitParameters(parameter)
     if len(parts) > 1:
         # This parameter has a default value
-        paramName = expandTemplates(substParameters(parts[0], params, depth, subst_depth+1), depth+1)
-        defaultValue = substParameters(parts[1], params, depth, subst_depth+1)
+        paramName = expandTemplates(substParameters(parts[0], params, depth, subst_depth), depth)
+        defaultValue = substParameters(parts[1], params, depth, subst_depth)
 
         if paramName in params:
             return params[paramName]  # use parameter value specified in template invocation
         else: # use the default value
-            return expandTemplates(defaultValue, depth+1)
+            return expandTemplates(defaultValue, depth)
     # parameter without a default value
-    parameter = substParameters(parameter, params, depth, subst_depth+1)
-    parameter = expandTemplates(parameter, depth+1)
+    parameter = substParameters(parameter, params, depth, subst_depth)
+    parameter = expandTemplates(parameter, depth)
     if parameter in params:
         return params[parameter]  # use parameter value specified in template invocation
     # Parameter not specified in template invocation and without
@@ -949,9 +951,31 @@ def normalizeNamespace(ns):
 # see http://www.mediawiki.org/wiki/Help:Extension:ParserFunctions
 # https://github.com/Wikia/app/blob/dev/extensions/ParserFunctions/ParserFunctions_body.php
 
+class Infix:
+    """Infix operators.
+    The calling sequence for the infix is:
+      x |op| y
+    """
+    def __init__(self, function):
+        self.function = function
+    def __ror__(self, other):
+        return Infix(lambda x, self=self, other=other: self.function(other, x))
+    def __or__(self, other):
+        return self.function(other)
+    def __rlshift__(self, other):
+        return Infix(lambda x, self=self, other=other: self.function(other, x))
+    def __rshift__(self, other):
+        return self.function(other)
+    def __call__(self, value1, value2):
+        return self.function(value1, value2)
+
+ROUND = Infix(lambda x,y: round(x, y))
+
 def sharp_expr(expr):
     try:
         expr = re.sub('mod', '%', expr)
+        expr = re.sub('\bdiv\b', '/', expr)
+        expr = re.sub('\bround\b', '|ROUND|', expr)
         return str(eval(expr))
     except:
         return ""
@@ -1254,13 +1278,16 @@ def dropSpans(spans, text):
 # Can be nested [[File:..|..[[..]]..|..]], [[Category:...]], etc.
 # We first expand inner ones, than remove enclosing ones.
 # Deal also with: [[Help:IPA for Catalan|[anˈdɔra]]]
-wikiLink = re.compile(r'\[\[([^|\]]*)(?:\|([^|\[]*?(?:\[[^\]]*?\])?[^|\[\]]*?))*?]](\w*)')
+# Matching this RE takes too long if there are several '|'
+#wikiLink = re.compile(r'\[\[([^|\]]*)(?:\|([^|\[]*?(?:\[[^\]]*?\])?[^|\[\]]*?))*?]](\w*)')
 
 parametrizedLink = re.compile(r'\[\[[^\]]*?]]')
 
+wikiLink = re.compile(r'\[\[([^|]*)(?:\|([^|]*?))*?]]')
+
 # Function applied to wikiLinks
-def make_anchor_tag(match):
-    global keepLinks
+def make_anchor_tag(link, trail):
+    match = wikiLink.match(link)
     link = match.group(1)
     colon = link.find(':')
     if colon > 0 and link[:colon] not in acceptedNamespaces:
@@ -1270,7 +1297,6 @@ def make_anchor_tag(match):
         colon2 = link.find(':', colon+1)
         if colon2 > 1 and link[colon+1:colon2] not in acceptedNamespaces:
             return ''
-    trail = match.group(3)
     anchor = match.group(2)
     if not anchor:
         anchor = link
@@ -1281,6 +1307,9 @@ def make_anchor_tag(match):
         return anchor
 
 # ----------------------------------------------------------------------
+
+# match tail after wikilink
+tailRE = re.compile('\w*')
 
 expand_templates = True
 
@@ -1300,10 +1329,22 @@ def clean(text):
     # Expand links
     res = ''
     cur = 0
-    for m in wikiLink.finditer(text):
-        res += text[cur:m.start()] + make_anchor_tag(m)
-        cur = m.end()
+    # This is too slow.
+    # for m in wikiLink.finditer(text):
+    #     res += text[cur:m.start()] + make_anchor_tag(m)
+    #     cur = m.end()
+    # text = res + text[cur:]
+    for s,e in findBalanced(text, ['[['], [']]']):
+        m = tailRE.match(text, e)
+        if m:
+            trail = m.group(0)
+            e = m.end()
+        else:
+            trail = ''
+        res += text[cur:s] + make_anchor_tag(text[s:e], trail)
+        cur = e
     text = res + text[cur:]
+
     # Drop all remaining ones
     text = parametrizedLink.sub('', text)
 
@@ -1369,8 +1410,7 @@ def clean(text):
     # Drop preformatted
     # Done last since templates may introduce tables or other elements with
     # spacing, that are removed above.
-
-    text = preformatted.sub('', text)
+    #text = preformatted.sub('', text)
 
     #############################################
 
@@ -1651,6 +1691,8 @@ def process_dump(input_file, template_file, outdir, file_size, file_compress, th
         extractor = ExtractorThread(queue, output_splitter)
         workers.append(extractor)
 
+    # we collect indivual lines, since str.join() is significantly faster than
+    # concatenation
     page = []
     id = None
     inText = False
@@ -1690,7 +1732,6 @@ def process_dump(input_file, template_file, outdir, file_size, file_compress, th
             colon = title.find(':')
             if (colon < 0 or title[:colon] in acceptedNamespaces) and \
                     not redirect and not title.startswith(templateNamespace):
-                logging.info("%s\t%s" % (id, title))
                 queue.put(Extractor(id, title, page), True) # block if full
             id = None
             page = []
@@ -1716,6 +1757,7 @@ class Extractor(object):
         self.page = page
 
     def extract(self, out=sys.stdout):
+        logging.info("%s\t%s" % (self.id, self.title))
         text = ''.join(self.page)
         url = get_url(self.id)
         header = '<doc id="%s" url="%s" title="%s">\n' % (self.id, url, self.title)
