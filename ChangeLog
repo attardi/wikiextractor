@@ -4,6 +4,8 @@
 	calling expandTemplate()
 	(define_template): removed \n in onlyincludeAccumulator, drop
 	<noinclude> always.
+	(sharp_invoke): restored support for #invoke, by adding parameter
+	frame to expandTemplate.
 
 2015-04-14  Giuseppe Attardi  <attardi@di.unipi.it>
 
