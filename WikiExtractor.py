@@ -55,12 +55,13 @@ import urllib
 import bz2
 import codecs
 from htmlentitydefs import name2codepoint
+import urllib
 import Queue, threading, multiprocessing
 
-#=========================================================================== 
+#===========================================================================
 
 # Program version
-version = '2.11'
+version = '2.15'
 
 ### PARAMS ####################################################################
 
@@ -116,10 +117,10 @@ def get_url(id):
 
 # xml-char = %x9 / %xA / %xD / %x20-D7FF / %xE000-FFFD / %x10000-10FFFF
 # sptab = SP / HTAB
- 
+
 # ; everything except ">" (%x3E)
 # attr-char = %x9 / %xA / %xD / %x20-3D / %x3F-D7FF / %xE000-FFFD / %x10000-10FFFF
- 
+
 # literal         = *xml-char
 # title           = wikitext-L3
 # part-name       = wikitext-L3
@@ -129,18 +130,18 @@ def get_url(id):
 # tplarg          = "{{{" parts "}}}"
 # template        = "{{" parts "}}"
 # link            = "[[" wikitext-L3 "]]"
- 
+
 # comment         = "<!--" literal "-->"
 # unclosed-comment = "<!--" literal END
 # ; the + in the line-eating-comment rule was absent between MW 1.12 and MW 1.22
 # line-eating-comment = LF LINE-START *SP +( comment *SP ) LINE-END
- 
+
 # attr            = *attr-char
 # nowiki-element  = "<nowiki" attr ( "/>" / ( ">" literal ( "</nowiki>" / END ) ) )
 
 # wikitext-L2     = heading / wikitext-L3 / *wikitext-L2
-# wikitext-L3     = literal / template / tplarg / link / comment / 
-#                   line-eating-comment / unclosed-comment / xmlish-element / 
+# wikitext-L3     = literal / template / tplarg / link / comment /
+#                   line-eating-comment / unclosed-comment / xmlish-element /
 #                   *wikitext-L3
 
 #------------------------------------------------------------------------------
@@ -247,7 +248,7 @@ placeholder_tag_patterns = [
 ]
 
 # Match preformatted lines
-preformatted = re.compile(r'^ .*?$', re.MULTILINE)
+preformatted = re.compile(r'^ .*?$')
 
 # Match external links (space separates second optional parameter)
 externalLink = re.compile(r'\[\w+[^ ]*? (.*?)]')
@@ -431,10 +432,9 @@ def templateParams(parameters, frame):
             # parameter ("2") is specified explicitly - this is handled
             # transparently.
 
-            parameterName = m.group(1)
+            parameterName = m.group(1).strip()
             parameterValue = m.group(2)
-          
-            parameterName = parameterName.strip()
+
             if ']]' not in parameterValue: # if the value does not contain a link, trim whitespace
                 parameterValue = parameterValue.strip()
             templateParams[parameterName] = parameterValue
@@ -542,7 +542,7 @@ def findBalanced(text, openDelim, closeDelim, openPatterns=None,
     else:
         openPat = '|'.join([re.escape(x) for x in openDelim])
     # patter for delimiters expected after each opening delimiter
-    afterPat = { o:re.compile(openPat+'|'+c, re.DOTALL) for o,c in izip(openDelim, closeDelim)} 
+    afterPat = { o:re.compile(openPat+'|'+c, re.DOTALL) for o,c in izip(openDelim, closeDelim)}
     stack = []
     start = 0
     cur = 0
@@ -779,7 +779,7 @@ def expandTemplate(body, frame):
     # part            = ( part-name "=" part-value ) / ( part-value )
     # part-name       = wikitext-L3
     # part-value      = wikitext-L3
-    # wikitext-L3     = literal / template / tplarg / link / comment / 
+    # wikitext-L3     = literal / template / tplarg / link / comment /
     #                   line-eating-comment / unclosed-comment /
     #		    xmlish-element / *wikitext-L3
 
@@ -799,7 +799,7 @@ def expandTemplate(body, frame):
     # resolve ambiguities like this:
     #   {{{{ }}}} -> { {{{ }}} }
     #   {{{{{ }}}}} -> {{ {{{ }}} }}
-    # 
+    #
     # :see: https://en.wikipedia.org/wiki/Help:Template#Handling_parameters
 
     # Evaluate parameters.
@@ -990,7 +990,7 @@ def sharp_expr(expr):
 def sharp_if(testValue, valueIfTrue, valueIfFalse=None, *args):
     if testValue.strip():
         # The {{#if:}} function is an if-then-else construct.
-        # The applied condition is: "The condition string is non-empty". 
+        # The applied condition is: "The condition string is non-empty".
         valueIfTrue = valueIfTrue.strip()
         if valueIfTrue:
             return valueIfTrue
@@ -1028,7 +1028,7 @@ def sharp_switch(primary, *params):
 
     # {{#switch: comparison string
     #  | case1 = result1
-    #  | case2 
+    #  | case2
     #  | case4 = result2
     #  | #default = result3
     # }}
@@ -1132,7 +1132,7 @@ def callParserFunction(functionName, args, frame):
 
     http://meta.wikimedia.org/wiki/Help:ParserFunctions
     """
-  
+
     try:
        if functionName == '#invoke':
            # special handling of frame
@@ -1294,7 +1294,7 @@ def dropSpans(spans, text):
 
 parametrizedLink = re.compile(r'\[\[[^\]]*?]]')
 
-wikiLink = re.compile(r'\[\[([^|]*)(?:\|([^|]*))*]]')
+wikiLink = re.compile(r'\[\[([^|]*)(?:\|(?:[^|]*))*\|([^]]*)]]')
 
 # Function applied to wikiLinks
 def make_anchor_tag(link, trail):
@@ -1315,7 +1315,7 @@ def make_anchor_tag(link, trail):
         anchor = link
     anchor += trail
     if keepLinks:
-        return '<a href="%s">%s</a>' % (link, anchor)
+        return '<a href="%s">%s</a>' % (urllib.quote(link.encode('utf-8')), anchor)
     else:
         return anchor
 
@@ -1421,11 +1421,6 @@ def clean(text):
 
     text = text.replace('<<', u'«').replace('>>', u'»')
 
-    # Drop preformatted
-    # Done last since templates may introduce tables or other elements with
-    # spacing, that are removed above.
-    #text = preformatted.sub('', text)
-
     #############################################
 
     # Cleanup text
@@ -1500,6 +1495,10 @@ def compact(text):
             emptySection = False
         elif not emptySection:
             page.append(line)
+        # dangerous
+        # # Drop preformatted
+        # elif line[0] == ' ':
+        #     continue
 
     return page
 
@@ -1699,7 +1698,7 @@ def process_dump(input_file, template_file, outdir, file_size, file_compress, th
 
     nextFile = NextFile(lock, outdir)
 
-    # start worker threads    
+    # start worker threads
     workers = []
     for _ in xrange(max(1, threads - 1)): # keep one for master
         output_splitter = OutputSplitter(nextFile, file_size, file_compress)
@@ -1752,7 +1751,7 @@ def process_dump(input_file, template_file, outdir, file_size, file_compress, th
             page = []
 
     # wait for empty queue
-    queue.join()        
+    queue.join()
 
     input.close()
 
@@ -1802,7 +1801,7 @@ class ExtractorThread(threading.Thread):
         threading.Thread.__init__(self)
         self.setDaemon(True)  # let the process die when main thread is killed
         self.start()
-        
+
     def run(self):
         while True:
             job = self._queue.get()
@@ -1829,7 +1828,7 @@ def main():
     parser.add_argument("-o", "--output", default="text",
                         help="output directory")
     parser.add_argument("-b", "--bytes", default="1M",
-                        help="put specified bytes per output file (default is %(default)s)", metavar="n[KM]")
+                        help="put specified bytes per output file (default is %(default)s)", metavar="n[KMG]")
     parser.add_argument("-B", "--base",
                         help="base URL for the Wikipedia pages")
     parser.add_argument("-c", "--compress", action="store_true",
@@ -1859,7 +1858,7 @@ def main():
                         help="print program version")
 
     args = parser.parse_args()
-    
+
     keepLinks = args.links
     keepSections = args.sections
     expand_templates = args.no_templates
@@ -1868,12 +1867,8 @@ def main():
         urlbase = args.base
 
     try:
-        if args.bytes[-1] in 'kK':
-            file_size = int(args.bytes[:-1]) * 1024
-        elif args.bytes[-1] in 'mM':
-            file_size = int(args.bytes[:-1]) * 1024 * 1024
-        else:
-            file_size = int(args.bytes)
+        power = 'kmg'.find(args.bytes[-1].lower()) + 1
+        file_size = int(args.bytes[:-1]) * 1024 ** power 
         if file_size < minFileSize: raise ValueError()
     except ValueError:
         logging.error('Insufficient or invalid size: %s' % args.bytes)

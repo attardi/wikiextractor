@@ -17,13 +17,13 @@ whole dump and extracting template definitions.
 
     Usage:
      WikiExtractor.py [options] xml-dump-file
-      
+
     optional arguments:
       -h, --help            show this help message and exit
       -o OUTPUT, --output OUTPUT
                             output directory
-      -b n[KM], --bytes n[KM]
-                        put specified bytes per output file (default is 1M)
+      -b n[KMG], --bytes n[KMG]
+                            put specified bytes per output file (default is 1M)
       -B BASE, --base BASE  base URL for the Wikipedia pages
       -c, --compress        compress output files using bzip
       -l, --links           preserve links

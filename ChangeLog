@@ -6,6 +6,9 @@
 	<noinclude> always.
 	(sharp_invoke): restored support for #invoke, by adding parameter
 	frame to expandTemplate.
+	(main): allow specifying G in --bytes.
+	(make_anchor_tag): urlencode link.
+	(wikiLink): properly match anchor.
 
 2015-04-14  Giuseppe Attardi  <attardi@di.unipi.it>
 
