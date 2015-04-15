@@ -479,6 +479,10 @@ def findMatchingBraces(text, ldelim):
     #   {{{{ }}}} -> { {{{ }}} }
     #   {{{{{ }}}}} -> {{ {{{ }}} }}
     #   {{#if:{{{{{#if:{{{nominee|}}}|nominee|candidate}}|}}}|...}}
+
+    # Handle:
+    # {{{{{|safesubst:}}}#Invoke:String|replace|{{{1|{{{{{|safesubst:}}}PAGENAME}}}}}|%s+%([^%(]-%)$||plain=false}}
+
     reOpen = re.compile('{' * ldelim) # inner
     reClose = re.compile('([{]{2,})|(}{2,})')       # at least 2
     cur = 0
@@ -497,26 +501,26 @@ def findMatchingBraces(text, ldelim):
             if m2.lastindex == 1:
                 npar += len(m2.group(1))
             else:
-                clen = len(m2.group(2))
-                if clen < npar:
-                    npar -= clen
-                    if npar == 1 and clen == ldelim and text[m1.start()+ldelim]=='{':
+                close = len(m2.group(2))
+                if close < npar:
+                    npar -= close
+                    if npar < ldelim and close == ldelim and all([text[i]=='{' for i in range(m1.start(),m1.start()+npar)]):
                         # spurious {
-                        yield m1.start()+1, end
+                        yield m1.start()+npar, end
                         cur = end
                         break
                 else:
                     # resolve ambiguities
                     if ldelim == 3:
-                        if clen > 3 and all([text[i]=='{' for i in range(m1.start()+3,m1.start()+clen)]):
-                            yield m1.start()+clen-3, end-clen+3
+                        if close > 3 and all([text[i]=='{' for i in range(m1.start()+3,m1.start()+close)]):
+                            yield m1.start()+close-3, end-close+3
                         elif text[m1.start()+3] == '{' and  text[m1.start()+4] != '{':
                             # spurious {
                             yield m1.start()+1, end
-                        else:   # clen >= npar
-                            yield m1.start(), end-clen+npar
+                        else:   # close >= npar
+                            yield m1.start(), end-close+npar
                     else:    # ldelim == 2
-                        yield m1.start(), end-clen+npar
+                        yield m1.start(), end-close+npar
                     cur = end
                     break
 
@@ -732,7 +736,7 @@ def expandTemplate(body, depth):
 
     parts = splitParameters(body)
     # title is the portion before the first |
-    #logging.debug('TITLE ' + str(depth) + ' ' + parts[0].strip())
+    logging.debug('TITLE ' + parts[0].strip())
     title = expandTemplates(parts[0].strip(), depth)
 
     # SUBST
@@ -844,6 +848,7 @@ def substParameters(body, params, depth, subst_depth=0):
     # {{{italics|{{{italic|}}}
     # {{#if:{{{{{#if:{{{nominee|}}}|nominee|candidate}}|}}}|
     #
+
     for s,e in findMatchingBraces(body, 3):
         # invoke substParameter on outer {{{}}}
         result += body[start:s] + substParameter(body[s+3:e-3],
@@ -1183,18 +1188,17 @@ def define_template(title, page):
     # remove comments
     text = comment.sub('', text)
 
+    # eliminate <noinclude> fragments
+    text = reNoinclude.sub('', text)
+    # eliminate unterminated <noinclude> elements
+    text = re.sub(r'<noinclude\s*>.*$', '', text, flags=re.DOTALL)
+
     onlyincludeAccumulator = ''
     for m in re.finditer('<onlyinclude>(.*?)</onlyinclude>', text, re.DOTALL):
-        onlyincludeAccumulator += m.group(1) + "\n"
+        onlyincludeAccumulator += m.group(1)
     if onlyincludeAccumulator:
         text = onlyincludeAccumulator
     else:
-        # If there are no <onlyinclude> fragments, simply eliminate
-        # <noinclude> fragments and keep <includeonly> ones.
-        text = reNoinclude.sub('', text)
-        # eliminate unterminated <noinclude> elements
-        text = re.sub(r'<noinclude\s*>.*$', '', text, flags=re.DOTALL)
-
         text = reIncludeonly.sub('', text)
 
     if text:
@@ -1283,11 +1287,13 @@ def dropSpans(spans, text):
 
 parametrizedLink = re.compile(r'\[\[[^\]]*?]]')
 
-wikiLink = re.compile(r'\[\[([^|]*)(?:\|([^|]*?))*?]]')
+wikiLink = re.compile(r'\[\[([^|]*)(?:\|([^|]*))*]]')
 
 # Function applied to wikiLinks
 def make_anchor_tag(link, trail):
     match = wikiLink.match(link)
+    if not match:               # single []
+        return link+trail
     link = match.group(1)
     colon = link.find(':')
     if colon > 0 and link[:colon] not in acceptedNamespaces:
@@ -1334,7 +1340,8 @@ def clean(text):
     #     res += text[cur:m.start()] + make_anchor_tag(m)
     #     cur = m.end()
     # text = res + text[cur:]
-    for s,e in findBalanced(text, ['[['], [']]']):
+    # Matches also: [[Help:IPA for Spanish|[a'ðoβe]]]
+    for s,e in findBalanced(text, ['[[', '['], [']]', ']']):
         m = tailRE.match(text, e)
         if m:
             trail = m.group(0)
@@ -1469,6 +1476,7 @@ def compact(text):
                 page.append("<li>%s</li>" % line[1:])
             else:
                 continue
+
         # Drop residuals of lists
         elif line[0] in '{|' or line[-1] in '}':
             continue

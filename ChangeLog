@@ -2,6 +2,8 @@
 
 	* WikiExtractor.py (expandTemplates): increase depth only when
 	calling expandTemplate()
+	(define_template): removed \n in onlyincludeAccumulator, drop
+	<noinclude> always.
 
 2015-04-14  Giuseppe Attardi  <attardi@di.unipi.it>
 
