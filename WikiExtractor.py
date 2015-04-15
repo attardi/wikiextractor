@@ -61,7 +61,7 @@ import Queue, threading, multiprocessing
 #===========================================================================
 
 # Program version
-version = '2.15'
+version = '2.16'
 
 ### PARAMS ####################################################################
 
@@ -317,6 +317,8 @@ def expandTemplates(wikitext, frame=[]):
 
 def splitParameters(paramsList, sep='|'):
     """
+    :param paramList: the parts of a template or tplarg.
+
     Split template parameters at the separator :param sep:, which defaults to
     "|". The fuction can be used also to split also key-value pairs at the
     separator "=".
@@ -344,8 +346,8 @@ def splitParameters(paramsList, sep='|'):
     parameters = []
     cur = 0
     for s,e in findBalanced(paramsList,
-                            ['{{{', '{{', '[[', '{\|'],
-                            ['}}}', '}}', ']]', '\|}']):
+                            ['{{{', '{{', '[[', '[', '{\|'],
+                            ['}}}', '}}', ']]', ']', '\|}']):
         par = paramsList[cur:s].split(sep)
         if par:
             if parameters:
@@ -1039,6 +1041,8 @@ def sharp_switch(primary, *params):
     rvalue = None
     lvalue = ''
     for param in params:
+        # handle cases like:
+        # [http://www.perseus.tufts.edu/hopper/text?doc=Perseus...]
         pair = splitParameters(param, '=')
         lvalue = pair[0].strip()
         rvalue = None
@@ -1284,24 +1288,21 @@ def dropSpans(spans, text):
 
 # Match interwiki links, | separates parameters.
 # First parameter is displayed, also trailing concatenated text included
-# in display, e.g. s for plural).
+# in display, e.g. 's' for plural).
 #
 # Can be nested [[File:..|..[[..]]..|..]], [[Category:...]], etc.
 # We first expand inner ones, than remove enclosing ones.
 # Deal also with: [[Help:IPA for Catalan|[anˈdɔra]]]
-# Matching this RE takes too long if there are several '|'
-#wikiLink = re.compile(r'\[\[([^|\]]*)(?:\|([^|\[]*?(?:\[[^\]]*?\])?[^|\[\]]*?))*?]](\w*)')
 
 parametrizedLink = re.compile(r'\[\[[^\]]*?]]')
 
-wikiLink = re.compile(r'\[\[([^|]*)(?:\|(?:[^|]*))*\|([^]]*)]]')
-
 # Function applied to wikiLinks
 def make_anchor_tag(link, trail):
-    match = wikiLink.match(link)
-    if not match:               # single []
-        return link+trail
-    link = match.group(1)
+    if link[1] == '[':
+        parts = splitParameters(link[2:-2])
+    else:
+        parts = splitParameters(link[1:-1])
+    link = parts[0]
     colon = link.find(':')
     if colon > 0 and link[:colon] not in acceptedNamespaces:
         return ''
@@ -1310,9 +1311,7 @@ def make_anchor_tag(link, trail):
         colon2 = link.find(':', colon+1)
         if colon2 > 1 and link[colon+1:colon2] not in acceptedNamespaces:
             return ''
-    anchor = match.group(2)
-    if not anchor:
-        anchor = link
+    anchor = parts[-1] if len(parts) > 1 else link
     anchor += trail
     if keepLinks:
         return '<a href="%s">%s</a>' % (urllib.quote(link.encode('utf-8')), anchor)
@@ -1897,8 +1896,7 @@ def main():
         with open(input_file) as file:
             page = file.read().decode('utf-8')
             m = re.search(r'<id>(.*)</id>', page)
-            if m:
-                id = m.group(1)
+            id = m.group(1) if m else 0
             m = re.search(r'<title>(.*)</title>', page)
             if m:
                 title = m.group(1)

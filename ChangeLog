@@ -9,6 +9,9 @@
 	(main): allow specifying G in --bytes.
 	(make_anchor_tag): urlencode link.
 	(wikiLink): properly match anchor.
+	(make_anchor_tag): use splitParameters to separate parts of link.
+	(splitParameters): include pair [], since arguments may contain
+	wikilinks.
 
 2015-04-14  Giuseppe Attardi  <attardi@di.unipi.it>
 
