@@ -1,3 +1,14 @@
+2015-04-16  Giuseppe Attardi  <attardi@di.unipi.it>
+
+	* WikiExtractor.py (MagicWords): dealing with MagicWords.
+	This required rewriting code as methods of class Extractor, since
+	some MagicWords are document related and are being handled in
+	different threads, hence thay canot be globals.
+	(findMatchingBraces): fix to ambiguities resolution.
+	(clean): fixed dealing with trail for make_anchor-tag()
+	(substParameter): expand defaultValue only if used.
+	(selfClosing_tag_patterns): avoid matching besides tag end..
+
 2015-04-15  Giuseppe Attardi  <attardi@di.unipi.it>
 
 	* WikiExtractor.py (expandTemplates): increase depth only when
