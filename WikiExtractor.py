@@ -2,7 +2,7 @@
 # -*- coding: utf-8 -*-
 #
 # =============================================================================
-#  Version: 2.18 (Apr 16, 2015)
+#  Version: 2.19 (Apr 16, 2015)
 #  Author: Giuseppe Attardi (attardi@di.unipi.it), University of Pisa
 #	   Antonio Fuschetto (fuschett@di.unipi.it), University of Pisa
 #
@@ -667,11 +667,14 @@ def splitParameters(paramsList, sep='|'):
     {{{...}}}, {{...}}, [[...]], {|...|}.
     """
 
+    # Must handle:
+    # #ifeq: ped|article|[http://emedicine.medscape.com/article/180-overview|[http://www.emedicine.com/ped/topic180.htm#{{#if: |section~}}
+
     parameters = []
     cur = 0
     for s,e in findBalanced(paramsList,
-                            ['{{{', '{{', '[[', '[', '{\|'],
-                            ['}}}', '}}', ']]', ']', '\|}']):
+                            ['{{{', '{{', '[[', '{|'],
+                            ['}}}', '}}', ']]', '|}']):
         par = paramsList[cur:s].split(sep)
         if par:
             if parameters:
