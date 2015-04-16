@@ -224,17 +224,13 @@ def unescape(text):
 comment = re.compile(r'<!--.*?-->', re.DOTALL)
 
 # Match elements to ignore
-discard_element_patterns = [re.compile(r'<\s*%s\b[^>]*>.*?<\s*/\s*%s>' % (tag, tag), re.DOTALL | re.IGNORECASE) for tag in discardElements]
+discard_element_patterns = [re.compile(r'<\s*(/\s*)?%s\b[^>]*>' % (tag), re.DOTALL | re.IGNORECASE) for tag in discardElements]
 
 # Match ignored tags
-ignored_tag_patterns = []
+ignored_tag_patterns = [re.compile(r'<\s*(/\s*)?%s\b[^>]*>' % (tag), re.DOTALL | re.IGNORECASE) for tag in ignoredTags]
 def ignoreTag(tag):
-    left = re.compile(r'<%s\b[^>/]*>' % tag, re.IGNORECASE) # both <ref> and <reference>
-    right = re.compile(r'</\s*%s>' % tag, re.IGNORECASE)
-    ignored_tag_patterns.append((left, right))
+    ignored_tag_patterns.append(re.compile(r'<\s*(/\s*)?%s\b[^>]*>' % tag))
 
-for tag in ignoredTags:
-    ignoreTag(tag)
 
 # Match selfClosing HTML tags
 selfClosing_tag_patterns = [
@@ -1286,6 +1282,17 @@ def dropSpans(spans, text):
     res += text[offset:]
     return res
 
+def dropTags(tags, text):
+    
+    tags.sort()
+    res = ''
+    offset = 0
+    for s, e in  tags:
+        res += text[offset:s]
+        offset = e
+    res += text[offset:]
+    return res
+   
 # Match interwiki links, | separates parameters.
 # First parameter is displayed, also trailing concatenated text included
 # in display, e.g. 's' for plural).
@@ -1392,25 +1399,23 @@ def clean(text):
     for pattern in selfClosing_tag_patterns:
         for m in pattern.finditer(text):
             spans.append((m.start(), m.end()))
-
-    # Drop ignored tags
-    for left, right in ignored_tag_patterns:
-        for m in left.finditer(text):
-            spans.append((m.start(), m.end()))
-        for m in right.finditer(text):
-            spans.append((m.start(), m.end()))
-
-    # Bulk remove all spans
-    text = dropSpans(spans, text)
-
-    # Drop discarded elements
-    spans = []
-    for pattern in discard_element_patterns:
-        for m in pattern.finditer(text):
-            spans.append((m.start(),m.end()))
+    
     # bulk removal
     text = dropSpans(spans, text)
 
+    tags = []
+    # Drop ignored tags
+    for pattern in ignored_tag_patterns:
+        for m in pattern.finditer(text):
+            tags.append((m.start(), m.end()))
+
+    # Drop discarded elements
+    for pattern in discard_element_patterns:
+        for m in pattern.finditer(text):
+            tags.append((m.start(), m.end()))
+    text = dropTags(tags, text)
+    
+    
     # Expand placeholders
     for pattern, placeholder in placeholder_tag_patterns:
         index = 1
@@ -1422,6 +1427,9 @@ def clean(text):
 
     #############################################
 
+	# XML output escaping
+    text = text.replace('&', '&amp;')
+    
     # Cleanup text
     text = text.replace('\t', ' ')
     text = spaces.sub(' ', text)
@@ -1567,7 +1575,10 @@ class OutputSplitter(object):
 
     def close(self):
         self.file.close()
-
+    
+    def flush(self):
+        self.file.flush()
+        
     def open(self, filename):
         if self.compress:
             return bz2.BZ2File(filename + '.bz2', 'w')
@@ -1786,6 +1797,7 @@ class Extractor(object):
             out.write(line.encode('utf-8'))
             out.write('\n')
         out.write(footer)
+        out.flush()
 
 #----------------------------------------------------------------------
 # Multithread version
