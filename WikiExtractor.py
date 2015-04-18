@@ -2,7 +2,7 @@
 # -*- coding: utf-8 -*-
 #
 # =============================================================================
-#  Version: 2.19 (Apr 16, 2015)
+#  Version: 2.20 (Apr 18, 2015)
 #  Author: Giuseppe Attardi (attardi@di.unipi.it), University of Pisa
 #	   Antonio Fuschetto (fuschett@di.unipi.it), University of Pisa
 #
@@ -61,7 +61,7 @@ import Queue, threading, multiprocessing
 #===========================================================================
 
 # Program version
-version = '2.18'
+version = '2.20'
 
 ### PARAMS ####################################################################
 
@@ -223,9 +223,6 @@ def unescape(text):
 # The buggy template {{Template:T}} has a comment terminating with just "->"
 comment = re.compile(r'<!--.*?-->', re.DOTALL)
 
-# Match elements to ignore
-discard_element_patterns = [re.compile(r'<\s*%s\b[^>/]*>.*?<\s*/\s*%s>' % (tag, tag), re.DOTALL | re.IGNORECASE) for tag in discardElements]
-
 # Match ignored tags
 ignored_tag_patterns = []
 def ignoreTag(tag):
@@ -295,7 +292,7 @@ class Extractor(object):
         header += self.title + '\n\n'
         header = header.encode('utf-8')
         self.magicWords['pagename'] = self.title
-        self.magicWords['fullpagename'] = fullyQualifiedTemplateTitle(self.title)
+        self.magicWords['fullpagename'] = self.title
         text = clean(self, text)
         footer = "\n</doc>\n"
         if out != sys.stdout:
@@ -334,6 +331,8 @@ class Extractor(object):
         template inclusion.
 
         """
+        # Test template expansion at:
+        # https://en.wikipedia.org/wiki/Special:ExpandTemplates
 
         res = ''
         if len(self.frame) >= self.maxTemplateRecursionLevels:
@@ -349,7 +348,7 @@ class Extractor(object):
             cur = e
         # leftover
         res += wikitext[cur:]
-        logging.debug('   expandTemplates> ' + str(len(self.frame)) + ' ' + res)
+        logging.debug('   expandTemplates> %d %s' % (len(self.frame), res))
         return res
 
     def templateParams(self, parameters):
@@ -363,11 +362,6 @@ class Extractor(object):
         if not parameters:
             return templateParams
         logging.debug('<templateParams: ' + str(len(self.frame)) + ' ' + '|'.join(parameters))
-
-        # evaluate parameters, since they may contain templates, including the
-        # symbol "=".
-        # {{#ifexpr: {{{1}}} = 1 }}
-        parameters = [self.expandTemplates(p) for p in parameters]
 
         # Parameters can be either named or unnamed. In the latter case, their
         # name is defined by their ordinal position (1, 2, 3, ...).
@@ -472,10 +466,10 @@ class Extractor(object):
         if len(self.frame) >= self.maxTemplateRecursionLevels:
             logging.warn('Reached max template recursion: %d' %
                          self.maxTemplateRecursionLevels)
-            logging.debug('   INVOCATION> ' + str(len(self.frame)) + ' ' + body)
+            logging.debug('   INVOCATION> %d %s' % (len(self.frame), body))
             return ''
 
-        logging.debug('INVOCATION ' + str(len(self.frame)) + ' ' + body)
+        logging.debug('INVOCATION %d %s' % (len(self.frame), body))
 
         parts = splitParameters(body)
         # title is the portion before the first |
@@ -483,16 +477,21 @@ class Extractor(object):
         title = self.expandTemplates(parts[0].strip())
 
         # SUBST
-        if re.match(substWords, title):
-            if title.startswith('subst'):
-                return body
-            title = re.sub(substWords, '', title)
+        # Apply the template tag to parameters without
+        # substituting into them, e.g.
+        # {{subst:t|a{{{p|q}}}b}} gives the wikitext start-a{{{p|q}}}b-end
+        # @see https://www.mediawiki.org/wiki/Manual:Substitution#Partial_substitution
+        subst = False
+        if re.match(substWords, title, re.IGNORECASE):
+            title = re.sub(substWords, '', title, 1, re.IGNORECASE)
+            subst = True
 
         if title.lower() in self.magicWords.values:
             return self.magicWords[title.lower()]
 
         # Parser functions
         # The first argument is everything after the first colon.
+        # It has been evaluated above.
         colon = title.find(':')
         if colon > 1:
             funct = title[:colon]
@@ -543,17 +542,24 @@ class Extractor(object):
         #
         # :see: https://en.wikipedia.org/wiki/Help:Template#Handling_parameters
 
-        # Evaluate parameters.
+        params = parts[1:]
+
+        if not subst:
+            # Evaluate parameters, since they may contain templates, including
+            # the symbol "=".
+            # {{#ifexpr: {{{1}}} = 1 }}
+            params = [self.expandTemplates(p) for p in params]
+
         # build a dict of name-values for the parameter values
-        params = self.templateParams(parts[1:])
+        params = self.templateParams(params)
 
         # Perform parameter substitution
         instantiated = self.substParameters(template, params)
-        #logging.debug('instantiated ' + str(len(self.frame)) + ' ' + template)
+        logging.debug('instantiated %d %s' % (len(self.frame), instantiated))
         self.frame.append((title, params))
         value = self.expandTemplates(instantiated)
         self.frame.pop()
-        logging.debug('   INVOCATION> ' + str(len(self.frame)) + ' ' + value)
+        logging.debug('   INVOCATION> %s %d %s' % (title, len(self.frame), value))
         return value
 
     def substParameters(self, body, params, subst_depth=0):
@@ -609,7 +615,7 @@ class Extractor(object):
 
         # any parts in a tplarg after the first (the parameter default) are
         # ignored, and an equals sign in the first part is treated as plain text.
-        #logging.debug(' subst ' + parameter + ' ' + str(params))
+        logging.debug(' subst %s %s' % (parameter, str(params)))
 
         parts = splitParameters(parameter)
         if len(parts) > 1:
@@ -738,50 +744,47 @@ def findMatchingBraces(text, ldelim):
     #   {{#if:{{{{{#if:{{{nominee|}}}|nominee|candidate}}|}}}|...}}
 
     # Handle:
-    # {{{{{|safesubst:}}}#Invoke:String|replace|{{{1|{{{{{|safesubst:}}}PAGENAME}}}}}|%s+%([^%(]-%)$||plain=false}}
+    #   {{{{{|safesubst:}}}#Invoke:String|replace|{{{1|{{{{{|safesubst:}}}PAGENAME}}}}}|%s+%([^%(]-%)$||plain=false}}
+    # as well as expressions with stray }:
+    #   {{{link|{{ucfirst:{{{1}}}}}} interchange}}}""")
 
-    reOpen = re.compile('{' * ldelim) # inner
-    reClose = re.compile('([{]{2,})|(}{2,})')       # at least 2
+    reOpen = re.compile('[{]{%d,}' % ldelim) # at least ldelim
+    reNext = re.compile('([{]{2,})|(}{2,})')       # at least 2
+
     cur = 0
-    # scan text after {*ldelim looking for matching }*ldelim
     while True:
         m1 = reOpen.search(text, cur)
         if not m1:
             return
-        npar = ldelim
+        openCount = len(m1.group(0))
+        stack = [openCount] # stack of opening
         end = m1.end()
         while True:
-            m2 = reClose.search(text, end)
+            m2 = reNext.search(text, end)
             if not m2:
                 return      # unbalanced
             end = m2.end()
             if m2.lastindex == 1:
-                npar += len(m2.group(1))
+                stack.append(len(m2.group(1))) # span of {
             else:
-                close = len(m2.group(2))
-                if close < npar:
-                    npar -= close
-                    if npar < ldelim:
-                        # spurious {
-                        if close == ldelim and all([text[i]=='{' for i in range(m1.start(),m1.start()+npar)]):
-                            # we got a proper closing though
-                            yield m1.start()+npar, end
-                        cur = end
-                        break
+                closeCount = len(m2.group(2))
+                while stack:
+                    openCount = stack.pop() # opening span
+                    if closeCount >= openCount:
+                        closeCount -= openCount
                     else:
-                        cur = end
-                else:
-                    # resolve ambiguities
-                    if ldelim == 3:
-                        if close > 3 and all([text[i]=='{' for i in range(m1.start()+3,m1.start()+close)]):
-                            yield m1.start()+close-3, end-close+3
-                        elif text[m1.start()+3] == '{' and  text[m1.start()+4] != '{':
-                            # spurious {
-                            yield m1.start()+1, end
-                        else:   # close >= npar
-                            yield m1.start(), end-close+npar
-                    else:    # ldelim == 2
-                        yield m1.start(), end-close+npar
+                        # put back unmatched
+                        stack.append(openCount - closeCount)
+                        break
+                    if closeCount <= 1: # either close or stray }
+                        break
+                if not stack:
+                    yield m1.start(), end-closeCount
+                    cur = end
+                    break
+                elif len(stack) == 1 and stack[0] < ldelim:
+                    # ambiguous {{{{{ }}} }}
+                    yield m1.start() + stack[0], end
                     cur = end
                     break
 
@@ -1011,6 +1014,7 @@ def normalizeNamespace(ns):
     return ucfirst(ns)
 
 # ----------------------------------------------------------------------
+# Parser functions
 # see http://www.mediawiki.org/wiki/Help:Extension:ParserFunctions
 # https://github.com/Wikia/app/blob/dev/extensions/ParserFunctions/ParserFunctions_body.php
 
@@ -1044,6 +1048,8 @@ def sharp_expr(expr):
         return ""
 
 def sharp_if(testValue, valueIfTrue, valueIfFalse=None, *args):
+    # In theory, we should evaluate the first argument here,
+    # but it was evaluated while evaluating part[0] in expandTemplate().
     if testValue.strip():
         # The {{#if:}} function is an if-then-else construct.
         # The applied condition is: "The condition string is non-empty".
@@ -1086,11 +1092,12 @@ def sharp_switch(primary, *params):
     #  | case1 = result1
     #  | case2
     #  | case4 = result2
-    #  | #default = result3
+    #  | 1 | case5 = result3
+    #  | #default = result4
     # }}
 
     primary = primary.strip()
-    found = False
+    found = False               # for fall through cases
     default = None
     rvalue = None
     lvalue = ''
@@ -1103,13 +1110,13 @@ def sharp_switch(primary, *params):
         if len(pair) > 1:
             # got "="
             rvalue = pair[1].strip()
-            if found or lvalue == primary:
+            # check for any of multiple values pipe separated
+            if found or primary in [v.strip() for v in lvalue.split('|')]:
                 # Found a match, return now
                 return rvalue
             elif lvalue == '#default':
                 default = rvalue
-                rvalue = None   # avoid defaulting to last case
-                # else wrong case, continue
+            rvalue = None   # avoid defaulting to last case
         elif lvalue == primary:
             # If the value matches, set a flag and continue
             found = True
@@ -1170,15 +1177,15 @@ parserFunctions = {
     # http://meta.wikimedia.org/wiki/Help:URL
     'urlencode': lambda string, *rest: urllib.quote(string.encode('utf-8')),
 
-    'lc': lambda string: string.lower() if string else '',
+    'lc': lambda string, *rest: string.lower() if string else '',
 
-    'lcfirst': lambda string: lcfirst(string),
+    'lcfirst': lambda string, *rest: lcfirst(string),
 
-    'lc': lambda string: string.upper() if string else '',
+    'uc': lambda string, *rest: string.upper() if string else '',
 
-    'ucfirst': lambda string: ucfirst(string),
+    'ucfirst': lambda string, *rest: ucfirst(string),
 
-    'int': lambda  string: string,
+    'int': lambda  string, *rest: str(int(string)),
 
 }
 
@@ -1228,6 +1235,10 @@ templates = {}
 redirects = {}
 
 def define_template(title, page):
+    """
+    Adds a template defined in the :param page:.
+    @see https://en.wikipedia.org/wiki/Help:Template#Noinclude.2C_includeonly.2C_and_onlyinclude
+    """
     global templates
     global redirects
 
@@ -1257,6 +1268,7 @@ def define_template(title, page):
     text = reNoinclude.sub('', text)
     # eliminate unterminated <noinclude> elements
     text = re.sub(r'<noinclude\s*>.*$', '', text, flags=re.DOTALL)
+    text = re.sub(r'<noinclude/>', '', text)
 
     onlyincludeAccumulator = ''
     for m in re.finditer('<onlyinclude>(.*?)</onlyinclude>', text, re.DOTALL):
@@ -1459,12 +1471,8 @@ def clean(extractor, text):
     text = dropSpans(spans, text)
 
     # Drop discarded elements
-    spans = []
-    for pattern in discard_element_patterns:
-        for m in pattern.finditer(text):
-            spans.append((m.start(),m.end()))
-    # bulk removal
-    text = dropSpans(spans, text)
+    for tag in discardElements:
+        text = dropNested(text, r'<\s*%s\b[^>/]*>' % tag, r'<\s*/\s*%s>' % tag)
 
     # Expand placeholders
     for pattern, placeholder in placeholder_tag_patterns:
@@ -1525,11 +1533,12 @@ def compact(text):
                 page.append(title)
         # handle indents
         elif line[0] == ':':
-            page.append(line[1:])
+            #page.append(line.lstrip(':*#;'))
+            continue
         # handle lists
         elif line[0] in '*#;':
             if keepSections:
-                page.append("<li>%s</li>" % line[1:])
+                page.append("<li>%s</li>" % line.lstrip(line[0]))
             else:
                 continue
 
