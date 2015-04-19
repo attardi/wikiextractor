@@ -2,7 +2,7 @@
 # -*- coding: utf-8 -*-
 #
 # =============================================================================
-#  Version: 2.20 (Apr 18, 2015)
+#  Version: 2.22 (Apr 19, 2015)
 #  Author: Giuseppe Attardi (attardi@di.unipi.it), University of Pisa
 #	   Antonio Fuschetto (fuschett@di.unipi.it), University of Pisa
 #
@@ -61,7 +61,7 @@ import Queue, threading, multiprocessing
 #===========================================================================
 
 # Program version
-version = '2.20'
+version = '2.22'
 
 ### PARAMS ####################################################################
 
@@ -97,7 +97,7 @@ acceptedNamespaces = ['w', 'wiktionary', 'wikt']
 #
 discardElements = [
         'gallery', 'timeline', 'noinclude', 'pre',
-        'table', 'tr', 'td', 'th', 'caption',
+        'table', 'tr', 'td', 'th', 'caption', 'div',
         'form', 'input', 'select', 'option', 'textarea',
         'ul', 'li', 'ol', 'dl', 'dt', 'dd', 'menu', 'dir',
         'ref', 'references', 'img', 'imagemap', 'source', 'small'
@@ -615,7 +615,7 @@ class Extractor(object):
 
         # any parts in a tplarg after the first (the parameter default) are
         # ignored, and an equals sign in the first part is treated as plain text.
-        logging.debug(' subst %s %s' % (parameter, str(params)))
+        #logging.debug(' subst %s' % parameter)
 
         parts = splitParameters(parameter)
         if len(parts) > 1:
@@ -953,6 +953,29 @@ class MagicWords(object):
 
     def __setitem__(self, name, value):
         self.values[name] = value
+
+    switches = [
+        '__NOTOC__',
+        '__FORCETOC__',
+        '__TOC__',
+        '__TOC__',
+        '__NEWSECTIONLINK__',
+        '__NONEWSECTIONLINK__',
+        '__NOGALLERY__',
+        '__HIDDENCAT__',
+        '__NOCONTENTCONVERT__',
+        '__NOCC__',
+        '__NOTITLECONVERT__',
+        '__NOTC__',
+        '__START__',
+        '__END__',
+        '__INDEX__',
+        '__NOINDEX__',
+        '__STATICREDIRECT__',
+        '__DISAMBIG__'
+        ]
+
+magicWordsRE = re.compile('|'.join(MagicWords.switches))
 
 # ----------------------------------------------------------------------
 # parser functions utilities
@@ -1392,6 +1415,10 @@ tailRE = re.compile('\w*')
 expand_templates = True
 
 def clean(extractor, text):
+    """
+    Transforms wiki markup.
+    @see https://www.mediawiki.org/wiki/Help:Formatting
+    """
 
     if (expand_templates):
         # expand templates
@@ -1440,6 +1467,9 @@ def clean(extractor, text):
     text = quote_quote.sub(r'\1', text)
     # residuals of unbalanced quotes
     text = text.replace("'''", '').replace("''", '&quot;')
+
+    # drop MagicWords behavioral switches
+    text = magicWordsRE.sub('', text)
 
     ################ Process HTML ###############
 
@@ -1495,6 +1525,7 @@ def clean(extractor, text):
     text = text.replace(',,', ',').replace(',.', '.')
     return text
 
+# skip level 1, it is page name level
 section = re.compile(r'(==+)\s*(.*?)\s*\1')
 
 def compact(text):
@@ -1538,7 +1569,9 @@ def compact(text):
         # handle lists
         elif line[0] in '*#;':
             if keepSections:
-                page.append("<li>%s</li>" % line.lstrip(line[0]))
+                line = line.lstrip(line[0]).strip()
+                if line:
+                    page.append("<li>%s</li>" % line)
             else:
                 continue
 
@@ -1549,10 +1582,11 @@ def compact(text):
         elif (line[0] == '(' and line[-1] == ')') or line.strip('.-') == '':
             continue
         elif len(headers):
-            items = headers.items()
-            items.sort()
-            for (i, v) in items:
-                page.append(v)
+            if not keepSections:
+                items = headers.items()
+                items.sort()
+                for (i, v) in items:
+                    page.append(v)
             headers.clear()
             page.append(line)   # first line
             emptySection = False

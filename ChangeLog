@@ -1,6 +1,9 @@
 2015-04-19  Giuseppe Attardi  <attardi@di.unipi.it>
 
 	* WikiExtractor.py (clean): use dropNext to drop discardElements.
+	(discardElements): added div.
+	(compact): avoid duplicated header line with optio --sections.
+	(compact): skip empty list items.
 
 2015-04-18  Giuseppe Attardi  <attardi@di.unipi.it>
 
