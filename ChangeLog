@@ -4,6 +4,9 @@
 	(discardElements): added div.
 	(compact): avoid duplicated header line with optio --sections.
 	(compact): skip empty list items.
+	(main): changed logger format.
+	(ignoredTags): added abbr.
+	(clean): handle extension SyntaxHighlight.
 
 2015-04-18  Giuseppe Attardi  <attardi@di.unipi.it>
 

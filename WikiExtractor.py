@@ -2,7 +2,7 @@
 # -*- coding: utf-8 -*-
 #
 # =============================================================================
-#  Version: 2.22 (Apr 19, 2015)
+#  Version: 2.23 (Apr 19, 2015)
 #  Author: Giuseppe Attardi (attardi@di.unipi.it), University of Pisa
 #	   Antonio Fuschetto (fuschett@di.unipi.it), University of Pisa
 #
@@ -61,7 +61,7 @@ import Queue, threading, multiprocessing
 #===========================================================================
 
 # Program version
-version = '2.22'
+version = '2.23'
 
 ### PARAMS ####################################################################
 
@@ -151,7 +151,7 @@ selfClosingTags = [ 'br', 'hr', 'nobr', 'ref', 'references', 'nowiki' ]
 # These tags are dropped, keeping their content.
 # handle 'a' separately, depending on keepLinks
 ignoredTags = [
-    'b', 'big', 'blockquote', 'center', 'cite', 'div', 'em',
+    'abbr', 'b', 'big', 'blockquote', 'center', 'cite', 'div', 'em',
     'font', 'h1', 'h2', 'h3', 'h4', 'hiero', 'i', 'kbd', 'nowiki',
     'p', 'plaintext', 's', 'span', 'strike', 'strong',
     'sub', 'sup', 'tt', 'u', 'var'
@@ -1412,6 +1412,8 @@ def make_anchor_tag(link, trail):
 # match tail after wikilink
 tailRE = re.compile('\w*')
 
+syntaxhighlight = re.compile('&lt;syntaxhighlight .*?&gt;(.*?)&lt;/syntaxhighlight&gt;', re.DOTALL)
+
 expand_templates = True
 
 def clean(extractor, text):
@@ -1473,10 +1475,14 @@ def clean(extractor, text):
 
     ################ Process HTML ###############
 
-    # turn into HTML
-    text = unescape(text)
-    # do it again (&amp;nbsp;)
-    text = unescape(text)
+    # turn into HTML, except for the content of <syntaxhighlight>
+    res = ''
+    cur = 0
+    for m in syntaxhighlight.finditer(text):
+        end = m.end()
+        res += unescape(text[cur:m.start()]) + m.group(1)
+        cur = end
+    text = res
 
     # Collect spans
 
@@ -1503,6 +1509,9 @@ def clean(extractor, text):
     # Drop discarded elements
     for tag in discardElements:
         text = dropNested(text, r'<\s*%s\b[^>/]*>' % tag, r'<\s*/\s*%s>' % tag)
+
+    # Turn into HTML what is left (&amp;nbsp;) and <syntaxhighlight>
+    text = unescape(text)
 
     # Expand placeholders
     for pattern, placeholder in placeholder_tag_patterns:
@@ -1731,7 +1740,7 @@ def load_templates(file, output_file=None):
             page = []
             articles += 1
             if articles % 10000 == 0:
-                logging.info("Preprocessed: %d pages" % articles)
+                logging.info("Preprocessed %d pages" % articles)
 
 def process_dump(input_file, template_file, outdir, file_size, file_compress, threads):
     """
@@ -1941,6 +1950,9 @@ def main():
 
     if args.namespaces:
         acceptedNamespaces = set(args.ns.split(','))
+
+    FORMAT = '%(levelname)s: %(message)s'
+    logging.basicConfig(format=FORMAT)
 
     logger = logging.getLogger()
     if not args.quiet:
