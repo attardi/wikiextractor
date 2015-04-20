@@ -1,3 +1,10 @@
+2015-04-20  Giuseppe Attardi  <attardi@di.unipi.it>
+
+	* WikiExtractor.py (findBalanced): dropped optional arguments.
+	(make_anchor_tag): dont use splitParameters() since we must
+	consider also single [, which do not count ib parameters.
+	(sharp_switch): use split() to split at fist = sign.
+
 2015-04-19  Giuseppe Attardi  <attardi@di.unipi.it>
 
 	* WikiExtractor.py (clean): use dropNext to drop discardElements.
@@ -7,6 +14,11 @@
 	(main): changed logger format.
 	(ignoredTags): added abbr.
 	(clean): handle extension SyntaxHighlight.
+	(main): use % parameters in logging.
+	(main): added option --html, that subsumes --links and --sections
+	for producing HTML output instead of plain text.
+	(Extractor): moved here variables keepLinks, keepSections, toHTML.
+	(compact): modified to produce HTML lists.
 
 2015-04-18  Giuseppe Attardi  <attardi@di.unipi.it>
 
