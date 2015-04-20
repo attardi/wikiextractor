@@ -2,7 +2,7 @@
 # -*- coding: utf-8 -*-
 #
 # =============================================================================
-#  Version: 2.24 (Apr 19, 2015)
+#  Version: 2.25 (Apr 20, 2015)
 #  Author: Giuseppe Attardi (attardi@di.unipi.it), University of Pisa
 #	   Antonio Fuschetto (fuschett@di.unipi.it), University of Pisa
 #
@@ -61,7 +61,7 @@ import Queue, threading, multiprocessing
 #===========================================================================
 
 # Program version
-version = '2.24'
+version = '2.25'
 
 ### PARAMS ####################################################################
 
@@ -1486,7 +1486,7 @@ def clean(extractor, text):
         text = bold.sub(r'\1', text)
         text = italic_quote.sub(r'"\1"', text)
         text = italic.sub(r'"\1"', text)
-        text = quote_quote.sub(r'\1', text)
+        text = quote_quote.sub(r'"\1"', text)
     # residuals of unbalanced quotes
     text = text.replace("'''", '').replace("''", '"')
 
@@ -1936,37 +1936,38 @@ def main():
                                      description=__doc__)
     parser.add_argument("input",
                         help="XML wiki dump file")
-    parser.add_argument("-o", "--output", default="text",
+    groupO = parser.add_argument_group('Output')
+    groupO.add_argument("-o", "--output", default="text",
                         help="output directory")
-    parser.add_argument("-b", "--bytes", default="1M",
+    groupO.add_argument("-b", "--bytes", default="1M",
                         help="put specified bytes per output file (default is %(default)s)", metavar="n[KMG]")
-    parser.add_argument("-B", "--base",
-                        help="base URL for the Wikipedia pages")
-    parser.add_argument("-c", "--compress", action="store_true",
+    groupO.add_argument("-c", "--compress", action="store_true",
                         help="compress output files using bzip")
-    parser.add_argument("-l", "--links", action="store_true",
+
+    groupP = parser.add_argument_group('Processing')
+    groupP.add_argument("--html", action="store_true",
+                        help="produce HTML output, subsumes --links and --sections")
+    groupP.add_argument("-l", "--links", action="store_true",
                         help="preserve links")
-    parser.add_argument("-s", "--sections", action="store_true",
-                        help="preserve sections")
-    parser.add_argument("--html", action="store_true",
-                        help="Produce HTML output, subsumes --links and --sections")
-    parser.add_argument("-ns", "--namespaces", default="", metavar="ns1,ns2",
+    groupP.add_argument("-ns", "--namespaces", default="", metavar="ns1,ns2",
                         help="accepted namespaces")
-    parser.add_argument("-q", "--quiet", action="store_true",
-                        help="suppress reporting progress info")
-    parser.add_argument("--debug", action="store_true",
-                        help="print debug info")
-    parser.add_argument("-a", "--article", action="store_true",
-                        help="analyze a file containing a single article (debug) option")
-    # parser.add_argument("-f", "--format", choices=(PLAIN, JSON), default=PLAIN,
-    #                     help="choose output format default is %(default)s")
-    parser.add_argument("--templates",
+    groupP.add_argument("-s", "--sections", action="store_true",
+                        help="preserve sections")
+    groupP.add_argument("--templates",
                         help="use or create file containing templates")
-    parser.add_argument("--no-templates", action="store_false",
+    groupP.add_argument("--no-templates", action="store_false",
                         help="Do not expand templates")
     parser.add_argument("--threads", type=int, default=2,
                         help="Number of threads to use (default 2)")
-    parser.add_argument("-v", "--version", action="version",
+
+    groupS = parser.add_argument_group('Special')
+    groupS.add_argument("-q", "--quiet", action="store_true",
+                        help="suppress reporting progress info")
+    groupS.add_argument("--debug", action="store_true",
+                        help="print debug info")
+    groupS.add_argument("-a", "--article", action="store_true",
+                        help="analyze a file containing a single article (debug) option")
+    groupS.add_argument("-v", "--version", action="version",
                         version='%(prog)s ' + version,
                         help="print program version")
 

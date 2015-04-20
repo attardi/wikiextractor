@@ -5,38 +5,49 @@ The tool is written in Python and requires no additional library.
 
 For further information, see the [project Home Page](http://medialab.di.unipi.it/wiki/Wikipedia_Extractor) or the [Wiki](https://github.com/attardi/wikiextractor/wiki).
 
-The current beta version of WikiExtrctor.py is capable of performing template expansion to some extent.
+This is a beta version that performs template expansion by preprocesssng the
+whole dump and extracting template definitions.
 
 ## Usage
 The script is invoked with a Wikipedia dump file as an argument.
 The output is stored in a number of files of similar size in a chosen directory.
 Each file will contains several documents in this [document format](http://medialab.di.unipi.it/wiki/Document_Format).
 
-This is a beta version that performs template expansion by preprocesssng the
-whole dump and extracting template definitions.
+    usage: WikiExtractor.py [-h] [-o OUTPUT] [-b n[KMG]] [-c] [--html] [-l]
+			    [-ns ns1,ns2] [-s] [--templates TEMPLATES]
+			    [--no-templates] [--threads THREADS] [-q] [--debug]
+			    [-a] [-v]
+			    input
 
-    Usage:
-     WikiExtractor.py [options] xml-dump-file
+    positional arguments:
+      input                 XML wiki dump file
 
     optional arguments:
       -h, --help            show this help message and exit
+      --threads THREADS     Number of threads to use (default 2)
+
+    Output:
       -o OUTPUT, --output OUTPUT
-                            output directory
+			    output directory
       -b n[KMG], --bytes n[KMG]
-                            put specified bytes per output file (default is 1M)
-      -B BASE, --base BASE  base URL for the Wikipedia pages
+			    put specified bytes per output file (default is 1M)
       -c, --compress        compress output files using bzip
+
+    Processing:
+      --html                produce HTML output, subsumes --links and --sections
       -l, --links           preserve links
       -ns ns1,ns2, --namespaces ns1,ns2
-                            accepted namespaces
+			    accepted namespaces
+      -s, --sections        preserve sections
+      --templates TEMPLATES
+			    use or create file containing templates
+      --no-templates        Do not expand templates
+
+    Special:
       -q, --quiet           suppress reporting progress info
       --debug               print debug info
-      -s, --sections        preserve sections
-      -a, --article         analyze a file containing a single article
-      --templates TEMPLATES
-                            use or create file containing templates
-      --no-templates        Do not expand templates
-      --threads THREADS     Number of threads to use (default 8)
+      -a, --article         analyze a file containing a single article (debug)
+			    option
       -v, --version         print program version
 
 Saving templates to a file will speed up performing extraction the next time,

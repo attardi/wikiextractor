@@ -4,6 +4,7 @@
 	(make_anchor_tag): dont use splitParameters() since we must
 	consider also single [, which do not count ib parameters.
 	(sharp_switch): use split() to split at fist = sign.
+	(main): grouped command options.
 
 2015-04-19  Giuseppe Attardi  <attardi@di.unipi.it>
 
