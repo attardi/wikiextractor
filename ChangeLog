@@ -6,6 +6,9 @@
 	(sharp_switch): use split() to split at fist = sign.
 	(main): grouped command options.
 	(main): removed option -B.
+	(Template): class used to represent templates. It provides a method
+	for parameter subsitution.
+	Templats are parsed on demand when used and stored in a cache.
 
 2015-04-19  Giuseppe Attardi  <attardi@di.unipi.it>
 

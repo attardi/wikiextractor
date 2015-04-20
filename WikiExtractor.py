@@ -2,7 +2,7 @@
 # -*- coding: utf-8 -*-
 #
 # =============================================================================
-#  Version: 2.25 (Apr 20, 2015)
+#  Version: 2.26 (Apr 20, 2015)
 #  Author: Giuseppe Attardi (attardi@di.unipi.it), University of Pisa
 #	   Antonio Fuschetto (fuschett@di.unipi.it), University of Pisa
 #
@@ -61,7 +61,7 @@ import Queue, threading, multiprocessing
 #===========================================================================
 
 # Program version
-version = '2.25'
+version = '2.26'
 
 ### PARAMS ####################################################################
 
@@ -256,6 +256,109 @@ dots = re.compile(r'\.{4,}')
 
 #======================================================================
 
+class Template(list):
+    """
+    A Template is a list of TemplateText or TemplateArgs
+    """
+
+    @classmethod
+    def parse(cls, body):
+        tpl = Template()
+        # we must handle nesting, s.a.
+        # {{{1|{{PAGENAME}}}
+        # {{{italics|{{{italic|}}}
+        # {{#if:{{{{{#if:{{{nominee|}}}|nominee|candidate}}|}}}|
+        #
+        start = 0
+        for s,e in findMatchingBraces(body, 3):
+            tpl.append(TemplateText(body[start:s]))
+            tpl.append(TemplateArg(body[s+3:e-3]))
+            start = e
+        tpl.append(TemplateText(body[start:])) # leftover
+        return tpl
+
+    def subst(self, params, extractor, depth=0):
+        # We perform parameter substitutions recursively.
+        # We also limit the maximum number of iterations to avoid too long or
+        # even endless loops (in case of malformed input).
+
+        # :see: http://meta.wikimedia.org/wiki/Help:Expansion#Distinction_between_variables.2C_parser_functions.2C_and_templates
+        #
+        # Parameter values are assigned to parameters in two (?) passes.
+        # Therefore a parameter name in a template can depend on the value of
+        # another parameter of the same template, regardless of the order in
+        # which they are specified in the template call, for example, using
+        # Template:ppp containing "{{{{{{p}}}}}}", {{ppp|p=q|q=r}} and even
+        # {{ppp|q=r|p=q}} gives r, but using Template:tvvv containing
+        # "{{{{{{{{{p}}}}}}}}}", {{tvvv|p=q|q=r|r=s}} gives s.
+
+        logging.debug('subst (%d, %d) %s', len(extractor.frame), depth, self)
+
+        if depth > extractor.maxParameterRecursionLevels:
+            logging.warn('Reachead maximum parameter recursions: %d',
+                         extractor.maxParameterRecursionLevels)
+            return ''
+
+        return ''.join([tpl.subst(params, extractor, depth) for tpl in self])
+
+    def __str__(self):
+        return ''.join([str(x) for x in self])
+
+class TemplateText(unicode):
+    """Fixed text of template"""
+
+    def subst(self, params, extractor, depth):
+        return self
+
+class TemplateArg(object):
+    """
+    parameter to a template.
+    Has a name and a default value, both of which are Templates.
+    """
+    def __init__(self, parameter):
+        """
+        :param parameter: the parts of a tplarg.
+        """
+        # the parameter name itself might contain templates, e.g.:
+        # appointe{{#if:{{{appointer14|}}}|r|d}}14|
+
+        # any parts in a tplarg after the first (the parameter default) are
+        # ignored, and an equals sign in the first part is treated as plain text.
+        #logging.debug('TemplateArg %s', parameter)
+
+        parts = splitParameters(parameter)
+        self.name = Template.parse(parts[0])
+        if len(parts) > 1:
+            # This parameter has a default value
+            self.default = Template.parse(parts[1])
+        else:
+            self.default = None
+
+    def __str__(self):
+        if self.default:
+            return '{{{%s|%s}}}' % (self.name, self.default)
+        else:
+            return '{{{%s}}}' % self.name
+
+    def subst(self, params, extractor, depth):
+        """
+        Substitute value for this argument from dict :param params:
+        Use :param extractor: to evaluate expressions for name and default.
+        Limit substitution to the maximun :param depth:.
+        """
+        # the parameter name itself might contain templates, e.g.:
+        # appointe{{#if:{{{appointer14|}}}|r|d}}14|
+        paramName = self.name.subst(params, extractor, depth+1)
+        paramName = extractor.expandTemplates(paramName)
+        if paramName in params:
+            return params[paramName]  # use parameter value specified in template invocation
+        elif self.default:            # use the default value
+            defaultValue = self.default.subst(params, extractor, depth+1)
+            return extractor.expandTemplates(defaultValue)
+        return ''
+
+#======================================================================
+
 substWords = 'subst:|safesubst:'
 
 class Extractor(object):
@@ -362,7 +465,7 @@ class Extractor(object):
 
         if not parameters:
             return templateParams
-        logging.debug('<templateParams: %d %s', len(self.frame), '|'.join(parameters))
+        logging.debug('<templateParams: %s', '|'.join(parameters))
 
         # Parameters can be either named or unnamed. In the latter case, their
         # name is defined by their ordinal position (1, 2, 3, ...).
@@ -395,7 +498,9 @@ class Extractor(object):
             # {{Reflist|colwidth=30em|refs=
             # &lt;ref name=&quot;Goode&quot;&gt;Title&lt;/ref&gt;
 
-            # The '=' might occurr within an HTML attribute: "&lt;ref name=value".
+            # The '=' might occurr within an HTML attribute:
+            #   "&lt;ref name=value"
+            # but we stop at first.
             m = re.match(' *([^= ]*?) *=(.*)', param, re.DOTALL)
             if m:
                 # This is a named parameter.  This case also handles parameter
@@ -416,7 +521,7 @@ class Extractor(object):
                 if ']]' not in param: # if the value does not contain a link, trim whitespace
                     param = param.strip()
                 templateParams[str(unnamedParameterCounter)] = param
-        logging.debug('   templateParams> %d %s', len(self.frame), '|'.join(templateParams.values()))
+        logging.debug('   templateParams> %s', '|'.join(templateParams.values()))
         return templateParams
 
     def expandTemplate(self, body):
@@ -507,12 +612,18 @@ class Extractor(object):
         if redirected:
             title = redirected
 
-        if title not in templates:
+        # get the template
+        if title in templateCache:
+            template = templateCache[title]
+        elif title in templates:
+            template = Template.parse(templates[title])
+            # add it to cache
+            templateCache[title] = template
+            del templates[title]
+        else:
             # The page being included could not be identified
             return ''
 
-        # get the template
-        template = templates[title]
         logging.debug('TEMPLATE %s: %s', title, template)
 
         # tplarg          = "{{{" parts "}}}"
@@ -555,93 +666,13 @@ class Extractor(object):
         params = self.templateParams(params)
 
         # Perform parameter substitution
-        instantiated = self.substParameters(template, params)
+        instantiated = template.subst(params, self)
         logging.debug('instantiated %d %s', len(self.frame), instantiated)
         self.frame.append((title, params))
         value = self.expandTemplates(instantiated)
         self.frame.pop()
         logging.debug('   INVOCATION> %s %d %s', title, len(self.frame), value)
         return value
-
-    def substParameters(self, body, params, subst_depth=0):
-        """
-        :param body: the body of a template.
-        :param params: dict of name-values template parameters.
-        :param subst_depth: depth of recursive parameter substitutions.
-        """
-        # We perform parameter substitutions recursively.
-        # We also limit the maximum number of iterations to avoid too long or
-        # even endless loops (in case of malformed input).
-
-        # :see: http://meta.wikimedia.org/wiki/Help:Expansion#Distinction_between_variables.2C_parser_functions.2C_and_templates
-        #
-        # Parameter values are assigned to parameters in two (?) passes.
-        # Therefore a parameter name in a template can depend on the value of
-        # another parameter of the same template, regardless of the order in
-        # which they are specified in the template call, for example, using
-        # Template:ppp containing "{{{{{{p}}}}}}", {{ppp|p=q|q=r}} and even
-        # {{ppp|q=r|p=q}} gives r, but using Template:tvvv containing
-        # "{{{{{{{{{p}}}}}}}}}", {{tvvv|p=q|q=r|r=s}} gives s.
-
-        logging.debug('substParameters (%d, %d) %s', len(self.frame), subst_depth, body)
-
-        result = ''
-        if subst_depth > self.maxParameterRecursionLevels:
-            logging.warn('Reachead maximum parameter recursions: %d',
-                     self.maxParameterRecursionLevels)
-            return result
-
-        start = 0
-        # we must handle nesting, s.a.
-        # {{{1|{{PAGENAME}}}
-        # {{{italics|{{{italic|}}}
-        # {{#if:{{{{{#if:{{{nominee|}}}|nominee|candidate}}|}}}|
-        #
-
-        for s,e in findMatchingBraces(body, 3):
-            # invoke substParameter on outer {{{}}}
-            result += body[start:s] + self.substParameter(body[s+3:e-3],
-                                                          params, subst_depth+1)
-            start = e
-        result += body[start:]                     # leftover
-        return result
-
-    def substParameter(self, parameter, params, subst_depth):
-        """
-        :param parameter: the parts of a tplarg.
-        :param params: dict of name-values of template parameters.
-        """
-        # the parameter name itself might contain templates, e.g.:
-        # appointe{{#if:{{{appointer14|}}}|r|d}}14|
-
-        # any parts in a tplarg after the first (the parameter default) are
-        # ignored, and an equals sign in the first part is treated as plain text.
-        #logging.debug(' subst %s', parameter)
-
-        parts = splitParameters(parameter)
-        if len(parts) > 1:
-            # This parameter has a default value
-            paramName = self.expandTemplates(self.substParameters(parts[0], params, subst_depth))
-            defaultValue = parts[1]
-
-            if paramName in params:
-                return params[paramName]  # use parameter value specified in template invocation
-            else: # use the default value
-                defaultValue = self.substParameters(defaultValue, params, subst_depth)
-                return self.expandTemplates(defaultValue)
-        # parameter without a default value
-        parameter = self.substParameters(parameter, params, subst_depth)
-        parameter = self.expandTemplates(parameter)
-        if parameter in params:
-            return params[parameter]  # use parameter value specified in template invocation
-        # Parameter not specified in template invocation and without
-        # a default value.
-        # The Wiki rules for templates
-        # (see http://meta.wikimedia.org/wiki/Help:Template)
-        # would require to keep the parameter in 3 braces, but we just drop them.
-        return ''
-        # Surplus parameters - i.e., those assigned values in template
-        # invocation but not used in the template body - are simply ignored.
 
 # ----------------------------------------------------------------------
 # parameter handling
@@ -1246,6 +1277,8 @@ reIncludeonly = re.compile(r'<includeonly>|</includeonly>', re.DOTALL)
 
 templates = {}
 redirects = {}
+# cache of parser templates
+templateCache = {}
 
 def define_template(title, page):
     """
