@@ -1,0 +1,109 @@
+<!DOCTYPE html>
+<html>
+
+  <head>
+    <meta charset='utf-8'>
+    <meta http-equiv="X-UA-Compatible" content="chrome=1">
+    <meta name="description" content="Wikiextractor : A tool for extracting plain text from Wikipedia dumps">
+
+    <link rel="stylesheet" type="text/css" media="screen" href="stylesheets/stylesheet.css">
+
+    <title>Wikiextractor</title>
+  </head>
+
+  <body>
+
+    <!-- HEADER -->
+    <div id="header_wrap" class="outer">
+        <header class="inner">
+          <a id="forkme_banner" href="https://github.com/attardi/wikiextractor">View on GitHub</a>
+
+          <h1 id="project_title">Wikiextractor</h1>
+          <h2 id="project_tagline">A tool for extracting plain text from Wikipedia dumps</h2>
+
+            <section id="downloads">
+              <a class="zip_download_link" href="https://github.com/attardi/wikiextractor/zipball/master">Download this project as a .zip file</a>
+              <a class="tar_download_link" href="https://github.com/attardi/wikiextractor/tarball/master">Download this project as a tar.gz file</a>
+            </section>
+        </header>
+    </div>
+
+    <!-- MAIN CONTENT -->
+    <div id="main_content_wrap" class="outer">
+      <section id="main_content" class="inner">
+        <h1>
+<a id="wikiextractor" class="anchor" href="#wikiextractor" aria-hidden="true"><span class="octicon octicon-link"></span></a>wikiextractor</h1>
+
+<p><a href="http://medialab.di.unipi.it/wiki/Wikipedia_Extractor">WikiExtractor.py</a> is a Python script that extracts and cleans text from a <a href="http://download.wikimedia.org/">Wikipedia database dump</a>.</p>
+
+<p>The tool is written in Python and requires no additional library.</p>
+
+<p>For further information, see the <a href="http://medialab.di.unipi.it/wiki/Wikipedia_Extractor">project Home Page</a> or the <a href="https://github.com/attardi/wikiextractor/wiki">Wiki</a>.</p>
+
+<p>This is a beta version that performs template expansion by preprocesssng the
+whole dump and extracting template definitions.</p>
+
+<h2>
+<a id="usage" class="anchor" href="#usage" aria-hidden="true"><span class="octicon octicon-link"></span></a>Usage</h2>
+
+<p>The script is invoked with a Wikipedia dump file as an argument.
+The output is stored in a number of files of similar size in a chosen directory.
+Each file will contains several documents in this <a href="http://medialab.di.unipi.it/wiki/Document_Format">document format</a>.</p>
+
+<pre><code>usage: WikiExtractor.py [-h] [-o OUTPUT] [-b n[KMG]] [-c] [--html] [-l]
+            [-ns ns1,ns2] [-s] [--templates TEMPLATES]
+            [--no-templates] [--threads THREADS] [-q] [--debug]
+            [-a] [-v]
+            input
+
+positional arguments:
+  input                 XML wiki dump file
+
+optional arguments:
+  -h, --help            show this help message and exit
+  --threads THREADS     Number of threads to use (default 2)
+
+Output:
+  -o OUTPUT, --output OUTPUT
+            output directory
+  -b n[KMG], --bytes n[KMG]
+            put specified bytes per output file (default is 1M)
+  -c, --compress        compress output files using bzip
+
+Processing:
+  --html                produce HTML output, subsumes --links and --sections
+  -l, --links           preserve links
+  -ns ns1,ns2, --namespaces ns1,ns2
+            accepted namespaces
+  -s, --sections        preserve sections
+  --templates TEMPLATES
+            use or create file containing templates
+  --no-templates        Do not expand templates
+
+Special:
+  -q, --quiet           suppress reporting progress info
+  --debug               print debug info
+  -a, --article         analyze a file containing a single article (debug)
+            option
+  -v, --version         print program version
+</code></pre>
+
+<p>Saving templates to a file will speed up performing extraction the next time,
+assuming template definitions have not changed.</p>
+
+<p>Option --no-templates significantly speeds up the extractor, avoiding the cost of expanding <a href="https://www.mediawiki.org/wiki/Help:Templates">MediaWiki templates</a>.</p>
+      </section>
+    </div>
+
+    <!-- FOOTER  -->
+    <div id="footer_wrap" class="outer">
+      <footer class="inner">
+        <p class="copyright">Wikiextractor maintained by <a href="https://github.com/attardi">attardi</a></p>
+        <p>Published with <a href="https://pages.github.com">GitHub Pages</a></p>
+      </footer>
+    </div>
+
+    
+
+  </body>
+</html>
