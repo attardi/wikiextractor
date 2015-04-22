@@ -2,7 +2,7 @@
 # -*- coding: utf-8 -*-
 #
 # =============================================================================
-#  Version: 2.27 (Apr 21, 2015)
+#  Version: 2.28 (Apr 21, 2015)
 #  Author: Giuseppe Attardi (attardi@di.unipi.it), University of Pisa
 #	   Antonio Fuschetto (fuschett@aol.com), University of Pisa
 #
@@ -60,7 +60,7 @@ import Queue, threading, multiprocessing
 #===========================================================================
 
 # Program version
-version = '2.27'
+version = '2.28'
 
 ### PARAMS ####################################################################
 
