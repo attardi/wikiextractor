@@ -5,8 +5,8 @@ The tool is written in Python and requires no additional library.
 
 For further information, see the [project Home Page](http://medialab.di.unipi.it/wiki/Wikipedia_Extractor) or the [Wiki](https://github.com/attardi/wikiextractor/wiki).
 
-This is a beta version that performs template expansion by preprocesssng the
-whole dump and extracting template definitions.
+This is a beta version that performs template expansion by preprocesssng the whole dump and extracting template definitions.
+The current version keeps a cache of parsed templates, achieving a speedup of twice over the previous version.
 
 ## Usage
 The script is invoked with a Wikipedia dump file as an argument.
@@ -54,4 +54,6 @@ Saving templates to a file will speed up performing extraction the next time,
 assuming template definitions have not changed.
 
 Option --no-templates significantly speeds up the extractor, avoiding the cost of expanding [MediaWiki templates](https://www.mediawiki.org/wiki/Help:Templates).
+
+For further information, visit [the dcumentation](http://attardi.github.io/wikiextractor).
 
