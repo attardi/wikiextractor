@@ -3,6 +3,7 @@
 	* WikiExtractor.py (replaceInternalLinks): function for replacing
 	internal links, modeled after MediaWiki original.
 	(replaceExternalLinks): revised taking into account the former.
+	(replaceInternalLinks): fix to nested iterator.
 
 2015-04-20  Giuseppe Attardi  <attardi@di.unipi.it>
 

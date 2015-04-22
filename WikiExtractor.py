@@ -2,7 +2,7 @@
 # -*- coding: utf-8 -*-
 #
 # =============================================================================
-#  Version: 2.28 (Apr 21, 2015)
+#  Version: 2.29 (Apr 21, 2015)
 #  Author: Giuseppe Attardi (attardi@di.unipi.it), University of Pisa
 #	   Antonio Fuschetto (fuschett@aol.com), University of Pisa
 #
@@ -60,7 +60,7 @@ import Queue, threading, multiprocessing
 #===========================================================================
 
 # Program version
-version = '2.28'
+version = '2.29'
 
 ### PARAMS ####################################################################
 
@@ -1433,11 +1433,11 @@ def replaceInternalLinks(text):
             title = inner[:pipe].rstrip()
             # find last |
             curp = pipe+1
-            for s,e in findBalanced(inner, ['[['], [']]']):
-                last = inner.rfind('|', curp, s)
+            for s1,e1 in findBalanced(inner, ['[['], [']]']):
+                last = inner.rfind('|', curp, s1)
                 if last >= 0:
                     pipe = last # advance
-                curp = e
+                curp = e1
             label = inner[pipe+1:].strip()
         res += text[cur:s] + makeInternalLink(title, label) + trail
         cur = end
@@ -1909,6 +1909,7 @@ def clean(extractor, text):
     text = re.sub(u'(\[\(«) ', r'\1', text)
     text = re.sub(r'\n\W+?\n', '\n', text) # lines with only punctuations
     text = text.replace(',,', ',').replace(',.', '.')
+
     return text
 
 # skip level 1, it is page name level
