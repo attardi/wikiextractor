@@ -2,9 +2,9 @@
 # -*- coding: utf-8 -*-
 #
 # =============================================================================
-#  Version: 2.26 (Apr 20, 2015)
+#  Version: 2.27 (Apr 21, 2015)
 #  Author: Giuseppe Attardi (attardi@di.unipi.it), University of Pisa
-#	   Antonio Fuschetto (fuschett@di.unipi.it), University of Pisa
+#	   Antonio Fuschetto (fuschett@aol.com), University of Pisa
 #
 #  Contributors:
 #	Leonardo Souza (lsouza@amtera.com.br)
@@ -47,21 +47,20 @@ collecting template definitions.
 """
 
 import sys, os.path
-import re, random
-import argparse
+import re                       # TODO use regex when it will be standard
+import argparse, random
 from itertools import izip,  izip_longest
 import logging, traceback
 import urllib
 import bz2
 import codecs
 from htmlentitydefs import name2codepoint
-import urllib
 import Queue, threading, multiprocessing
 
 #===========================================================================
 
 # Program version
-version = '2.26'
+version = '2.27'
 
 ### PARAMS ####################################################################
 
@@ -302,7 +301,7 @@ class Template(list):
         return ''.join([tpl.subst(params, extractor, depth) for tpl in self])
 
     def __str__(self):
-        return ''.join([str(x) for x in self])
+        return ''.join([unicode(x) for x in self])
 
 class TemplateText(unicode):
     """Fixed text of template"""
@@ -1398,21 +1397,317 @@ def dropSpans(spans, text):
     res += text[offset:]
     return res
 
-# Match interwiki links, | separates parameters.
-# First parameter is displayed, also trailing concatenated text included
-# in display, e.g. 's' for plural).
-#
+# ----------------------------------------------------------------------
+# WikiLinks
+# See https://www.mediawiki.org/wiki/Help:Links#Internal_links
+
 # Can be nested [[File:..|..[[..]]..|..]], [[Category:...]], etc.
-# We first expand inner ones, than remove enclosing ones.
-# Deal also with: [[Help:IPA for Catalan|[anˈdɔra]]]
+# Also: [[Help:IPA for Catalan|[andora]]]
 
-parametrizedLink = re.compile(r'\[\[[^\]]*?]]')
+def replaceInternalLinks(text):
+    """
+    Replaces external links of the form:
+    [[title |...|label]]trail
 
-# Function applied to wikiLinks
-def make_anchor_tag(link, trail):
-    braq = 2 if link[1] == '[' else 1
-    pipe = link.find('|', braq)
-    title = link[braq:-braq] if  pipe < 0 else link[braq:pipe]
+    with title concatenated with trail, when present, e.g. 's' for plural.
+    """
+    # call this after removal of external links, so we need not worry about
+    # triple closing ]]].
+    cur = 0
+    res = ''
+    for s,e in findBalanced(text, ['[['], [']]']):
+        m = tailRE.match(text, e)
+        if m:
+            trail = m.group(0)
+            end = m.end()
+        else:
+            trail = ''
+            end = e
+        inner = text[s+2:e-2]
+        # find first |
+        pipe = inner.find('|')
+        if pipe < 0:
+            title = inner
+            label = title
+        else:
+            title = inner[:pipe].rstrip()
+            # find last |
+            curp = pipe+1
+            for s,e in findBalanced(inner, ['[['], [']]']):
+                last = inner.rfind('|', curp, s)
+                if last >= 0:
+                    pipe = last # advance
+                curp = e
+            label = inner[pipe+1:].strip()
+        res += text[cur:s] + makeInternalLink(title, label) + trail
+        cur = end
+    return res + text[cur:]
+
+# the official version is a method in class Parser, similar to this:
+# def replaceInternalLinks2(text):
+#     global wgExtraInterlanguageLinkPrefixes
+ 
+#     # the % is needed to support urlencoded titles as well
+#     tc = Title::legalChars() + '#%'
+#     # Match a link having the form [[namespace:link|alternate]]trail
+#     e1 = re.compile("([%s]+)(?:\\|(.+?))?]](.*)" % tc, re.S | re.D)
+#     # Match cases where there is no "]]", which might still be images
+#     e1_img = re.compile("([%s]+)\\|(.*)" % tc, re.S | re.D)
+ 
+#     holders = LinkHolderArray(self)
+ 
+#     # split the entire text string on occurrences of [[
+#     iterBrackets = re.compile('[[').finditer(text)
+
+#     m in iterBrackets.next()
+#     # get the first element (all text up to first [[)
+#     s = text[:m.start()]
+#     cur = m.end()
+
+#     line = s
+ 
+#     useLinkPrefixExtension = self.getTargetLanguage().linkPrefixExtension()
+#     e2 = None
+#     if useLinkPrefixExtension:
+#         # Match the end of a line for a word that is not followed by whitespace,
+#         # e.g. in the case of "The Arab al[[Razi]]",  "al" will be matched
+#         global wgContLang
+#         charset = wgContLang.linkPrefixCharset()
+#         e2 = re.compile("((?>.*[^charset]|))(.+)", re.S | re.D | re.U)
+
+#     if self.mTitle is None:
+#         raise MWException(__METHOD__ + ": \self.mTitle is null\n")
+
+#     nottalk = not self.mTitle.isTalkPage()
+
+#     if useLinkPrefixExtension:
+#         m = e2.match(s)
+#         if m:
+#             first_prefix = m.group(2)
+#         else:
+#             first_prefix = false
+#     else:
+#         prefix = ''
+
+#     useSubpages = self.areSubpagesAllowed()
+ 
+#     for m in iterBrackets:
+#         line = text[cur:m.start()]
+#         cur = m.end()
+
+#         # TODO: Check for excessive memory usage
+
+#         if useLinkPrefixExtension:
+#             m = e2.match(e2)
+#             if m:
+#                 prefix = m.group(2)
+#                 s = m.group(1)
+#             else:
+#                 prefix = ''
+#             # first link
+#             if first_prefix:
+#                 prefix = first_prefix
+#                 first_prefix = False
+ 
+#         might_be_img = False
+ 
+#         m = e1.match(line)
+#         if m: # page with normal label or alt
+#             label = m.group(2)
+#             # If we get a ] at the beginning of m.group(3) that means we have a link that is something like:
+#             # [[Image:Foo.jpg|[http://example.com desc]]] <- having three ] in a row fucks up,
+#             # the real problem is with the e1 regex
+#             # See bug 1300.
+#             #
+#             # Still some problems for cases where the ] is meant to be outside punctuation,
+#             # and no image is in sight. See bug 2095.
+#             #
+#             if label and m.group(3)[0] == ']' and '[' in label:
+#                 label += ']' # so that replaceExternalLinks(label) works later
+#                 m.group(3) = m.group(3)[1:]
+#             # fix up urlencoded title texts
+#             if '%' in m.group(1):
+#                 # Should anchors '#' also be rejected?
+#                 m.group(1) = str_replace(array('<', '>'), array('&lt', '&gt'), rawurldecode(m.group(1)))
+#             trail = m.group(3)
+#         else:
+#             m = e1_img.match(line):
+#             if m:
+#                 # Invalid, but might be an image with a link in its caption
+#                 might_be_img = true
+#                 label = m.group(2)
+#                 if '%' in m.group(1):
+#                     m.group(1) = rawurldecode(m.group(1))
+#                 trail = ""
+#             else:		# Invalid form; output directly
+#                 s += prefix + '[[' + line
+#                 continue
+
+#         origLink = m.group(1)
+
+#         # Dont allow internal links to pages containing
+#         # PROTO: where PROTO is a valid URL protocol these
+#         # should be external links.
+#         if (preg_match('/^(?i:' + self.mUrlProtocols + ')/', origLink)) {
+#             s += prefix + '[[' + line
+#             continue
+#         }
+
+#         # Make subpage if necessary
+#         if useSubpages:
+#             link = self.maybeDoSubpageLink(origLink, label)
+#         else:
+#             link = origLink
+
+#         noforce = origLink[0] != ':'
+#         if not noforce:
+#             # Strip off leading ':'
+#             link = link[1:]
+
+#         nt = Title::newFromText(self.mStripState.unstripNoWiki(link))
+#         if nt is None:
+#             s += prefix + '[[' + line
+#             continue
+
+#         ns = nt.getNamespace()
+#         iw = nt.getInterwiki()
+
+#         if might_be_img {	# if this is actually an invalid link
+#             if (ns == NS_FILE and noforce) { # but might be an image
+#                 found = False
+#                 while True:
+#                     # look at the next 'line' to see if we can close it there
+#                     next_line = iterBrakets.next()
+#                     if not next_line:
+#                         break
+#                     m = explode(']]', next_line, 3)
+#                     if m.lastindex == 3:
+#                         # the first ]] closes the inner link, the second the image
+#                         found = True
+#                         label += "[[%s]]%s" % (m.group(0), m.group(1))
+#                         trail = m.group(2)
+#                         break
+#                     elif m.lastindex == 2:
+#                         # if there is exactly one ]] that is fine, we will keep looking
+#                         label += "[[{m[0]}]]{m.group(1)}"
+#                     else:
+#                         # if next_line is invalid too, we need look no further
+#                         label += '[[' + next_line
+#                         break
+#                 if not found:
+#                     # we couldnt find the end of this imageLink, so output it raw
+#                     # but dont ignore what might be perfectly normal links in the text we ve examined
+#                     holders.merge(self.replaceInternalLinks2(label))
+#                     s += "{prefix}[[%s|%s" % (link, text)
+#                     # note: no trail, because without an end, there *is* no trail
+#                     continue
+#             } else: # it is not an image, so output it raw
+#                 s += "{prefix}[[%s|%s" % (link, text)
+#                 # note: no trail, because without an end, there *is* no trail
+#                      continue
+#         }
+ 
+#         wasblank = (text == '')
+#         if wasblank:
+#             text = link
+#         else:
+#             # Bug 4598 madness.  Handle the quotes only if they come from the alternate part
+#             # [[Lista d''e paise d''o munno]] . <a href="...">Lista d''e paise d''o munno</a>
+#             # [[Criticism of Harry Potter|Criticism of ''Harry Potter'']]
+#             #    . <a href="Criticism of Harry Potter">Criticism of <i>Harry Potter</i></a>
+#             text = self.doQuotes(text)
+
+#         # Link not escaped by : , create the various objects
+#         if noforce and not nt.wasLocalInterwiki():
+#             # Interwikis
+#             if iw and mOptions.getInterwikiMagic() and nottalk and (
+#                     Language::fetchLanguageName(iw, None, 'mw') or
+#                     in_array(iw, wgExtraInterlanguageLinkPrefixes)):
+#                 # Bug 24502: filter duplicates
+#                 if iw not in mLangLinkLanguages:
+#                     self.mLangLinkLanguages[iw] = True
+#                     self.mOutput.addLanguageLink(nt.getFullText())
+
+#                 s = rstrip(s + prefix)
+#                 s += strip(trail, "\n") == '' ? '': prefix + trail
+#                 continue
+
+#             if ns == NS_FILE:
+#                 if not wfIsBadImage(nt.getDBkey(), self.mTitle):
+#                     if wasblank:
+#                         # if no parameters were passed, text
+#                         # becomes something like "File:Foo.png",
+#                         # which we dont want to pass on to the
+#                         # image generator
+#                         text = ''
+#                     else:
+#                         # recursively parse links inside the image caption
+#                         # actually, this will parse them in any other parameters, too,
+#                         # but it might be hard to fix that, and it doesnt matter ATM
+#                         text = self.replaceExternalLinks(text)
+#                         holders.merge(self.replaceInternalLinks2(text))
+#                     # cloak any absolute URLs inside the image markup, so replaceExternalLinks() wont touch them
+#                     s += prefix + self.armorLinks(
+#                         self.makeImage(nt, text, holders)) + trail
+#                 else:
+#                     s += prefix + trail
+#                 continue
+ 
+#             if ns == NS_CATEGORY:
+#                 s = rstrip(s + "\n") # bug 87
+
+#                 if wasblank:
+#                     sortkey = self.getDefaultSort()
+#                 else:
+#                     sortkey = text
+#                 sortkey = Sanitizer::decodeCharReferences(sortkey)
+#                 sortkey = str_replace("\n", '', sortkey)
+#                 sortkey = self.getConverterLanguage().convertCategoryKey(sortkey)
+#                 self.mOutput.addCategory(nt.getDBkey(), sortkey)
+
+#                 s += strip(prefix + trail, "\n") == '' ? '' : prefix + trail
+
+#                 continue
+#             }
+#         }
+
+#         # Self-link checking. For some languages, variants of the title are checked in
+#         # LinkHolderArray::doVariants() to allow batching the existence checks necessary
+#         # for linking to a different variant.
+#         if ns != NS_SPECIAL and nt.equals(self.mTitle) and !nt.hasFragment():
+#             s += prefix + Linker::makeSelfLinkObj(nt, text, '', trail)
+#                  continue
+ 
+#         # NS_MEDIA is a pseudo-namespace for linking directly to a file
+#         # @todo FIXME: Should do batch file existence checks, see comment below
+#         if ns == NS_MEDIA:
+#             # Give extensions a chance to select the file revision for us
+#             options = []
+#             descQuery = False
+#             Hooks::run('BeforeParserFetchFileAndTitle',
+#                        [this, nt, &options, &descQuery])
+#             # Fetch and register the file (file title may be different via hooks)
+#             file, nt = self.fetchFileAndTitle(nt, options)
+#             # Cloak with NOPARSE to avoid replacement in replaceExternalLinks
+#             s += prefix + self.armorLinks(
+#                 Linker::makeMediaLinkFile(nt, file, text)) + trail
+#             continue
+
+#         # Some titles, such as valid special pages or files in foreign repos, should
+#         # be shown as bluelinks even though they are not included in the page table
+#         #
+#         # @todo FIXME: isAlwaysKnown() can be expensive for file links; we should really do
+#         # batch file existence checks for NS_FILE and NS_MEDIA
+#         if iw == '' and nt.isAlwaysKnown():
+#             self.mOutput.addLink(nt)
+#             s += self.makeKnownLinkHolder(nt, text, array(), trail, prefix)
+#         else:
+#             # Links will be added to the output link list after checking
+#             s += holders.makeHolder(nt, text, array(), trail, prefix)
+#     }
+#     return holders
+
+def makeInternalLink(title, label):
     colon = title.find(':')
     if colon > 0 and title[:colon] not in acceptedNamespaces:
         return ''
@@ -1421,22 +1716,89 @@ def make_anchor_tag(link, trail):
         colon2 = title.find(':', colon+1)
         if colon2 > 1 and title[colon+1:colon2] not in acceptedNamespaces:
             return ''
-    # find anchor
-    if pipe < 0:
-        anchor = title
+    if Extractor.keepLinks:
+        return '<a href="%s">%s</a>' % (urllib.quote(title.encode('utf-8')), anchor)
     else:
-        # find last |
-        cur = pipe
-        for s,e in findBalanced(link[pipe:-braq], ['[[', '['], [']]', ']']):
-            pipe = link.find('|', cur, s)
-            if pipe < 0:
-                pipe = cur
-        anchor = link[pipe+1:-braq]
-    anchor += trail
+        return label
+
+# ----------------------------------------------------------------------
+# External links
+
+# from: https://doc.wikimedia.org/mediawiki-core/master/php/DefaultSettings_8php_source.html
+
+wgUrlProtocols = [
+     'bitcoin:', 'ftp://', 'ftps://', 'geo:', 'git://', 'gopher://', 'http://',
+     'https://', 'irc://', 'ircs://', 'magnet:', 'mailto:', 'mms://', 'news:',
+     'nntp://', 'redis://', 'sftp://', 'sip:', 'sips:', 'sms:', 'ssh://',
+     'svn://', 'tel:', 'telnet://', 'urn:', 'worldwind://', 'xmpp:', '//'
+]
+
+# from: https://doc.wikimedia.org/mediawiki-core/master/php/Parser_8php_source.html
+
+# Constants needed for external link processing
+# Everything except bracket, space, or control characters
+# \p{Zs} is unicode 'separator, space' category. It covers the space 0x20
+# as well as U+3000 is IDEOGRAPHIC SPACE for bug 19052
+EXT_LINK_URL_CLASS = r'[^][<>"\x00-\x20\x7F\s]'
+ExtLinkBracketedRegex = re.compile('\[(((?i)' + '|'.join(wgUrlProtocols) + ')' + EXT_LINK_URL_CLASS + r'+)\s*([^\]\x00-\x08\x0a-\x1F]*?)\]', re.S | re.U)
+EXT_IMAGE_REGEX = re.compile(
+    r"""^(http://|https://)([^][<>"\x00-\x20\x7F\s]+)
+    /([A-Za-z0-9_.,~%\-+&;#*?!=()@\x80-\xFF]+)\.((?i)gif|png|jpg|jpeg)$""",
+    re.X | re.S | re.U)
+
+def replaceExternalLinks(text):
+    s = ''
+    cur = 0
+    for m in ExtLinkBracketedRegex.finditer(text):
+        s += text[cur:m.start()]
+        cur = m.end()
+
+        url = m.group(1)
+        label = m.group(3)
+ 
+        # # The characters '<' and '>' (which were escaped by
+        # # removeHTMLtags()) should not be included in
+        # # URLs, per RFC 2396.
+        # m2 = re.search('&(lt|gt);', url)
+        # if m2:
+        #     link = url[m2.end():] + ' ' + link
+        #     url = url[0:m2.end()]
+ 
+        # If the link text is an image URL, replace it with an <img> tag
+        # This happened by accident in the original parser, but some people used it extensively
+        m = EXT_IMAGE_REGEX.match(label)
+        if m:
+            label = makeExternalImage(label)
+ 
+        # Use the encoded URL
+        # This means that users can paste URLs directly into the text
+        # Funny characters like ö aren't valid in URLs anyway
+        # This was changed in August 2004
+        s += makeExternalLink(url, label) #+ trail
+ 
+    return s + text[cur:]
+
+# Function applied to wikiLinks
+def makeExternalLink(title, anchor):
+    colon = title.find(':')
+    if colon > 0 and title[:colon] not in acceptedNamespaces:
+        return ''
+    if colon == 0:
+        # drop also :File:
+        colon2 = title.find(':', colon+1)
+        if colon2 > 1 and title[colon+1:colon2] not in acceptedNamespaces:
+            return ''
     if Extractor.keepLinks:
         return '<a href="%s">%s</a>' % (urllib.quote(title.encode('utf-8')), anchor)
     else:
         return anchor
+
+def makeExternalImage(url, alt=''):
+    if Extractor.keepLinks:
+        return '<img src="%s" alt="%s">' % (url, alt)
+    else:
+        return alt
+
 
 # ----------------------------------------------------------------------
 
@@ -1464,36 +1826,11 @@ def clean(extractor, text):
     # Drop tables
     text = dropNested(text, r'{\|', r'\|}')
 
-    # Expand links
-    res = ''
-    cur = 0
-    # This is too slow.
-    # for m in wikiLink.finditer(text):
-    #     res += text[cur:m.start()] + make_anchor_tag(m)
-    #     cur = m.end()
-    # text = res + text[cur:]
-    # Matches also: [[Help:IPA for Spanish|[a'ðoβe]]]
-    # May be nested:
-    #    [http://www.perseus.tufts.edu  .&lt;/ref&gt;&lt;ref&gt;[http://www.merriam-webster.com], [[Merriam-Webster]].&lt;/ref&gt;&lt;ref&gt;
+    # replace external links
+    text = replaceExternalLinks(text)
 
-    for s,e in findBalanced(text, ['[[', '['], [']]', ']']):
-        m = tailRE.match(text, e)
-        if m:
-            trail = m.group(0)
-            end = m.end()
-        else:
-            trail = ''
-            end = e
-        res += text[cur:s] + make_anchor_tag(text[s:e], trail)
-        cur = end
-    text = res + text[cur:]
-
-    # Drop all remaining ones
-    text = parametrizedLink.sub('', text)
-
-    # Handle external links
-    text = externalLink.sub(r'\1', text)
-    text = externalLinkNoAnchor.sub('', text)
+    # replace internal links
+    text = replaceInternalLinks(text)
 
     # drop MagicWords behavioral switches
     text = magicWordsRE.sub('', text)
