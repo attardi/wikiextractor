@@ -1,3 +1,7 @@
+2015-04-23  Giuseppe Attardi  <attardi@di.unipi.it>
+
+	* WikiExtractor.py: make UTF-8 the default encoding
+
 2015-04-22  Giuseppe Attardi  <attardi@di.unipi.it>
 
 	* WikiExtractor.py (replaceInternalLinks): function for replacing

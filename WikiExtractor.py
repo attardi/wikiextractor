@@ -2,7 +2,7 @@
 # -*- coding: utf-8 -*-
 #
 # =============================================================================
-#  Version: 2.29 (Apr 21, 2015)
+#  Version: 2.30 (Apr 23, 2015)
 #  Author: Giuseppe Attardi (attardi@di.unipi.it), University of Pisa
 #	   Antonio Fuschetto (fuschett@aol.com), University of Pisa
 #
@@ -46,7 +46,11 @@ This version performs template expansion by preprocesssng the whole dump and
 collecting template definitions.
 """
 
-import sys, os.path
+import sys
+# make UTF-8 the default encoding
+reload(sys)
+sys.setdefaultencoding("utf-8")
+import os.path
 import re                       # TODO use regex when it will be standard
 import argparse, random
 from itertools import izip,  izip_longest
@@ -60,7 +64,7 @@ import Queue, threading, multiprocessing
 #===========================================================================
 
 # Program version
-version = '2.29'
+version = '2.30'
 
 ### PARAMS ####################################################################
 
