@@ -2,11 +2,11 @@
 # -*- coding: utf-8 -*-
 #
 # =============================================================================
-#  Version: 2.30 (Apr 23, 2015)
+#  Version: 2.31 (Apr 25, 2015)
 #  Author: Giuseppe Attardi (attardi@di.unipi.it), University of Pisa
-#	   Antonio Fuschetto (fuschett@aol.com), University of Pisa
 #
 #  Contributors:
+#	Antonio Fuschetto (fuschett@aol.com)
 #	Leonardo Souza (lsouza@amtera.com.br)
 #	Juan Manuel Caicedo (juan@cavorite.com)
 #	Humberto Pereira (begini@gmail.com)
@@ -16,7 +16,7 @@
 #	Radics Geza (radicsge@gmail.com)
 #
 # =============================================================================
-#  Copyright (c) 2009. Giuseppe Attardi (attardi@di.unipi.it).
+#  Copyright (c) 2009-2015. Giuseppe Attardi (attardi@di.unipi.it).
 # =============================================================================
 #  This file is part of Tanl.
 #
@@ -47,9 +47,6 @@ collecting template definitions.
 """
 
 import sys
-# make UTF-8 the default encoding
-reload(sys)
-sys.setdefaultencoding("utf-8")
 import os.path
 import re                       # TODO use regex when it will be standard
 import argparse, random
@@ -64,7 +61,7 @@ import Queue, threading, multiprocessing
 #===========================================================================
 
 # Program version
-version = '2.30'
+version = '2.31'
 
 ### PARAMS ####################################################################
 
@@ -1090,7 +1087,7 @@ def sharp_expr(expr):
         expr = re.sub('mod', '%', expr)
         expr = re.sub('\bdiv\b', '/', expr)
         expr = re.sub('\bround\b', '|ROUND|', expr)
-        return str(eval(expr))
+        return unicode(eval(expr))
     except:
         return ""
 
