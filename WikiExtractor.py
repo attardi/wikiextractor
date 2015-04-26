@@ -2,7 +2,7 @@
 # -*- coding: utf-8 -*-
 #
 # =============================================================================
-#  Version: 2.31 (Apr 25, 2015)
+#  Version: 2.32 (Apr 26, 2015)
 #  Author: Giuseppe Attardi (attardi@di.unipi.it), University of Pisa
 #
 #  Contributors:
@@ -46,12 +46,11 @@ This version performs template expansion by preprocesssng the whole dump and
 collecting template definitions.
 """
 
-import sys
-import os.path
+import sys, os.path, time
 import re                       # TODO use regex when it will be standard
 import argparse, random
 from itertools import izip,  izip_longest
-import logging, traceback
+import logging
 import urllib
 import bz2
 import codecs
@@ -61,7 +60,7 @@ import Queue, threading, multiprocessing
 #===========================================================================
 
 # Program version
-version = '2.31'
+version = '2.32'
 
 ### PARAMS ####################################################################
 
@@ -292,7 +291,7 @@ class Template(list):
         # {{ppp|q=r|p=q}} gives r, but using Template:tvvv containing
         # "{{{{{{{{{p}}}}}}}}}", {{tvvv|p=q|q=r|r=s}} gives s.
 
-        logging.debug('subst (%d, %d) %s', len(extractor.frame), depth, self)
+        logging.debug('subst tpl (%d, %d) %s', len(extractor.frame), depth, self)
 
         if depth > extractor.maxParameterRecursionLevels:
             logging.warn('Reachead maximum parameter recursions: %d',
@@ -320,13 +319,14 @@ class TemplateArg(object):
         :param parameter: the parts of a tplarg.
         """
         # the parameter name itself might contain templates, e.g.:
-        # appointe{{#if:{{{appointer14|}}}|r|d}}14|
+        #   appointe{{#if:{{{appointer14|}}}|r|d}}14|
+        #   4|{{{{{subst|}}}CURRENTYEAR}}
 
         # any parts in a tplarg after the first (the parameter default) are
         # ignored, and an equals sign in the first part is treated as plain text.
         #logging.debug('TemplateArg %s', parameter)
 
-        parts = splitParameters(parameter)
+        parts = splitParts(parameter)
         self.name = Template.parse(parts[0])
         if len(parts) > 1:
             # This parameter has a default value
@@ -350,12 +350,14 @@ class TemplateArg(object):
         # appointe{{#if:{{{appointer14|}}}|r|d}}14|
         paramName = self.name.subst(params, extractor, depth+1)
         paramName = extractor.expandTemplates(paramName)
+        res = ''
         if paramName in params:
-            return params[paramName]  # use parameter value specified in template invocation
+            res = params[paramName]  # use parameter value specified in template invocation
         elif self.default:            # use the default value
             defaultValue = self.default.subst(params, extractor, depth+1)
-            return extractor.expandTemplates(defaultValue)
-        return ''
+            res =  extractor.expandTemplates(defaultValue)
+        logging.debug('subst arg %d %s -> %s' % (depth, paramName, res))
+        return res
 
 #======================================================================
 
@@ -397,6 +399,11 @@ class Extractor(object):
         header = header.encode('utf-8')
         self.magicWords['pagename'] = self.title
         self.magicWords['fullpagename'] = self.title
+        self.magicWords['currentyear'] = time.strftime('%Y')
+        self.magicWords['currentmonth'] = time.strftime('%m')
+        self.magicWords['currentday'] = time.strftime('%d')
+        self.magicWords['currenthour'] = time.strftime('%H')
+        self.magicWords['currenttime'] = time.strftime('%H:%M:%S')
         text = clean(self, text)
         footer = "\n</doc>\n"
         if out != sys.stdout:
@@ -452,7 +459,8 @@ class Extractor(object):
             cur = e
         # leftover
         res += wikitext[cur:]
-        logging.debug('   expandTemplates> %d %s', len(self.frame), res)
+        if cur:
+            logging.debug('   expandTemplates> %d %s', len(self.frame), res)
         return res
 
     def templateParams(self, parameters):
@@ -577,7 +585,7 @@ class Extractor(object):
 
         logging.debug('INVOCATION %d %s', len(self.frame), body)
 
-        parts = splitParameters(body)
+        parts = splitParts(body)
         # title is the portion before the first |
         logging.debug('TITLE %s', parts[0].strip())
         title = self.expandTemplates(parts[0].strip())
@@ -677,12 +685,11 @@ class Extractor(object):
 # ----------------------------------------------------------------------
 # parameter handling
 
-def splitParameters(paramsList, sep='|'):
+def splitParts(paramsList):
     """
     :param paramList: the parts of a template or tplarg.
 
-    Split template parameters at the separator :param sep:, which defaults to
-    "|". The fuction can be used also to split also key-value pairs at the
+    Split template parameters at the separator "|".
     separator "=".
 
     Template parameters often contain URLs, internal links, text or even
@@ -701,7 +708,7 @@ def splitParameters(paramsList, sep='|'):
        }}
      }}
 
-    We split parameters at the "|" symbols that are not inside any pair
+    We split parts at the "|" symbols that are not inside any pair
     {{{...}}}, {{...}}, [[...]], {|...|}.
     """
 
@@ -710,11 +717,15 @@ def splitParameters(paramsList, sep='|'):
     # as part of:
     # {{#ifeq: ped|article|[http://emedicine.medscape.com/article/180-overview|[http://www.emedicine.com/ped/topic180.htm#{{#if: |section~}}}} ped/180{{#if: |~}}]
 
+    # should handle both tpl arg like:
+    #    4|{{{{{subst|}}}CURRENTYEAR}}
+    # and tpl parameters like:
+    #    ||[[Category:People|{{#if:A|A|{{PAGENAME}}}}]]
+
+    sep = '|'
     parameters = []
     cur = 0
-    for s,e in findBalanced(paramsList,
-                            ['{{{', '{{', '[[', '{|'],
-                            ['}}}', '}}', ']]', '|}']):
+    for s,e in findMatchingBraces(paramsList):
         par = paramsList[cur:s].split(sep)
         if par:
             if parameters:
@@ -742,12 +753,12 @@ def splitParameters(paramsList, sep='|'):
         else:
             parameters = par
 
-    #logging.debug('splitParameters %s %s\nparams: %s', sep, paramsList, str(parameters))
+    #logging.debug('splitParts %s %s\nparams: %s', sep, paramsList, str(parameters))
     return parameters
 
-def findMatchingBraces(text, ldelim):
+def findMatchingBraces(text, ldelim=0):
     """
-    :param ldelim: number of braces to match.
+    :param ldelim: number of braces to match. 0 means match [[]], {{}} and {{{}}}.
     """
     # Parsing is done with respect to pairs of double braces {{..}} delimiting
     # a template, and pairs of triple braces {{{..}}} delimiting a tplarg.
@@ -758,8 +769,8 @@ def findMatchingBraces(text, ldelim):
     # separate or nested (not overlapping).
 
     # Unmatched double rectangular closing brackets can be in a template or
-    # tplarg, but unmatched double rectangular opening brackets
-    # cannot. Unmatched double or triple closing braces inside a pair of
+    # tplarg, but unmatched double rectangular opening brackets cannot.
+    # Unmatched double or triple closing braces inside a pair of
     # double rectangular brackets are treated as plain text.
     # Other formulation: in ambiguity between template or tplarg on one hand,
     # and a link on the other hand, the structure with the rightmost opening
@@ -783,45 +794,75 @@ def findMatchingBraces(text, ldelim):
     # as well as expressions with stray }:
     #   {{{link|{{ucfirst:{{{1}}}}}} interchange}}}
 
-    reOpen = re.compile('[{]{%d,}' % ldelim) # at least ldelim
-    reNext = re.compile('([{]{2,})|(}{2,})')       # at least 2
+    if ldelim:                                   # 2-3
+        reOpen = re.compile('[{]{%d,}' % ldelim) # at least ldelim
+        reNext = re.compile('[{]{2,}|}{2,}') # at least 2
+    else:
+        reOpen = re.compile('{{2,}|\[{2,}')
+        reNext = re.compile('{{2,}|}{2,}|\[{2,}|]{2,}') # at least 2
 
     cur = 0
     while True:
         m1 = reOpen.search(text, cur)
         if not m1:
             return
-        openCount = len(m1.group(0))
-        stack = [openCount] # stack of opening
+        lmatch = m1.end()-m1.start()
+        if m1.group()[0] == '{':
+            stack = [lmatch]    # stack of opening braces lengths
+        else:
+            stack = [-lmatch]   # negative means [
         end = m1.end()
         while True:
             m2 = reNext.search(text, end)
             if not m2:
                 return      # unbalanced
             end = m2.end()
-            if m2.lastindex == 1:
-                stack.append(len(m2.group(1))) # span of {
-            else:
-                closeCount = len(m2.group(2))
+            brac = m2.group()[0]
+            lmatch = m2.end()-m2.start()
+
+            if brac == '{':
+                stack.append(lmatch)
+            elif brac == '}':
                 while stack:
                     openCount = stack.pop() # opening span
-                    if closeCount >= openCount:
-                        closeCount -= openCount
+                    if openCount == 0:      # illegal unmatched [[
+                        continue
+                    if lmatch >= openCount:
+                        lmatch -= openCount
+                        if lmatch <= 1: # either close or stray }
+                            break
                     else:
                         # put back unmatched
-                        stack.append(openCount - closeCount)
-                        break
-                    if closeCount <= 1: # either close or stray }
+                        stack.append(openCount - lmatch)
                         break
                 if not stack:
-                    yield m1.start(), end-closeCount
+                    yield m1.start(), end-lmatch
                     cur = end
                     break
-                elif len(stack) == 1 and stack[0] < ldelim:
+                elif len(stack) == 1 and 0 < stack[0] < ldelim:
                     # ambiguous {{{{{ }}} }}
                     yield m1.start() + stack[0], end
                     cur = end
                     break
+            elif brac == '[': # [[
+                stack.append(-lmatch)
+            else:               # ]]
+                while stack and stack[-1] < 0: # matching [[
+                    openCount = -stack.pop()
+                    if lmatch >= openCount:
+                        lmatch -= openCount
+                        if lmatch <= 1: # either close or stray ]
+                            break
+                    else:
+                        # put back unmatched (negative)
+                        stack.append(lmatch - openCount)
+                        break
+                if not stack:
+                    yield m1.start(), end-lmatch
+                    cur = end
+                    break
+                # unmatched ]] are discarded
+                cur = end
 
 def findBalanced(text, openDelim, closeDelim):
     """
@@ -1084,12 +1125,14 @@ ROUND = Infix(lambda x,y: round(x, y))
 
 def sharp_expr(expr):
     try:
+        expr = re.sub('=', '==', expr)
         expr = re.sub('mod', '%', expr)
         expr = re.sub('\bdiv\b', '/', expr)
         expr = re.sub('\bround\b', '|ROUND|', expr)
         return unicode(eval(expr))
     except:
-        return ""
+        return '<span class="error"></span>'
+
 
 def sharp_if(testValue, valueIfTrue, valueIfFalse=None, *args):
     # In theory, we should evaluate the first argument here,
@@ -1908,7 +1951,7 @@ def clean(extractor, text):
     text = dots.sub('...', text)
     text = re.sub(u' (,:\.\)\]»)', r'\1', text)
     text = re.sub(u'(\[\(«) ', r'\1', text)
-    text = re.sub(r'\n\W+?\n', '\n', text) # lines with only punctuations
+    text = re.sub(r'\n\W+?\n', '\n', text, flags=re.U) # lines with only punctuations
     text = text.replace(',,', ',').replace(',.', '.')
 
     return text
@@ -1994,7 +2037,7 @@ def compact(text):
             listLevel = []
 
         # Drop residuals of lists
-        elif line[0] in '{|' or line[-1] in '}':
+        elif line[0] in '{|' or line[-1] == '}':
             continue
         # Drop irrelevant lines
         elif (line[0] == '(' and line[-1] == ')') or line.strip('.-') == '':

@@ -1,7 +1,15 @@
+2015-04-26  Giuseppe Attardi  <attardi@di.unipi.it>
+
+	* WikiExtractor.py (clean): use re.U when matching \W or chinese
+	characters will be lost.
+
 2015-04-25  Giuseppe Attardi  <attardi@di.unipi.it>
 
 	* WikiExtractor.py (sharp_expr): use unicode() instread od str()
 	or else chinese article 596814 fails.
+	(splitParameters): use findMatchingBraces istead of findBalanced,
+	to properly handle {{{4|{{{{{subst|}}}CURRENTYEAR}}}}
+	(Extractor.extract): handle currentyear, currentmonth and currentday
 
 2015-04-23  Giuseppe Attardi  <attardi@di.unipi.it>
 
