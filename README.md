@@ -55,5 +55,5 @@ assuming template definitions have not changed.
 
 Option --no-templates significantly speeds up the extractor, avoiding the cost of expanding [MediaWiki templates](https://www.mediawiki.org/wiki/Help:Templates).
 
-For further information, visit [the dcumentation](http://attardi.github.io/wikiextractor).
+For further information, visit [the documentation](http://attardi.github.io/wikiextractor).
 
