@@ -2,7 +2,7 @@
 # -*- coding: utf-8 -*-
 #
 # =============================================================================
-#  Version: 2.32 (Apr 26, 2015)
+#  Version: 2.33 (May 6, 2015)
 #  Author: Giuseppe Attardi (attardi@di.unipi.it), University of Pisa
 #
 #  Contributors:
@@ -60,7 +60,7 @@ import Queue, threading, multiprocessing
 #===========================================================================
 
 # Program version
-version = '2.32'
+version = '2.33'
 
 ### PARAMS ####################################################################
 
@@ -1761,7 +1761,7 @@ def makeInternalLink(title, label):
         if colon2 > 1 and title[colon+1:colon2] not in acceptedNamespaces:
             return ''
     if Extractor.keepLinks:
-        return '<a href="%s">%s</a>' % (urllib.quote(title.encode('utf-8')), anchor)
+        return '<a href="%s">%s</a>' % (urllib.quote(title.encode('utf-8')), label)
     else:
         return label
 
@@ -2009,7 +2009,7 @@ def compact(text):
         elif line[0] in '*#;:':
             if Extractor.toHTML:
                 i = 0
-                for c,n in izip_longest(listLevel, line):
+                for c,n in izip_longest(listLevel, line, fillvalue=' '):
                     if n not in '*#;:':
                         if c:
                             page.append(listClose[c])
@@ -2022,7 +2022,7 @@ def compact(text):
                             # close level
                             page.append(listClose[c])
                             listLevel = listLevel[:-1]
-                        listLevel = listLevel + n
+                        listLevel += n
                         page.append(listOpen[n])
                     i += 1
                 n = line[i-1]
@@ -2406,7 +2406,7 @@ def main():
         return
 
     if args.namespaces:
-        acceptedNamespaces = set(args.ns.split(','))
+        acceptedNamespaces = set(args.namespaces.split(','))
 
     FORMAT = '%(levelname)s: %(message)s'
     logging.basicConfig(format=FORMAT)
