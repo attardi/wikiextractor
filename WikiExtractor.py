@@ -2009,14 +2009,15 @@ def compact(text):
         elif line[0] in '*#;:':
             if Extractor.toHTML:
                 i = 0
-                for c,n in izip_longest(listLevel, line, fillvalue=' '):
-                    if n not in '*#;:':
+                for c,n in izip_longest(listLevel, line, fillvalue=''):
+                    if not n or n not in '*#;:':
                         if c:
                             page.append(listClose[c])
                             listLevel = listLevel[:-1]
                             continue
                         else:
                             break
+                    # n != ''
                     if c != n and (not c or (c not in ';:' and n not in ';:')):
                         if c:
                             # close level
@@ -2025,9 +2026,9 @@ def compact(text):
                         listLevel += n
                         page.append(listOpen[n])
                     i += 1
-                n = line[i-1]
+                n = line[i-1]   # last list char
                 line = line[i:].strip()
-                if line:
+                if line: # FIXME: n is '"'
                     page.append(listItem[n] % line)
             else:
                 continue
