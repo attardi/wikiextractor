@@ -298,7 +298,7 @@ class Template(list):
                          extractor.maxParameterRecursionLevels)
             return ''
 
-        return ''.join([tpl.subst(params, extractor, depth+1) for tpl in self])
+        return ''.join([tpl.subst(params, extractor, depth) for tpl in self])
 
     def __str__(self):
         return ''.join([unicode(x) for x in self])
