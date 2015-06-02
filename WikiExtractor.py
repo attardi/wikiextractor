@@ -2,7 +2,7 @@
 # -*- coding: utf-8 -*-
 #
 # =============================================================================
-#  Version: 2.33 (May 6, 2015)
+#  Version: 2.34 (June 2, 2015)
 #  Author: Giuseppe Attardi (attardi@di.unipi.it), University of Pisa
 #
 #  Contributors:
@@ -60,7 +60,7 @@ import Queue, threading, multiprocessing
 #===========================================================================
 
 # Program version
-version = '2.33'
+version = '2.34'
 
 ### PARAMS ####################################################################
 
@@ -298,7 +298,7 @@ class Template(list):
                          extractor.maxParameterRecursionLevels)
             return ''
 
-        return ''.join([tpl.subst(params, extractor, depth) for tpl in self])
+        return ''.join([tpl.subst(params, extractor, depth+1) for tpl in self])
 
     def __str__(self):
         return ''.join([unicode(x) for x in self])
@@ -674,9 +674,12 @@ class Extractor(object):
         params = self.templateParams(params)
 
         # Perform parameter substitution
+        # extend frame before subst, since there may be recursion in default
+        # parameter value, e.g. {{OTRS|celebrative|date=April 2015}} in article
+        # 21637542 in enwiki.
+        self.frame.append((title, params))
         instantiated = template.subst(params, self)
         logging.debug('instantiated %d %s', len(self.frame), instantiated)
-        self.frame.append((title, params))
         value = self.expandTemplates(instantiated)
         self.frame.pop()
         logging.debug('   INVOCATION> %s %d %s', title, len(self.frame), value)

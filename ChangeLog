@@ -1,3 +1,10 @@
+2015-06-02  Giuseppe Attardi  <attardi@di.unipi.it>
+
+	* WikiExtractor.py (Extractor.expandTemplate): extend frame before
+	subst(), since there may be recursion in default parameter value,
+	e.g. {{OTRS|celebrative|date=April 2015}} in article 21637542 in
+	enwiki.
+
 2015-05-06  Giuseppe Attardi  <attardi@di.unipi.it>
 
 	* WikiExtractor.py (main): fixed arg.namespaces.
