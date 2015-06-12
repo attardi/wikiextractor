@@ -215,7 +215,7 @@ comment = re.compile(r'<!--.*?-->', re.DOTALL)
 # Match ignored tags
 ignored_tag_patterns = []
 def ignoreTag(tag):
-    left = re.compile(r'<%s\b.*?>' % tag, re.IGNORECASE) # both <ref> and <reference>
+    left = re.compile(r'<%s\b.*?>' % tag, re.IGNORECASE | re.DOTALL) # both <ref> and <reference>
     right = re.compile(r'</\s*%s>' % tag, re.IGNORECASE)
     ignored_tag_patterns.append((left, right))
 
