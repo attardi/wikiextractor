@@ -1,4 +1,4 @@
-#!/usr/bin/python
+!/usr/bin/python
 # -*- coding: utf-8 -*-
 #
 # =============================================================================
@@ -56,6 +56,7 @@ import bz2
 import codecs
 from htmlentitydefs import name2codepoint
 import Queue, threading, multiprocessing
+import StringIO
 
 #===========================================================================
 
@@ -406,8 +407,6 @@ class Extractor(object):
         self.magicWords['currenttime'] = time.strftime('%H:%M:%S')
         text = clean(self, text)
         footer = "\n</doc>\n"
-###        if out != sys.stdout:
-###            out.reserve(len(header) + len(text) + len(footer))
         out.write(header)
         for line in compact(text):
             out.write(line.encode('utf-8'))
@@ -2079,21 +2078,19 @@ class NextFile(object):
 
     filesPerDir = 100
 
-    def __init__(self, lock, path_name):
-        self.lock = lock
+    def __init__(self, path_name):
         self.path_name = path_name
         self.dir_index = -1
         self.file_index = -1
 
     def next(self):
-        with self.lock:
-            self.file_index = (self.file_index + 1) % NextFile.filesPerDir
-            if self.file_index == 0:
-                self.dir_index += 1
-            dirname = self._dirname()
-            if not os.path.isdir(dirname):
-                os.makedirs(dirname)
-            return self._filepath()
+        self.file_index = (self.file_index + 1) % NextFile.filesPerDir
+        if self.file_index == 0:
+            self.dir_index += 1
+        dirname = self._dirname()
+        if not os.path.isdir(dirname):
+            os.makedirs(dirname)
+        return self._filepath()
 
     def _dirname(self):
         char1 = self.dir_index % 26
@@ -2126,6 +2123,7 @@ class OutputSplitter(object):
             self.file = self.open(self.nextFile.next())
 
     def write(self, data):
+        self.reserve(len(data))
         self.file.write(data)
 
     def close(self):
@@ -2198,24 +2196,32 @@ def load_templates(file, output_file=None):
             if articles % 10000 == 0:
                 logging.info("Preprocessed %d pages", articles)
 
-def process_dump(input, template_file, outdir, file_size, file_compress, threads):
+def process_dump(input_file, template_file, out_file, file_size, file_compress, process_count):
     """
-    :param input_file: name of the wikipedia dump file.
+    :param input_file: name of the wikipedia dump file; '-' to read from stdin
     :param template_file: optional file with template definitions.
-    :param outdir: name of the directory where to store extracted files.
-    :param file_size: max size of each extracted file.
+    :param out_file: name of the file (if no file_size limit) or directory to store extracted data
+    :param file_size: max size of each extracted file, or None for no max (one file)
     :param file_compress: whether to compress files with bzip.
+    :param process_count: number of extration processes to spawn.
     """
     global urlbase
     global knownNamespaces
     global templateNamespace
     global expand_templates
 
+    if input_file == '-':
+        input = sys.stdin
+    elif input_file.lower().endswith("bz2"):
+        input = bz2.BZ2File(input_file)
+    else:
+        input = open(input_file)
+
     # collect siteinfo
     for line in input:
         line = line.decode('utf-8')
         m = tagRE.search(line)
-        if not  m:
+        if not m:
             continue
         tag = m.group(2)
         if tag == 'base':
@@ -2234,39 +2240,40 @@ def process_dump(input, template_file, outdir, file_size, file_compress, threads
         # preprocess
         logging.info("Preprocessing dump to collect template definitions: this may take some time.")
         if template_file and os.path.exists(template_file):
-            input.close()
             with open(template_file) as file:
                 load_templates(file)
         else:
+            if input_file == '-':
+                # can't scan then reset stdin; must error w/ suggestion to specify template_file
+                raise ValueError("to use templates with stdin dump, must supply explicit template-file")
             load_templates(input, template_file)
             input.close()
-        input = opener(input_file)
+            input = opener(input_file)
+
 
     # process pages
-###    logging.info("Starting processing pages from %s.", input_file)
-    logging.info("Starting processing pages from %s.", 'input')
+    logging.info("Starting processing pages from %s.", input_file)
+
+    # output queue & single dedicated process
+    out_queue = multiprocessing.JoinableQueue(maxsize=10 * process_count)
+    outputter = multiprocessing.Process(target=output_process,
+                                        args=(out_queue,process_count,out_file,file_size,file_compress))
+    outputter.daemon = False
+    outputter.start()
 
     # initialize jobs queue
-    #threads = multiprocessing.cpu_count()
-    logging.info("Using %d CPUs.", threads)
-###    queue = Queue.Queue(maxsize=2 * threads)
-    queue = multiprocessing.JoinableQueue(maxsize=10 * threads)
-    lock = threading.Lock()  # for protecting shared state.
+    logging.info("Using %d extract processess.", process_count)
+    queue = multiprocessing.JoinableQueue(maxsize=10 * process_count)
 
-###    nextFile = NextFile(lock, outdir)
-
-    # start worker threads
+    # start worker processes
     workers = []
-    for _ in xrange(max(1, threads - 1)): # keep one for master
-###        output_splitter = OutputSplitter(nextFile, file_size, file_compress)
-###        extractor = ExtractorThread(queue, output_splitter)
-        fname = outdir +'/'+ str(_)
-        extractor = multiprocessing.Process(target=worker_process,args=(queue,fname))
+    for _ in xrange(max(1, process_count)):
+        extractor = multiprocessing.Process(target=extract_process,args=(queue,out_queue))
         extractor.daemon = False  # ensure worker process gets to finish
         extractor.start()
         workers.append(extractor)
 
-    # we collect indivual lines, since str.join() is significantly faster than
+    # we collect individual lines, since str.join() is significantly faster than
     # concatenation
     page = []
     id = None
@@ -2307,57 +2314,73 @@ def process_dump(input, template_file, outdir, file_size, file_compress, threads
             colon = title.find(':')
             if (colon < 0 or title[:colon] in acceptedNamespaces) and \
                     not redirect and not title.startswith(templateNamespace):
-###                queue.put(Extractor(id, title, page), True) # block if full
                 item = (id, title, page)
-###                print(id)
-                queue.put(item, True) # block if full
+                queue.put(item, True)  # block if full
             id = None
             page = []
 
-    for _ in xrange(max(1, threads - 1)):
-        queue.put(None)  # let each thread finish
+    for _ in xrange(process_count):
+        queue.put(None)  # signal each thread should finish
 
-    # wait for empty queue
+    input.close()
+
+    # wait for empty queues
     queue.join()
-
+    out_queue.join()
 
 
 #----------------------------------------------------------------------
-# Multithread version
+# Multiprocess support
 
-def worker_process(queue, fname):
-    output = bz2.BZ2File(fname + '.bz2', 'w')
+def extract_process(jobs_queue, done_queue):
+    """Pull tuples of raw page content, do CPU/regex-heavy fixup, push finished text"""
     while True:
-        job = queue.get()
+        job = jobs_queue.get()  # job is (id, title, page)
         if job:
-            Extractor(*job).extract(output)
-            queue.task_done()  # notify of previous job done
+            out = StringIO.StringIO()
+            Extractor(*job).extract(out)
+            done_queue.put((job[0],out.getvalue()))  # (id, finished_text)
+            jobs_queue.task_done()  # notify of previous job done
+            out.close()
         else:
             break
-    output.close()
-    queue.task_done()  # notify of final job done only after file close
+    done_queue.put((-1,'IGNORED'))  # signal no more from this process
+    jobs_queue.task_done()  # notify of final job done only after exit loop
 
-###class ExtractorThread(threading.Thread):
-class ExtractorThread(multiprocessing.Process):
-    """
-    Extractor thread.
-    """
-    def __init__(self, queue, splitter):
-        self._queue = queue
-        self._splitter = splitter
-####        threading.Thread.__init__(self)
-        multiprocessing.Process.__init__(self)
-        self.daemon = True  # let the process die when main thread is killed
-        self.start()
+def output_process(queue, extractor_count, out_file, file_size, file_compress):
+    """Pull finished article text, write to one or series of files (or stdout)"""
+    if out_file == '-':
+        output = sys.stdout
+        if file_size > 0:
+            logging.warn("writing to stdout, so max file size %d ignored" % file_size)
+        if file_compress:
+            logging.warn("writing to stdout, so no output compression (use external tool)")
+    elif file_size > 0:
+        # max size in effect, so file is a directory to collect many files
+        nextFile = NextFile(out_file)
+        output = OutputSplitter(nextFile, file_size, file_compress)
+    else:
+        # plain single file
+        if file_compress:
+            output = bz2.BZ2File(out_file + '.bz2', 'w')
+        else:
+            output = open(out_file, 'w')
 
-    def run(self):
-        while True:
-            job = self._queue.get()
-            if job:
-                job.extract(self._splitter)
-                self._queue.task_done()
-            else:
-                break
+    while True:
+        id, text = queue.get()
+        if id < 0:
+            # a process finished
+            extractor_count -= 1
+            if extractor_count == 0:
+                break  # all processes finished
+            queue.task_done()
+            continue
+        output.write(text)
+        queue.task_done()
+
+    if output != sys.stdout:
+        output.close()
+    queue.task_done()
 
 # ----------------------------------------------------------------------
 
@@ -2375,9 +2398,10 @@ def main():
                         help="XML wiki dump file")
     groupO = parser.add_argument_group('Output')
     groupO.add_argument("-o", "--output", default="text",
-                        help="output directory")
-    groupO.add_argument("-b", "--bytes", default="1M",
-                        help="put specified bytes per output file (default is %(default)s)", metavar="n[KMG]")
+                        help="output filename (if no bytes limit) or directory for files (if bytes limit set)")
+    groupO.add_argument("-b", "--bytes", default="None",
+                        help="maximum bytes per output file; default is no limit (%(default)s)",
+                        metavar="n[KMG]")
     groupO.add_argument("-c", "--compress", action="store_true",
                         help="compress output files using bzip")
 
@@ -2394,8 +2418,9 @@ def main():
                         help="use or create file containing templates")
     groupP.add_argument("--no-templates", action="store_false",
                         help="Do not expand templates")
-    parser.add_argument("--threads", type=int, default=2,
-                        help="Number of threads to use (default 2)")
+    default_process_count = multiprocessing.cpu_count()-1
+    parser.add_argument("--processes", type=int, default=default_process_count,
+                        help="Number of extract processes; default is one less than CPU cores (%d)"%default_process_count)
 
     groupS = parser.add_argument_group('Special')
     groupS.add_argument("-q", "--quiet", action="store_true",
@@ -2420,9 +2445,13 @@ def main():
     expand_templates = args.no_templates
 
     try:
-        power = 'kmg'.find(args.bytes[-1].lower()) + 1
-        file_size = int(args.bytes[:-1]) * 1024 ** power 
-        if file_size < minFileSize: raise ValueError()
+        if args.bytes == "None":
+            file_size = -1
+        else:
+            power = 'kmg'.find(args.bytes[-1].lower()) + 1
+            file_size = int(args.bytes[:-1]) * 1024 ** power
+        if file_size != -1 and file_size < minFileSize:
+            raise ValueError()
     except ValueError:
         logging.error('Insufficient or invalid size: %s', args.bytes)
         return
@@ -2460,25 +2489,17 @@ def main():
             Extractor(id, title, [page]).extract()
         return
 
-    output_dir = args.output
-    if not os.path.isdir(output_dir):
+    output_path = args.output
+    if file_size > 0 and not os.path.isdir(output_path):
         try:
-            os.makedirs(output_dir)
+            os.makedirs(output_path)
         except:
-            logging.error('Could not create: %s', output_dir)
+            logging.error('Could not create: %s', output_path)
             return
 
-    if input_file == '-':
-        input = sys.stdin
-    elif input_file.lower().endswith("bz2"):
-        input = bz2.BZ2File(input_file)
-    else:
-        input = open(input_file)
+    process_dump(input_file, args.templates, output_path, file_size,
+                 args.compress, args.processes)
 
-    process_dump(input, args.templates, output_dir, file_size,
-                 args.compress, args.threads)
-
-    input.close()
 
 if __name__ == '__main__':
     main()
