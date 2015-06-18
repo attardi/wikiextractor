@@ -2418,9 +2418,9 @@ def main():
                         help="use or create file containing templates")
     groupP.add_argument("--no-templates", action="store_false",
                         help="Do not expand templates")
-    default_process_count = multiprocessing.cpu_count()-1
+    default_process_count = multiprocessing.cpu_count()
     parser.add_argument("--processes", type=int, default=default_process_count,
-                        help="Number of extract processes; default is one less than CPU cores (%d)"%default_process_count)
+                        help="Number of extract processes; default is count of CPU cores (%d)"%default_process_count)
 
     groupS = parser.add_argument_group('Special')
     groupS.add_argument("-q", "--quiet", action="store_true",
