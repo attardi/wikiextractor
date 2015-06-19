@@ -1,4 +1,4 @@
-!/usr/bin/python
+#!/usr/bin/python
 # -*- coding: utf-8 -*-
 #
 # =============================================================================
@@ -57,6 +57,7 @@ import codecs
 from htmlentitydefs import name2codepoint
 import Queue, threading, multiprocessing
 import StringIO
+import fileinput
 
 #===========================================================================
 
@@ -2240,8 +2241,9 @@ def process_dump(input_file, template_file, out_file, file_size, file_compress, 
         # preprocess
         logging.info("Preprocessing dump to collect template definitions: this may take some time.")
         if template_file and os.path.exists(template_file):
-            with open(template_file) as file:
-                load_templates(file)
+            file = fileinput.FileInput(template_file,openhook=fileinput.hook_compressed)
+            load_templates(file)
+            file.close()
         else:
             if input_file == '-':
                 # can't scan then reset stdin; must error w/ suggestion to specify template_file
@@ -2254,22 +2256,24 @@ def process_dump(input_file, template_file, out_file, file_size, file_compress, 
     # process pages
     logging.info("Starting processing pages from %s.", input_file)
 
+    # ordering/control queue
+    ordering_queue = multiprocessing.JoinableQueue(maxsize=10 * process_count)
+
     # output queue & single dedicated process
-    out_queue = multiprocessing.JoinableQueue(maxsize=10 * process_count)
+    out_queue = multiprocessing.Queue(maxsize=10 * process_count)
     outputter = multiprocessing.Process(target=output_process,
-                                        args=(out_queue,process_count,out_file,file_size,file_compress))
-    outputter.daemon = False
+                                        args=(ordering_queue,out_queue,out_file,file_size,file_compress))
     outputter.start()
 
     # initialize jobs queue
     logging.info("Using %d extract processess.", process_count)
-    queue = multiprocessing.JoinableQueue(maxsize=10 * process_count)
+    queue = multiprocessing.Queue(maxsize=10 * process_count)
 
     # start worker processes
     workers = []
     for _ in xrange(max(1, process_count)):
         extractor = multiprocessing.Process(target=extract_process,args=(queue,out_queue))
-        extractor.daemon = False  # ensure worker process gets to finish
+        extractor.daemon = True  # only live while parent process lives
         extractor.start()
         workers.append(extractor)
 
@@ -2277,6 +2281,8 @@ def process_dump(input_file, template_file, out_file, file_size, file_compress, 
     # concatenation
     page = []
     id = None
+    last_id = None
+    ordinal = 1
     inText = False
     redirect = False
     for line in input:
@@ -2312,21 +2318,21 @@ def process_dump(input_file, template_file, out_file, file_size, file_compress, 
             page.append(line)
         elif tag == '/page':
             colon = title.find(':')
-            if (colon < 0 or title[:colon] in acceptedNamespaces) and \
+            if (colon < 0 or title[:colon] in acceptedNamespaces) and id != last_id and \
                     not redirect and not title.startswith(templateNamespace):
-                item = (id, title, page)
-                queue.put(item, True)  # block if full
+                item = (id, title, page, ordinal)
+                queue.put(item, True)  # goes to any available extract_process
+                ordering_queue.put(ordinal, True)  # goes only to output_process
+                last_id = id
+                ordinal += 1
             id = None
             page = []
 
-    for _ in xrange(process_count):
-        queue.put(None)  # signal each thread should finish
-
     input.close()
-
-    # wait for empty queues
-    queue.join()
-    out_queue.join()
+    ordering_queue.put(None)  # signal end of work
+    logging.info("Extracted %d articles", ordinal)
+    # wait for empty queue
+    ordering_queue.join()
 
 
 #----------------------------------------------------------------------
@@ -2335,19 +2341,16 @@ def process_dump(input_file, template_file, out_file, file_size, file_compress, 
 def extract_process(jobs_queue, done_queue):
     """Pull tuples of raw page content, do CPU/regex-heavy fixup, push finished text"""
     while True:
-        job = jobs_queue.get()  # job is (id, title, page)
+        job = jobs_queue.get()  # job is (id, title, page, ordinal)
         if job:
             out = StringIO.StringIO()
-            Extractor(*job).extract(out)
-            done_queue.put((job[0],out.getvalue()))  # (id, finished_text)
-            jobs_queue.task_done()  # notify of previous job done
+            Extractor(*job[:3]).extract(out)
+            done_queue.put((job[3],out.getvalue()))  # (ordinal, finished_text)
             out.close()
         else:
             break
-    done_queue.put((-1,'IGNORED'))  # signal no more from this process
-    jobs_queue.task_done()  # notify of final job done only after exit loop
 
-def output_process(queue, extractor_count, out_file, file_size, file_compress):
+def output_process(ordering_queue, docs_queue, out_file, file_size, file_compress):
     """Pull finished article text, write to one or series of files (or stdout)"""
     if out_file == '-':
         output = sys.stdout
@@ -2366,21 +2369,22 @@ def output_process(queue, extractor_count, out_file, file_size, file_compress):
         else:
             output = open(out_file, 'w')
 
+    ordering_buffer = {}
     while True:
-        id, text = queue.get()
-        if id < 0:
-            # a process finished
-            extractor_count -= 1
-            if extractor_count == 0:
-                break  # all processes finished
-            queue.task_done()
-            continue
-        output.write(text)
-        queue.task_done()
+        next_ordinal = ordering_queue.get()
+        if next_ordinal == None:
+            break
+        while True:
+            if next_ordinal in ordering_buffer:
+                output.write(ordering_buffer.pop(next_ordinal))
+                ordering_queue.task_done()
+                break
+            ordinal, text = docs_queue.get()
+            ordering_buffer[ordinal] = text
 
     if output != sys.stdout:
         output.close()
-    queue.task_done()
+    ordering_queue.task_done()  # report last None as done
 
 # ----------------------------------------------------------------------
 
