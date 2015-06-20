@@ -15,22 +15,23 @@ Each file will contains several documents in this [document format](http://media
 
     usage: WikiExtractor.py [-h] [-o OUTPUT] [-b n[KMG]] [-c] [--html] [-l]
 			    [-ns ns1,ns2] [-s] [--templates TEMPLATES]
-			    [--no-templates] [--threads THREADS] [-q] [--debug]
+			    [--no-templates] [--processes PROCESSES] [-q] [--debug]
 			    [-a] [-v]
 			    input
 
     positional arguments:
-      input                 XML wiki dump file
+      input                 XML wiki dump file; use '-' to read from stdin
 
     optional arguments:
       -h, --help            show this help message and exit
-      --threads THREADS     Number of threads to use (default 2)
+      --processes PROCESSES number of processes to use (default number of CPU cores)
 
     Output:
       -o OUTPUT, --output OUTPUT
-			    output directory
+			    output path; a file if no max bytes per file set, 
+			    otherwise a directory to collect files. use '-' for stdout.
       -b n[KMG], --bytes n[KMG]
-			    put specified bytes per output file (default is 1M)
+			    maximum bytes per output file (default is no limit: one file)
       -c, --compress        compress output files using bzip
 
     Processing:
