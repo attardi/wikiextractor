@@ -1998,8 +1998,8 @@ def compact(text):
         if not line:
             continue
         # Handle section titles
-###        m = section.match(line)
-        if False:  ### m:
+        m = section.match(line)
+        if m:
             title = m.group(2)
             lev = len(m.group(1))
             if Extractor.toHTML:
