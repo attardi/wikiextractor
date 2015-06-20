@@ -58,6 +58,7 @@ from htmlentitydefs import name2codepoint
 import Queue, threading, multiprocessing
 import StringIO
 import fileinput
+from timeit import default_timer
 
 #===========================================================================
 
@@ -296,8 +297,7 @@ class Template(list):
         logging.debug('subst tpl (%d, %d) %s', len(extractor.frame), depth, self)
 
         if depth > extractor.maxParameterRecursionLevels:
-            logging.warn('Reachead maximum parameter recursions: %d',
-                         extractor.maxParameterRecursionLevels)
+            extractor.recursion_exceeded_3_errs += 1
             return ''
 
         return ''.join([tpl.subst(params, extractor, depth) for tpl in self])
@@ -390,9 +390,14 @@ class Extractor(object):
         self.page = page
         self.magicWords = MagicWords()
         self.frame = []
+        self.recursion_exceeded_1_errs = 0
+        self.recursion_exceeded_2_errs = 0
+        self.recursion_exceeded_3_errs = 0
+        self.untitled_template_errs = 0
+
 
     def extract(self, out=sys.stdout):
-        logging.info("%s\t%s", self.id, self.title)
+        logging.debug("%s\t%s", self.id, self.title)
         text = ''.join(self.page)
         url = get_url(self.id)
         header = '<doc id="%s" url="%s" title="%s">\n' % (self.id, url, self.title)
@@ -413,6 +418,14 @@ class Extractor(object):
             out.write(line.encode('utf-8'))
             out.write('\n')
         out.write(footer)
+        errs = (self.recursion_exceeded_1_errs,
+                self.recursion_exceeded_2_errs,
+                self.recursion_exceeded_3_errs,
+                self.untitled_template_errs)
+        if any(errs):
+            logging.warn("template errors '%s' (%s): untitled(%d) recursion(%d,%d,%d)", self.title, self.id, *errs)
+
+
 
     #----------------------------------------------------------------------
     # Expand templates
@@ -447,7 +460,7 @@ class Extractor(object):
 
         res = ''
         if len(self.frame) >= self.maxTemplateRecursionLevels:
-            logging.warn('Max template recursion exceeded!')
+            self.recursion_exceeded_1_errs += 1
             return res
 
         #logging.debug('<expandTemplates ' + str(len(self.frame)))
@@ -578,8 +591,7 @@ class Extractor(object):
         # equals sign are indexed 1, 2, .., given as attribute in the <name> tag.
 
         if len(self.frame) >= self.maxTemplateRecursionLevels:
-            logging.warn('Reached max template recursion: %d',
-                         self.maxTemplateRecursionLevels)
+            self.recursion_exceeded_2_errs += 1
             logging.debug('   INVOCATION> %d %s', len(self.frame), body)
             return ''
 
@@ -615,6 +627,9 @@ class Extractor(object):
             return self.expandTemplates(ret)
 
         title = fullyQualifiedTemplateTitle(title)
+        if not title:
+            self.untitled_template_errs += 1
+            return ''
 
         redirected = redirects.get(title)
         if redirected:
@@ -1095,8 +1110,7 @@ def fullyQualifiedTemplateTitle(templateTitle):
     if templateTitle:
         return "Template:" + ucfirst(templateTitle)
     else:
-        logging.warn("Skipping page with empty title")
-        return ''
+        return ''  # caller may log as error
 
 def normalizeNamespace(ns):
     return ucfirst(ns)
@@ -1227,6 +1241,8 @@ def sharp_invoke(module, function, frame):
             # find parameters in frame whose title is the one of the original
             # template invocation
             templateTitle = fullyQualifiedTemplateTitle(function)
+            if not templateTitle:
+                logging.warn("Template with empty title")
             pair = next((x for x in frame if x[0] == templateTitle), None)
             if pair:
                 params = pair[1]
@@ -2194,8 +2210,11 @@ def load_templates(file, output_file=None):
                     output.write('</page>\n')
             page = []
             articles += 1
-            if articles % 10000 == 0:
+            if articles % 100000 == 0:
                 logging.info("Preprocessed %d pages", articles)
+    if output_file:
+        output.close()
+        logging.info("Saved %d templates to '%s'", len(templates), output_file)
 
 def process_dump(input_file, template_file, out_file, file_size, file_compress, process_count):
     """
@@ -2213,10 +2232,8 @@ def process_dump(input_file, template_file, out_file, file_size, file_compress, 
 
     if input_file == '-':
         input = sys.stdin
-    elif input_file.lower().endswith("bz2"):
-        input = bz2.BZ2File(input_file)
     else:
-        input = open(input_file)
+        input = fileinput.FileInput(input_file,openhook=fileinput.hook_compressed)
 
     # collect siteinfo
     for line in input:
@@ -2239,8 +2256,9 @@ def process_dump(input_file, template_file, out_file, file_size, file_compress, 
 
     if expand_templates:
         # preprocess
-        logging.info("Preprocessing dump to collect template definitions: this may take some time.")
+        template_load_start = default_timer()
         if template_file and os.path.exists(template_file):
+            logging.info("Preprocessing '%s' to collect template definitions: this may take some time.", template_file)
             file = fileinput.FileInput(template_file,openhook=fileinput.hook_compressed)
             load_templates(file)
             file.close()
@@ -2248,13 +2266,18 @@ def process_dump(input_file, template_file, out_file, file_size, file_compress, 
             if input_file == '-':
                 # can't scan then reset stdin; must error w/ suggestion to specify template_file
                 raise ValueError("to use templates with stdin dump, must supply explicit template-file")
+            logging.info("Preprocessing '%s' to collect template definitions: this may take some time.", input_file)
             load_templates(input, template_file)
             input.close()
-            input = opener(input_file)
+            input = fileinput.FileInput(input_file,openhook=fileinput.hook_compressed)
+        template_load_elapsed = default_timer() - template_load_start
+        logging.info("Loaded %d templates in %.1fs", len(templates), template_load_elapsed)
+
 
 
     # process pages
-    logging.info("Starting processing pages from %s.", input_file)
+    logging.info("Starting page extraction from %s.", input_file)
+    extract_start = default_timer()
 
     # ordering/control queue
     ordering_queue = multiprocessing.JoinableQueue(maxsize=10 * process_count)
@@ -2266,7 +2289,7 @@ def process_dump(input_file, template_file, out_file, file_size, file_compress, 
     outputter.start()
 
     # initialize jobs queue
-    logging.info("Using %d extract processess.", process_count)
+    logging.info("Using %d extract processes.", process_count)
     queue = multiprocessing.Queue(maxsize=10 * process_count)
 
     # start worker processes
@@ -2282,7 +2305,7 @@ def process_dump(input_file, template_file, out_file, file_size, file_compress, 
     page = []
     id = None
     last_id = None
-    ordinal = 1
+    ordinal = 0
     inText = False
     redirect = False
     for line in input:
@@ -2330,9 +2353,11 @@ def process_dump(input_file, template_file, out_file, file_size, file_compress, 
 
     input.close()
     ordering_queue.put(None)  # signal end of work
-    logging.info("Extracted %d articles", ordinal)
     # wait for empty queue
     ordering_queue.join()
+    extract_duration = default_timer() - extract_start
+    extract_rate = ordinal / extract_duration
+    logging.info("Finished %d-process extraction of %d articles in %.1fs (%.1f/s)", process_count, ordinal, extract_duration, extract_rate)
 
 
 #----------------------------------------------------------------------
@@ -2369,6 +2394,8 @@ def output_process(ordering_queue, docs_queue, out_file, file_size, file_compres
         else:
             output = open(out_file, 'w')
 
+    interval_start = default_timer()
+    interval_count = 0
     ordering_buffer = {}
     while True:
         next_ordinal = ordering_queue.get()
@@ -2378,6 +2405,11 @@ def output_process(ordering_queue, docs_queue, out_file, file_size, file_compres
             if next_ordinal in ordering_buffer:
                 output.write(ordering_buffer.pop(next_ordinal))
                 ordering_queue.task_done()
+                if (next_ordinal+1) % 100000 == 0:
+                    interval_rate = (next_ordinal-interval_count) / (default_timer()/interval_start)
+                    logging.info("Extracted %d articles (%.1f/s)", next_ordinal, interval_rate)
+                    interval_start = default_timer()
+                    interval_count = next_ordinal
                 break
             ordinal, text = docs_queue.get()
             ordering_buffer[ordinal] = text
