@@ -1397,8 +1397,8 @@ def dropNested(text, openDelim, closeDelim):
     """
     A matching function for nested expressions, e.g. namespaces and tables.
     """
-    openRE = re.compile(openDelim)
-    closeRE = re.compile(closeDelim)
+    openRE = re.compile(openDelim, re.IGNORECASE)
+    closeRE = re.compile(closeDelim, re.IGNORECASE)
     # partition text in separate blocks { } { }
     spans = []                # pairs (s, e) for each partition
     nest = 0                    # nesting level
