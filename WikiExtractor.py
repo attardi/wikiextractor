@@ -2405,11 +2405,12 @@ def output_process(ordering_queue, docs_queue, out_file, file_size, file_compres
             if next_ordinal in ordering_buffer:
                 output.write(ordering_buffer.pop(next_ordinal))
                 ordering_queue.task_done()
-                if (next_ordinal+1) % 100000 == 0:
-                    interval_rate = (next_ordinal-interval_count) / (default_timer()/interval_start)
-                    logging.info("Extracted %d articles (%.1f/s)", next_ordinal, interval_rate)
+                count_done = next_ordinal + 1
+                if count_done % 100000 == 0:
+                    interval_rate = (count_done - interval_count) / (default_timer() - interval_start)
+                    logging.info("Extracted %d articles (%.1f/s)", count_done, interval_rate)
                     interval_start = default_timer()
-                    interval_count = next_ordinal
+                    interval_count = count_done
                 break
             ordinal, text = docs_queue.get()
             ordering_buffer[ordinal] = text
