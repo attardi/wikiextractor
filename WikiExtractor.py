@@ -60,7 +60,7 @@ import Queue, threading, multiprocessing
 #===========================================================================
 
 # Program version
-version = '2.34'
+version = '2.35'
 
 ### PARAMS ####################################################################
 
@@ -71,7 +71,8 @@ knownNamespaces = set(['Template'])
 
 ##
 # The namespace used for template definitions
-templateNamespace = 'Template'
+# It is the name associated with namespace key=10 in the siteinfo header.
+templateNamespace = ''
 
 ##
 # Recognize only these namespaces
@@ -324,7 +325,7 @@ class TemplateArg(object):
 
         # any parts in a tplarg after the first (the parameter default) are
         # ignored, and an equals sign in the first part is treated as plain text.
-        #logging.debug('TemplateArg %s', parameter)
+        logging.debug('TemplateArg %s', parameter)
 
         parts = splitParts(parameter)
         self.name = Template.parse(parts[0])
@@ -450,7 +451,7 @@ class Extractor(object):
             logging.warn('Max template recursion exceeded!')
             return res
 
-        #logging.debug('<expandTemplates ' + str(len(self.frame)))
+        logging.debug('<expandTemplates ' + str(len(self.frame)))
 
         cur = 0
         # look for matching {{...}}
@@ -756,7 +757,7 @@ def splitParts(paramsList):
         else:
             parameters = par
 
-    #logging.debug('splitParts %s %s\nparams: %s', sep, paramsList, str(parameters))
+    logging.debug('splitParts %s %s\nparams: %s', sep, paramsList, str(parameters))
     return parameters
 
 def findMatchingBraces(text, ldelim=0):
@@ -1046,7 +1047,9 @@ magicWordsRE = re.compile('|'.join(MagicWords.switches))
 # parser functions utilities
 
 def ucfirst(string):
-    """:return: a string with its first character uppercase"""
+    """:return: a string with just its first character uppercase
+    We can't use title() since it coverts all words.
+    """
     if string:
         if len(string) > 1:
             return string[0].upper() + string[1:]
@@ -1070,6 +1073,7 @@ def fullyQualifiedTemplateTitle(templateTitle):
     Determine the namespace of the page being included through the template
     mechanism
     """
+    global templatePrefix
     if templateTitle.startswith(':'):
         # Leading colon by itself implies main namespace, so strip this colon
         return ucfirst(templateTitle[1:])
@@ -1093,7 +1097,7 @@ def fullyQualifiedTemplateTitle(templateTitle):
     # space]], but having in the system a redirect page with an empty title
     # causes numerous problems, so we'll live happier without it.
     if templateTitle:
-        return "Template:" + ucfirst(templateTitle)
+        return templatePrefix + ucfirst(templateTitle)
     else:
         logging.warn("Skipping page with empty title")
         return ''
@@ -2149,6 +2153,7 @@ def load_templates(file, output_file=None):
     Load templates from :param file:.
     :param output_file: file where to save templates.
     """
+    global templateNamespace, templatePrefix
     templatePrefix = templateNamespace + ':'
     articles = 0
     page = []
@@ -2182,6 +2187,12 @@ def load_templates(file, output_file=None):
         elif inText:
             page.append(line)
         elif tag == '/page':
+            if not output_file and not templateNamespace: # do not know it yet
+                # we recnstruct it from the first title
+                colon = title.find(':')
+                if colon > 1:
+                    templateNamespace = title[:colon]
+                    templatePrefix = title[:colon+1]
             if title.startswith(templatePrefix):
                 define_template(title, page)
                 if output_file:
@@ -2234,6 +2245,7 @@ def process_dump(input_file, template_file, outdir, file_size, file_compress, th
             knownNamespaces.add(m.group(3))
             if re.search('key="10"', line):
                 templateNamespace = m.group(3)
+                templatePrefix = templateNamespace + ':'
         elif tag == '/siteinfo':
             break
 
@@ -2439,6 +2451,9 @@ def main():
             m = re.search(r'<title>(.*)</title>', page)
             if m:
                 title = m.group(1)
+            else:
+                logging.error('Missing title element')
+                return
             Extractor(id, title, [page]).extract()
         return
 

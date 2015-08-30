@@ -1,3 +1,10 @@
+2015-08-30  Giuseppe Attardi  <attardi@di.unipi.it>
+
+	* WikiExtractor.py (main): check presence of title elemen in
+	single article.
+	(load_templates): reconstruct the template namespace from the
+	title of the first template in the saved templates.
+
 2015-06-02  Giuseppe Attardi  <attardi@di.unipi.it>
 
 	* WikiExtractor.py (Extractor.expandTemplate): extend frame before
