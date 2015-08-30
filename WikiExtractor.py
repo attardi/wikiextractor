@@ -295,7 +295,7 @@ class Template(list):
         # {{ppp|q=r|p=q}} gives r, but using Template:tvvv containing
         # "{{{{{{{{{p}}}}}}}}}", {{tvvv|p=q|q=r|r=s}} gives s.
 
-        logging.debug('subst tpl (%d, %d) %s', len(extractor.frame), depth, self)
+        #logging.debug('subst tpl (%d, %d) %s', len(extractor.frame), depth, self)
 
         if depth > extractor.maxParameterRecursionLevels:
             extractor.recursion_exceeded_3_errs += 1
@@ -327,7 +327,7 @@ class TemplateArg(object):
 
         # any parts in a tplarg after the first (the parameter default) are
         # ignored, and an equals sign in the first part is treated as plain text.
-        logging.debug('TemplateArg %s', parameter)
+        #logging.debug('TemplateArg %s', parameter)
 
         parts = splitParts(parameter)
         self.name = Template.parse(parts[0])
@@ -359,7 +359,7 @@ class TemplateArg(object):
         elif self.default:            # use the default value
             defaultValue = self.default.subst(params, extractor, depth+1)
             res =  extractor.expandTemplates(defaultValue)
-        logging.debug('subst arg %d %s -> %s' % (depth, paramName, res))
+        #logging.debug('subst arg %d %s -> %s' % (depth, paramName, res))
         return res
 
 #======================================================================
@@ -398,7 +398,7 @@ class Extractor(object):
 
 
     def extract(self, out=sys.stdout):
-        logging.debug("%s\t%s", self.id, self.title)
+        #logging.debug("%s\t%s", self.id, self.title)
         text = ''.join(self.page)
         url = get_url(self.id)
         header = '<doc id="%s" url="%s" title="%s">\n' % (self.id, url, self.title)
@@ -464,7 +464,7 @@ class Extractor(object):
             self.recursion_exceeded_1_errs += 1
             return res
 
-        logging.debug('<expandTemplates ' + str(len(self.frame)))
+        #logging.debug('<expandTemplates ' + str(len(self.frame)))
 
         cur = 0
         # look for matching {{...}}
@@ -474,7 +474,7 @@ class Extractor(object):
         # leftover
         res += wikitext[cur:]
         if cur:
-            logging.debug('   expandTemplates> %d %s', len(self.frame), res)
+            #logging.debug('   expandTemplates> %d %s', len(self.frame), res)
         return res
 
     def templateParams(self, parameters):
@@ -487,7 +487,7 @@ class Extractor(object):
 
         if not parameters:
             return templateParams
-        logging.debug('<templateParams: %s', '|'.join(parameters))
+        #logging.debug('<templateParams: %s', '|'.join(parameters))
 
         # Parameters can be either named or unnamed. In the latter case, their
         # name is defined by their ordinal position (1, 2, 3, ...).
@@ -543,7 +543,7 @@ class Extractor(object):
                 if ']]' not in param: # if the value does not contain a link, trim whitespace
                     param = param.strip()
                 templateParams[str(unnamedParameterCounter)] = param
-        logging.debug('   templateParams> %s', '|'.join(templateParams.values()))
+        #logging.debug('   templateParams> %s', '|'.join(templateParams.values()))
         return templateParams
 
     def expandTemplate(self, body):
@@ -593,7 +593,7 @@ class Extractor(object):
 
         if len(self.frame) >= self.maxTemplateRecursionLevels:
             self.recursion_exceeded_2_errs += 1
-            logging.debug('   INVOCATION> %d %s', len(self.frame), body)
+            #logging.debug('   INVOCATION> %d %s', len(self.frame), body)
             return ''
 
         logging.debug('INVOCATION %d %s', len(self.frame), body)
@@ -648,7 +648,7 @@ class Extractor(object):
             # The page being included could not be identified
             return ''
 
-        logging.debug('TEMPLATE %s: %s', title, template)
+        #logging.debug('TEMPLATE %s: %s', title, template)
 
         # tplarg          = "{{{" parts "}}}"
         # parts           = [ title *( "|" part ) ]
@@ -695,10 +695,10 @@ class Extractor(object):
         # 21637542 in enwiki.
         self.frame.append((title, params))
         instantiated = template.subst(params, self)
-        logging.debug('instantiated %d %s', len(self.frame), instantiated)
+        #logging.debug('instantiated %d %s', len(self.frame), instantiated)
         value = self.expandTemplates(instantiated)
         self.frame.pop()
-        logging.debug('   INVOCATION> %s %d %s', title, len(self.frame), value)
+        #logging.debug('   INVOCATION> %s %d %s', title, len(self.frame), value)
         return value
 
 # ----------------------------------------------------------------------
@@ -772,7 +772,7 @@ def splitParts(paramsList):
         else:
             parameters = par
 
-    logging.debug('splitParts %s %s\nparams: %s', sep, paramsList, str(parameters))
+    #logging.debug('splitParts %s %s\nparams: %s', sep, paramsList, str(parameters))
     return parameters
 
 def findMatchingBraces(text, ldelim=0):
@@ -1312,11 +1312,11 @@ def callParserFunction(functionName, args, frame):
        if functionName == '#invoke':
            # special handling of frame
            ret = sharp_invoke(args[0].strip(), args[1].strip(), frame)
-           logging.debug('parserFunction> %s %s', functionName, ret)
+           #logging.debug('parserFunction> %s %s', functionName, ret)
            return ret
        if functionName in parserFunctions:
            ret = parserFunctions[functionName](*args)
-           logging.debug('parserFunction> %s %s', functionName, ret)
+           #logging.debug('parserFunction> %s %s', functionName, ret)
            return ret
     except:
         return ""             # FIXME: fix errors
