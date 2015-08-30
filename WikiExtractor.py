@@ -2,7 +2,7 @@
 # -*- coding: utf-8 -*-
 #
 # =============================================================================
-#  Version: 2.34 (June 2, 2015)
+#  Version: 2.36 (August 31, 2015)
 #  Author: Giuseppe Attardi (attardi@di.unipi.it), University of Pisa
 #
 #  Contributors:
@@ -63,7 +63,7 @@ from timeit import default_timer
 #===========================================================================
 
 # Program version
-version = '2.35'
+version = '2.36'
 
 ### PARAMS ####################################################################
 
@@ -474,7 +474,7 @@ class Extractor(object):
         # leftover
         res += wikitext[cur:]
         if cur:
-            #logging.debug('   expandTemplates> %d %s', len(self.frame), res)
+            logging.debug('   expandTemplates> %d %s', len(self.frame), res)
         return res
 
     def templateParams(self, parameters):
@@ -1357,7 +1357,7 @@ def define_template(title, page):
     #title = normalizeTitle(title)
 
     # check for redirects
-    m = re.match('#REDIRECT.*?\[\[([^\]]*)]]', page[0])
+    m = re.match('#REDIRECT.*?\[\[([^\]]*)]]', page[0], re.IGNORECASE)
     if m:
         redirects[title] = m.group(1) #normalizeTitle(m.group(1))
         return

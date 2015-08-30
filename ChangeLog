@@ -4,6 +4,7 @@
 	single article.
 	(load_templates): reconstruct the template namespace from the
 	title of the first template in the saved templates.
+	(define_template): match also #redirect as used in French.
 
 2015-06-02  Giuseppe Attardi  <attardi@di.unipi.it>
 
