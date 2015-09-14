@@ -1,6 +1,21 @@
+2015-09-14  Giuseppe Attardi  <attardi@di.unipi.it>
+
+	* WikiExtractor.py (Extractor.templateParams): allow space in key
+
+	* WikiExtractor.py (process_dump): eliminated ordering_queue in
+	favor of termination signals to jobs_queue.
+
+2015-09-13  Giuseppe Attardi  <attardi@di.unipi.it>
+
+	* WikiExtractor.py (process_dump): queue.put() dropped second arg
+	True, since it is the default.
+	(process_dump): queue renamed to jobs_queue.
+	(main): restored default bytes to 1M.
+	Dropped confusing option to write to a single file: use -o - for that.
+
 2015-08-30  Giuseppe Attardi  <attardi@di.unipi.it>
 
-	* WikiExtractor.py (main): check presence of title elemen in
+	* WikiExtractor.py (main): check presence of title element in
 	single article.
 	(load_templates): reconstruct the template namespace from the
 	title of the first template in the saved templates.

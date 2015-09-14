@@ -2,7 +2,7 @@
 # -*- coding: utf-8 -*-
 #
 # =============================================================================
-#  Version: 2.36 (August 31, 2015)
+#  Version: 2.37 (September 14, 2015)
 #  Author: Giuseppe Attardi (attardi@di.unipi.it), University of Pisa
 #
 #  Contributors:
@@ -55,15 +55,15 @@ import urllib
 import bz2
 import codecs
 from htmlentitydefs import name2codepoint
-import Queue, threading, multiprocessing
-import StringIO
+from multiprocessing import Queue, JoinableQueue, Process, Manager, cpu_count
+from cStringIO import StringIO
 import fileinput
 from timeit import default_timer
 
 #===========================================================================
 
 # Program version
-version = '2.36'
+version = '2.37'
 
 ### PARAMS ####################################################################
 
@@ -391,14 +391,17 @@ class Extractor(object):
         self.page = page
         self.magicWords = MagicWords()
         self.frame = []
-        self.recursion_exceeded_1_errs = 0
-        self.recursion_exceeded_2_errs = 0
-        self.recursion_exceeded_3_errs = 0
-        self.untitled_template_errs = 0
+        self.recursion_exceeded_1_errs = 0 # template recursion within expandTemplates()
+        self.recursion_exceeded_2_errs = 0 # template recursion within expandTemplate()
+        self.recursion_exceeded_3_errs = 0 # parameter recursion
+        self.template_title_errs = 0
 
 
-    def extract(self, out=sys.stdout):
-        #logging.debug("%s\t%s", self.id, self.title)
+    def extract(self, out):
+        """
+        :param out: a memory file.
+        """
+        logging.debug("%s\t%s", self.id, self.title)
         text = ''.join(self.page)
         url = get_url(self.id)
         header = '<doc id="%s" url="%s" title="%s">\n' % (self.id, url, self.title)
@@ -419,14 +422,12 @@ class Extractor(object):
             out.write(line.encode('utf-8'))
             out.write('\n')
         out.write(footer)
-        errs = (self.recursion_exceeded_1_errs,
+        errs = (self.template_title_errs,
+                self.recursion_exceeded_1_errs,
                 self.recursion_exceeded_2_errs,
-                self.recursion_exceeded_3_errs,
-                self.untitled_template_errs)
+                self.recursion_exceeded_3_errs)
         if any(errs):
-            logging.warn("template errors '%s' (%s): untitled(%d) recursion(%d,%d,%d)", self.title, self.id, *errs)
-
-
+            logging.warn("Template errors in article '%s' (%s): title(%d) recursion(%d, %d, %d)", self.title, self.id, *errs)
 
     #----------------------------------------------------------------------
     # Expand templates
@@ -473,8 +474,7 @@ class Extractor(object):
             cur = e
         # leftover
         res += wikitext[cur:]
-        if cur:
-            logging.debug('   expandTemplates> %d %s', len(self.frame), res)
+        #logging.debug('   expandTemplates> %d %s', len(self.frame), res)
         return res
 
     def templateParams(self, parameters):
@@ -487,7 +487,7 @@ class Extractor(object):
 
         if not parameters:
             return templateParams
-        #logging.debug('<templateParams: %s', '|'.join(parameters))
+        logging.debug('<templateParams: %s', '|'.join(parameters))
 
         # Parameters can be either named or unnamed. In the latter case, their
         # name is defined by their ordinal position (1, 2, 3, ...).
@@ -523,7 +523,7 @@ class Extractor(object):
             # The '=' might occurr within an HTML attribute:
             #   "&lt;ref name=value"
             # but we stop at first.
-            m = re.match(' *([^= ]*?) *=(.*)', param, re.DOTALL)
+            m = re.match(' *([^=]*?) *=(.*)', param, re.DOTALL)
             if m:
                 # This is a named parameter.  This case also handles parameter
                 # assignments like "2=xxx", where the number of an unnamed
@@ -543,7 +543,7 @@ class Extractor(object):
                 if ']]' not in param: # if the value does not contain a link, trim whitespace
                     param = param.strip()
                 templateParams[str(unnamedParameterCounter)] = param
-        #logging.debug('   templateParams> %s', '|'.join(templateParams.values()))
+        logging.debug('   templateParams> %s', '|'.join(templateParams.values()))
         return templateParams
 
     def expandTemplate(self, body):
@@ -629,7 +629,7 @@ class Extractor(object):
 
         title = fullyQualifiedTemplateTitle(title)
         if not title:
-            self.untitled_template_errs += 1
+            self.template_title_errs += 1
             return ''
 
         redirected = redirects.get(title)
@@ -1341,9 +1341,11 @@ def callParserFunction(functionName, args, frame):
 reNoinclude = re.compile(r'<noinclude>(?:.*?)</noinclude>', re.DOTALL)
 reIncludeonly = re.compile(r'<includeonly>|</includeonly>', re.DOTALL)
 
+# These are built before spawning processes, hence thay are shared.
 templates = {}
 redirects = {}
 # cache of parser templates
+# FIXME: sharing this with a Manager slows down.
 templateCache = {}
 
 def define_template(title, page):
@@ -2227,14 +2229,15 @@ def load_templates(file, output_file=None):
         output.close()
         logging.info("Saved %d templates to '%s'", len(templates), output_file)
 
-def process_dump(input_file, template_file, out_file, file_size, file_compress, process_count):
+def process_dump(input_file, template_file, out_file, file_size, file_compress,
+                 process_count):
     """
     :param input_file: name of the wikipedia dump file; '-' to read from stdin
     :param template_file: optional file with template definitions.
-    :param out_file: name of the file (if no file_size limit) or directory to store extracted data
+    :param out_file: directory where to store extracted data, or '-' for stdout
     :param file_size: max size of each extracted file, or None for no max (one file)
     :param file_compress: whether to compress files with bzip.
-    :param process_count: number of extration processes to spawn.
+    :param process_count: number of extraction processes to spawn.
     """
     global urlbase
     global knownNamespaces
@@ -2244,7 +2247,7 @@ def process_dump(input_file, template_file, out_file, file_size, file_compress, 
     if input_file == '-':
         input = sys.stdin
     else:
-        input = fileinput.FileInput(input_file,openhook=fileinput.hook_compressed)
+        input = fileinput.FileInput(input_file, openhook=fileinput.hook_compressed)
 
     # collect siteinfo
     for line in input:
@@ -2271,7 +2274,7 @@ def process_dump(input_file, template_file, out_file, file_size, file_compress, 
         template_load_start = default_timer()
         if template_file and os.path.exists(template_file):
             logging.info("Preprocessing '%s' to collect template definitions: this may take some time.", template_file)
-            file = fileinput.FileInput(template_file,openhook=fileinput.hook_compressed)
+            file = fileinput.FileInput(template_file, openhook=fileinput.hook_compressed)
             load_templates(file)
             file.close()
         else:
@@ -2285,39 +2288,49 @@ def process_dump(input_file, template_file, out_file, file_size, file_compress, 
         template_load_elapsed = default_timer() - template_load_start
         logging.info("Loaded %d templates in %.1fs", len(templates), template_load_elapsed)
 
-
+    if out_file == '-':
+        output = sys.stdout
+        if file_compress:
+            logging.warn("writing to stdout, so no output compression (use external tool)")
+    else:
+        nextFile = NextFile(out_file)
+        output = OutputSplitter(nextFile, file_size, file_compress)
 
     # process pages
     logging.info("Starting page extraction from %s.", input_file)
     extract_start = default_timer()
 
-    # ordering/control queue
-    ordering_queue = multiprocessing.JoinableQueue(maxsize=10 * process_count)
+    # Parallel Map/Reduce:
+    # - pages to be processed are dispatched to workers
+    # - a reduce process collects the results, sort them and print them.
 
-    # output queue & single dedicated process
-    out_queue = multiprocessing.Queue(maxsize=10 * process_count)
-    outputter = multiprocessing.Process(target=output_process,
-                                        args=(ordering_queue,out_queue,out_file,file_size,file_compress))
-    outputter.start()
+    maxsize = 10 * process_count
+    # output queue
+    output_queue = JoinableQueue(maxsize=maxsize)
+
+    # Reduce job that sorts and prints output
+    reduce = Process(target=reduce_process,
+                     args=(output_queue, output))
+    reduce.start()
 
     # initialize jobs queue
-    logging.info("Using %d extract processes.", process_count)
-    queue = multiprocessing.Queue(maxsize=10 * process_count)
+    jobs_queue = JoinableQueue(maxsize=maxsize)
 
     # start worker processes
+    logging.info("Using %d extract processes.", process_count)
     workers = []
     for _ in xrange(max(1, process_count)):
-        extractor = multiprocessing.Process(target=extract_process,args=(queue,out_queue))
+        extractor = Process(target=extract_process,args=(jobs_queue, output_queue))
         extractor.daemon = True  # only live while parent process lives
         extractor.start()
         workers.append(extractor)
 
-    # we collect individual lines, since str.join() is significantly faster than
-    # concatenation
+    # we collect individual lines, since str.join() is significantly faster
+    # than concatenation
     page = []
     id = None
     last_id = None
-    ordinal = 0
+    ordinal = 0                 # page count
     inText = False
     redirect = False
     for line in input:
@@ -2355,81 +2368,86 @@ def process_dump(input_file, template_file, out_file, file_size, file_compress, 
             colon = title.find(':')
             if (colon < 0 or title[:colon] in acceptedNamespaces) and id != last_id and \
                     not redirect and not title.startswith(templateNamespace):
-                item = (id, title, page, ordinal)
-                queue.put(item, True)  # goes to any available extract_process
-                ordering_queue.put(ordinal, True)  # goes only to output_process
+                job = (id, title, page, ordinal)
+                jobs_queue.put(job) # goes to any available extract_process
                 last_id = id
                 ordinal += 1
             id = None
             page = []
 
     input.close()
-    ordering_queue.put(None)  # signal end of work
-    # wait for empty queue
-    ordering_queue.join()
+
+    # wait for workers to finish
+    jobs_queue.join()
+
+    # signal termination
+    for _ in workers:
+        jobs_queue.put(None)
+
+    # wait for workers to terminate
+    jobs_queue.join()
+
+    # signal end of work to reduce process
+    output_queue.put(None)
+    # wait for it to finish
+    output_queue.join()
+
+    if output != sys.stdout:
+        output.close()
     extract_duration = default_timer() - extract_start
     extract_rate = ordinal / extract_duration
-    logging.info("Finished %d-process extraction of %d articles in %.1fs (%.1f/s)", process_count, ordinal, extract_duration, extract_rate)
-
+    logging.info("Finished %d-process extraction of %d articles in %.1fs (%.1f art/s)",
+                 process_count, ordinal, extract_duration, extract_rate)
 
 #----------------------------------------------------------------------
 # Multiprocess support
 
-def extract_process(jobs_queue, done_queue):
-    """Pull tuples of raw page content, do CPU/regex-heavy fixup, push finished text"""
+def extract_process(jobs_queue, output_queue):
+    """Pull tuples of raw page content, do CPU/regex-heavy fixup, push finished text
+    :param job_queue: where to get jobs.
+    :param output_queue: where to queue extracted text for output.
+    """
     while True:
         job = jobs_queue.get()  # job is (id, title, page, ordinal)
         if job:
-            out = StringIO.StringIO()
-            Extractor(*job[:3]).extract(out)
-            done_queue.put((job[3],out.getvalue()))  # (ordinal, finished_text)
+            out = StringIO()    # memory buffer
+            Extractor(*job[:3]).extract(out) # (id, title, page)
+            text = out.getvalue()
+            output_queue.put((job[3], text)) # (ordinal, extracted_text)
+            jobs_queue.task_done()
             out.close()
         else:
+            jobs_queue.task_done()
             break
 
-def output_process(ordering_queue, docs_queue, out_file, file_size, file_compress):
-    """Pull finished article text, write to one or series of files (or stdout)"""
-    if out_file == '-':
-        output = sys.stdout
-        if file_size > 0:
-            logging.warn("writing to stdout, so max file size %d ignored" % file_size)
-        if file_compress:
-            logging.warn("writing to stdout, so no output compression (use external tool)")
-    elif file_size > 0:
-        # max size in effect, so file is a directory to collect many files
-        nextFile = NextFile(out_file)
-        output = OutputSplitter(nextFile, file_size, file_compress)
-    else:
-        # plain single file
-        if file_compress:
-            output = bz2.BZ2File(out_file + '.bz2', 'w')
-        else:
-            output = open(out_file, 'w')
+def reduce_process(output_queue, output):
+    """Pull finished article text, write series of files (or stdout)
+    :param output_queue: text to be output.
+    :param output: file object where to print.
+    """
 
     interval_start = default_timer()
-    interval_count = 0
-    ordering_buffer = {}
+    period = 100000
+    # FIXME: use a heap
+    ordering_buffer = {}        # collected pages
+    next_ordinal = 0 # sequence number of pages
     while True:
-        next_ordinal = ordering_queue.get()
-        if next_ordinal == None:
-            break
-        while True:
-            if next_ordinal in ordering_buffer:
-                output.write(ordering_buffer.pop(next_ordinal))
-                ordering_queue.task_done()
-                count_done = next_ordinal + 1
-                if count_done % 100000 == 0:
-                    interval_rate = (count_done - interval_count) / (default_timer() - interval_start)
-                    logging.info("Extracted %d articles (%.1f/s)", count_done, interval_rate)
-                    interval_start = default_timer()
-                    interval_count = count_done
+        if next_ordinal in ordering_buffer:
+            output.write(ordering_buffer.pop(next_ordinal))
+            next_ordinal += 1
+            # progress report
+            if next_ordinal % period == 0:
+                interval_rate = period / (default_timer() - interval_start)
+                logging.info("Extracted %d articles (%.1f/s)", next_ordinal, interval_rate)
+                interval_start = default_timer()
+        else:
+            # mapper puts None to signal finish
+            pair = output_queue.get()
+            output_queue.task_done()
+            if not pair:
                 break
-            ordinal, text = docs_queue.get()
+            ordinal, text = pair
             ordering_buffer[ordinal] = text
-
-    if output != sys.stdout:
-        output.close()
-    ordering_queue.task_done()  # report last None as done
 
 # ----------------------------------------------------------------------
 
@@ -2438,7 +2456,7 @@ minFileSize = 200 * 1024
 
 def main():
     global urlbase, acceptedNamespaces
-    global expand_templates
+    global expand_templates, templateCache
 
     parser = argparse.ArgumentParser(prog=os.path.basename(sys.argv[0]),
         formatter_class=argparse.RawDescriptionHelpFormatter,
@@ -2447,9 +2465,9 @@ def main():
                         help="XML wiki dump file")
     groupO = parser.add_argument_group('Output')
     groupO.add_argument("-o", "--output", default="text",
-                        help="output filename (if no bytes limit) or directory for files (if bytes limit set)")
-    groupO.add_argument("-b", "--bytes", default="None",
-                        help="maximum bytes per output file; default is no limit (%(default)s)",
+                        help="directory for extracted files (or '-' for dumping to stdin)")
+    groupO.add_argument("-b", "--bytes", default="1M",
+                        help="maximum bytes per output file (default %(default)))",
                         metavar="n[KMG]")
     groupO.add_argument("-c", "--compress", action="store_true",
                         help="compress output files using bzip")
@@ -2467,9 +2485,9 @@ def main():
                         help="use or create file containing templates")
     groupP.add_argument("--no-templates", action="store_false",
                         help="Do not expand templates")
-    default_process_count = multiprocessing.cpu_count()
+    default_process_count = cpu_count() - 1
     parser.add_argument("--processes", type=int, default=default_process_count,
-                        help="Number of extract processes; default is count of CPU cores (%d)"%default_process_count)
+                        help="Number of extract processes (default %(default))")
 
     groupS = parser.add_argument_group('Special')
     groupS.add_argument("-q", "--quiet", action="store_true",
@@ -2477,7 +2495,7 @@ def main():
     groupS.add_argument("--debug", action="store_true",
                         help="print debug info")
     groupS.add_argument("-a", "--article", action="store_true",
-                        help="analyze a file containing a single article (debug) option")
+                        help="analyze a file containing a single article (debug option)")
     groupS.add_argument("-v", "--version", action="version",
                         version='%(prog)s ' + version,
                         help="print program version")
@@ -2494,12 +2512,9 @@ def main():
     expand_templates = args.no_templates
 
     try:
-        if args.bytes == "None":
-            file_size = -1
-        else:
-            power = 'kmg'.find(args.bytes[-1].lower()) + 1
-            file_size = int(args.bytes[:-1]) * 1024 ** power
-        if file_size != -1 and file_size < minFileSize:
+        power = 'kmg'.find(args.bytes[-1].lower()) + 1
+        file_size = int(args.bytes[:-1]) * 1024 ** power
+        if file_size < minFileSize:
             raise ValueError()
     except ValueError:
         logging.error('Insufficient or invalid size: %s', args.bytes)
@@ -2522,6 +2537,10 @@ def main():
     if not Extractor.keepLinks:
         ignoreTag('a')
 
+    # sharing cache of parser templates is too slow:
+    #manager = Manager()
+    #templateCache = manager.dict()
+
     if args.article:
         if args.templates:
             if os.path.exists(args.templates):
@@ -2538,11 +2557,11 @@ def main():
             else:
                 logging.error('Missing title element')
                 return
-            Extractor(id, title, [page]).extract()
+            Extractor(id, title, [page]).extract(sys.stdout)
         return
 
     output_path = args.output
-    if file_size > 0 and not os.path.isdir(output_path):
+    if output_path != '-' and not os.path.isdir(output_path):
         try:
             os.makedirs(output_path)
         except:
