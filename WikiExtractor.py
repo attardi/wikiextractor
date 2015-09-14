@@ -2,7 +2,7 @@
 # -*- coding: utf-8 -*-
 #
 # =============================================================================
-#  Version: 2.37 (September 14, 2015)
+#  Version: 2.38 (September 14, 2015)
 #  Author: Giuseppe Attardi (attardi@di.unipi.it), University of Pisa
 #
 #  Contributors:
@@ -63,7 +63,7 @@ from timeit import default_timer
 #===========================================================================
 
 # Program version
-version = '2.37'
+version = '2.38'
 
 ### PARAMS ####################################################################
 
@@ -427,7 +427,8 @@ class Extractor(object):
                 self.recursion_exceeded_2_errs,
                 self.recursion_exceeded_3_errs)
         if any(errs):
-            logging.warn("Template errors in article '%s' (%s): title(%d) recursion(%d, %d, %d)", self.title, self.id, *errs)
+            logging.warn("Template errors in article '%s' (%s): title(%d) recursion(%d, %d, %d)",
+                         self.title, self.id, *errs)
 
     #----------------------------------------------------------------------
     # Expand templates
@@ -2306,21 +2307,21 @@ def process_dump(input_file, template_file, out_file, file_size, file_compress,
 
     maxsize = 10 * process_count
     # output queue
-    output_queue = JoinableQueue(maxsize=maxsize)
+    output_queue = Queue(maxsize=maxsize)
 
     # Reduce job that sorts and prints output
-    reduce = Process(target=reduce_process,
-                     args=(output_queue, output))
+    reduce = Process(target=reduce_process, args=(output_queue, output))
     reduce.start()
 
     # initialize jobs queue
-    jobs_queue = JoinableQueue(maxsize=maxsize)
+    jobs_queue = Queue(maxsize=maxsize)
 
     # start worker processes
     logging.info("Using %d extract processes.", process_count)
     workers = []
     for _ in xrange(max(1, process_count)):
-        extractor = Process(target=extract_process,args=(jobs_queue, output_queue))
+        extractor = Process(target=extract_process,
+                            args=(jobs_queue, output_queue))
         extractor.daemon = True  # only live while parent process lives
         extractor.start()
         workers.append(extractor)
@@ -2377,20 +2378,17 @@ def process_dump(input_file, template_file, out_file, file_size, file_compress,
 
     input.close()
 
-    # wait for workers to finish
-    jobs_queue.join()
-
     # signal termination
-    for _ in workers:
+    for w in workers:
         jobs_queue.put(None)
-
     # wait for workers to terminate
-    jobs_queue.join()
+    for w in workers:
+        w.join()
 
     # signal end of work to reduce process
     output_queue.put(None)
     # wait for it to finish
-    output_queue.join()
+    reduce.join()
 
     if output != sys.stdout:
         output.close()
@@ -2414,10 +2412,8 @@ def extract_process(jobs_queue, output_queue):
             Extractor(*job[:3]).extract(out) # (id, title, page)
             text = out.getvalue()
             output_queue.put((job[3], text)) # (ordinal, extracted_text)
-            jobs_queue.task_done()
             out.close()
         else:
-            jobs_queue.task_done()
             break
 
 def reduce_process(output_queue, output):
@@ -2438,12 +2434,12 @@ def reduce_process(output_queue, output):
             # progress report
             if next_ordinal % period == 0:
                 interval_rate = period / (default_timer() - interval_start)
-                logging.info("Extracted %d articles (%.1f/s)", next_ordinal, interval_rate)
+                logging.info("Extracted %d articles (%.1f art/s)",
+                             next_ordinal, interval_rate)
                 interval_start = default_timer()
         else:
             # mapper puts None to signal finish
             pair = output_queue.get()
-            output_queue.task_done()
             if not pair:
                 break
             ordinal, text = pair

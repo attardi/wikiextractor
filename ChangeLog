@@ -1,6 +1,7 @@
 2015-09-14  Giuseppe Attardi  <attardi@di.unipi.it>
 
 	* WikiExtractor.py (Extractor.templateParams): allow space in key
+	(process_dump): terminate by joining processes rather than queues.
 
 	* WikiExtractor.py (process_dump): eliminated ordering_queue in
 	favor of termination signals to jobs_queue.
