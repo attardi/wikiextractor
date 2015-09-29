@@ -2,7 +2,7 @@
 # -*- coding: utf-8 -*-
 #
 # =============================================================================
-#  Version: 2.38 (September 14, 2015)
+#  Version: 2.39 (September 29, 2015)
 #  Author: Giuseppe Attardi (attardi@di.unipi.it), University of Pisa
 #
 #  Contributors:
@@ -63,7 +63,7 @@ from timeit import default_timer
 #===========================================================================
 
 # Program version
-version = '2.38'
+version = '2.39'
 
 ### PARAMS ####################################################################
 
@@ -76,6 +76,11 @@ knownNamespaces = set(['Template'])
 # The namespace used for template definitions
 # It is the name associated with namespace key=10 in the siteinfo header.
 templateNamespace = ''
+
+##
+# The namespace used for module definitions
+# It is the name associated with namespace key=828 in the siteinfo header.
+moduleNamespace = ''
 
 ##
 # Recognize only these namespaces
@@ -2164,15 +2169,16 @@ class OutputSplitter(object):
 
 tagRE = re.compile(r'(.*?)<(/?\w+)[^>]*>(?:([^<]*)(<.*?>)?)?')
 #                    1     2               3      4
-#tagRE = re.compile(r'(.*?)<(/?\w+)[^>]*>([^<]*)')
 
 def load_templates(file, output_file=None):
     """
     Load templates from :param file:.
-    :param output_file: file where to save templates.
+    :param output_file: file where to save templates and modules.
     """
     global templateNamespace, templatePrefix
     templatePrefix = templateNamespace + ':'
+    global moduleNamespace, modulePrefix
+    modulePrefix = moduleNamespace + ':'
     articles = 0
     page = []
     inText = False
@@ -2206,22 +2212,25 @@ def load_templates(file, output_file=None):
             page.append(line)
         elif tag == '/page':
             if not output_file and not templateNamespace: # do not know it yet
-                # we recnstruct it from the first title
+                # we reconstruct it from the first title
                 colon = title.find(':')
                 if colon > 1:
                     templateNamespace = title[:colon]
                     templatePrefix = title[:colon+1]
+            # FIXME: should reconstruct also moduleNamespace
             if title.startswith(templatePrefix):
                 define_template(title, page)
-                if output_file:
-                    output.write('<page>\n')
-                    output.write('   <title>%s</title>\n' % title)
-                    output.write('   <ns>10</ns>\n')
-                    output.write('   <text>')
-                    for line in page:
-                        output.write(line)
-                    output.write('   </text>\n')
-                    output.write('</page>\n')
+            # save templates and modules to file
+            if output_file and (title.startswith(templatePrefix) or
+                                title.startswith(modulePrefix)):
+                output.write('<page>\n')
+                output.write('   <title>%s</title>\n' % title)
+                output.write('   <ns>10</ns>\n')
+                output.write('   <text>')
+                for line in page:
+                    output.write(line)
+                output.write('   </text>\n')
+                output.write('</page>\n')
             page = []
             articles += 1
             if articles % 100000 == 0:
@@ -2242,7 +2251,8 @@ def process_dump(input_file, template_file, out_file, file_size, file_compress,
     """
     global urlbase
     global knownNamespaces
-    global templateNamespace
+    global templateNamespace, templatePrefix
+    global moduleNamespace, modulePrefix
     global expand_templates
 
     if input_file == '-':
@@ -2267,6 +2277,9 @@ def process_dump(input_file, template_file, out_file, file_size, file_compress,
             if re.search('key="10"', line):
                 templateNamespace = m.group(3)
                 templatePrefix = templateNamespace + ':'
+            elif re.search('key="828"', line):
+                moduleNamespace = m.group(3)
+                modulePrefix = moduleNamespace + ':'
         elif tag == '/siteinfo':
             break
 
@@ -2325,6 +2338,8 @@ def process_dump(input_file, template_file, out_file, file_size, file_compress,
         extractor.daemon = True  # only live while parent process lives
         extractor.start()
         workers.append(extractor)
+
+    # Mapper process
 
     # we collect individual lines, since str.join() is significantly faster
     # than concatenation
@@ -2463,7 +2478,7 @@ def main():
     groupO.add_argument("-o", "--output", default="text",
                         help="directory for extracted files (or '-' for dumping to stdin)")
     groupO.add_argument("-b", "--bytes", default="1M",
-                        help="maximum bytes per output file (default %(default)))",
+                        help="maximum bytes per output file (default %(default)s)",
                         metavar="n[KMG]")
     groupO.add_argument("-c", "--compress", action="store_true",
                         help="compress output files using bzip")
@@ -2483,7 +2498,7 @@ def main():
                         help="Do not expand templates")
     default_process_count = cpu_count() - 1
     parser.add_argument("--processes", type=int, default=default_process_count,
-                        help="Number of extract processes (default %(default))")
+                        help="Number of extract processes (default %(default)s)")
 
     groupS = parser.add_argument_group('Special')
     groupS.add_argument("-q", "--quiet", action="store_true",
