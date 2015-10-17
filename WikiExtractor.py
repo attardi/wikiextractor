@@ -147,16 +147,16 @@ def get_url(uid):
 
 # ------------------------------------------------------------------------------
 
-selfClosingTags = ['br', 'hr', 'nobr', 'ref', 'references', 'nowiki']
+selfClosingTags = ('br', 'hr', 'nobr', 'ref', 'references', 'nowiki')
 
 # These tags are dropped, keeping their content.
 # handle 'a' separately, depending on keepLinks
-ignoredTags = [
+ignoredTags = (
     'abbr', 'b', 'big', 'blockquote', 'center', 'cite', 'div', 'em',
     'font', 'h1', 'h2', 'h3', 'h4', 'hiero', 'i', 'kbd', 'nowiki',
     'p', 'plaintext', 's', 'span', 'strike', 'strong',
     'sub', 'sup', 'tt', 'u', 'var'
-]
+)
 
 placeholder_tags = {'math': 'formula', 'code': 'codice'}
 
@@ -2232,8 +2232,6 @@ class OutputSplitter(object):
 # READER
 
 tagRE = re.compile(r'(.*?)<(/?\w+)[^>]*>(?:([^<]*)(<.*?>)?)?')
-
-
 #                    1     2               3      4
 
 
@@ -2321,7 +2319,6 @@ def process_dump(input_file, template_file, out_file, file_size, file_compress,
     global knownNamespaces
     global templateNamespace, templatePrefix
     global moduleNamespace, modulePrefix
-    global expand_templates
 
     if input_file == '-':
         input = sys.stdin
