@@ -49,6 +49,7 @@ collecting template definitions.
 import argparse
 import bz2
 import codecs
+import cgi
 import fileinput
 import logging
 import os.path
@@ -1943,7 +1944,7 @@ expand_templates = True
 
 def clean(extractor, text):
     """
-    Transforms wiki markup.
+    Transforms wiki markup. If the command line flag --escapedoc is set then the text is also escaped
     @see https://www.mediawiki.org/wiki/Help:Formatting
     """
 
@@ -2041,7 +2042,8 @@ def clean(extractor, text):
     text = re.sub(u'(\[\(«) ', r'\1', text)
     text = re.sub(r'\n\W+?\n', '\n', text, flags=re.U)  # lines with only punctuations
     text = text.replace(',,', ',').replace(',.', '.')
-
+    if escape_doc:
+        text = cgi.escape(text)
     return text
 
 
@@ -2537,7 +2539,7 @@ minFileSize = 200 * 1024
 
 def main():
     global urlbase, acceptedNamespaces
-    global expand_templates, templateCache
+    global expand_templates, templateCache, escape_doc
 
     parser = argparse.ArgumentParser(prog=os.path.basename(sys.argv[0]),
                                      formatter_class=argparse.RawDescriptionHelpFormatter,
@@ -2566,6 +2568,8 @@ def main():
                         help="use or create file containing templates")
     groupP.add_argument("--no-templates", action="store_false",
                         help="Do not expand templates")
+    groupP.add_argument("--escapedoc", action="store_true",
+                        help="use to escape the contents of the output <doc>...</doc>")
     default_process_count = cpu_count() - 1
     parser.add_argument("--processes", type=int, default=default_process_count,
                         help="Number of extract processes (default %(default)s)")
@@ -2591,6 +2595,7 @@ def main():
         Extractor.keepSections = True
 
     expand_templates = args.no_templates
+    escape_doc = args.escapedoc
 
     try:
         power = 'kmg'.find(args.bytes[-1].lower()) + 1
