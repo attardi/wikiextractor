@@ -48,6 +48,8 @@ Each file will contains several documents in this [document format](http://media
       --templates TEMPLATES
 			    use or create file containing templates
       --no-templates        Do not expand templates
+      --escapedoc           use to escape the contents of the output
+                            <doc>...</doc>
 
     Special:
       -q, --quiet           suppress reporting progress info
