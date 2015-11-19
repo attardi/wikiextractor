@@ -29,14 +29,14 @@ Each file will contains several documents in this [document format](http://media
 
     optional arguments:
       -h, --help            show this help message and exit
-      --processes PROCESSES number of processes to use (default number of CPU cores)
+      --processes PROCESSES number of processes to use (default: number of CPU cores)
 
     Output:
       -o OUTPUT, --output OUTPUT
 			    a directory where to store the extracted files (or '-' for dumping to
-                            stdin)
+                            stdout)
       -b n[KMG], --bytes n[KMG]
-			    maximum bytes per output file (default is no limit: one file)
+                            maximum bytes per output file (default 1M)
       -c, --compress        compress output files using bzip
 
     Processing:
@@ -52,12 +52,13 @@ Each file will contains several documents in this [document format](http://media
     Special:
       -q, --quiet           suppress reporting progress info
       --debug               print debug info
-      -a, --article         analyze a file containing a single article (debug)
-			    option
+      -a, --article         analyze a file containing a single article (debug option)
       -v, --version         print program version
 
-Saving templates to a file will speed up performing extraction the next time, assuming template definitions have not changed.
+Saving templates to a file will speed up performing extraction the next time,
+assuming template definitions have not changed.
 
-Option --no-templates significantly speeds up the extractor, avoiding the cost of expanding [MediaWiki templates](https://www.mediawiki.org/wiki/Help:Templates).
+Option --no-templates significantly speeds up the extractor, avoiding the cost
+of expanding [MediaWiki templates](https://www.mediawiki.org/wiki/Help:Templates).
 
 For further information, visit [the documentation](http://attardi.github.io/wikiextractor).
