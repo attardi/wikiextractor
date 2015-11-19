@@ -2,7 +2,7 @@
 # -*- coding: utf-8 -*-
 
 # =============================================================================
-#  Version: 2.40 (October 17, 2015)
+#  Version: 2.41 (November 19, 2015)
 #  Author: Giuseppe Attardi (attardi@di.unipi.it), University of Pisa
 #
 #  Contributors:
@@ -65,7 +65,7 @@ from timeit import default_timer
 # ===========================================================================
 
 # Program version
-version = '2.40'
+version = '2.41'
 
 ## PARAMS ####################################################################
 
@@ -78,6 +78,7 @@ knownNamespaces = set(['Template'])
 # The namespace used for template definitions
 # It is the name associated with namespace key=10 in the siteinfo header.
 templateNamespace = ''
+templatePrefix = ''
 
 ##
 # The namespace used for module definitions
@@ -1908,18 +1909,10 @@ def replaceExternalLinks(text):
     return s + text[cur:]
 
 
-def makeExternalLink(title, anchor):
+def makeExternalLink(url, anchor):
     """Function applied to wikiLinks"""
-    colon = title.find(':')
-    if colon > 0 and title[:colon] not in acceptedNamespaces:
-        return ''
-    if colon == 0:
-        # drop also :File:
-        colon2 = title.find(':', colon + 1)
-        if colon2 > 1 and title[colon + 1:colon2] not in acceptedNamespaces:
-            return ''
     if Extractor.keepLinks:
-        return '<a href="%s">%s</a>' % (urllib.quote(title.encode('utf-8')), anchor)
+        return '<a href="%s">%s</a>' % (urllib.quote(url.encode('utf-8')), anchor)
     else:
         return anchor
 
@@ -2098,6 +2091,7 @@ def compact(text):
         # handle lists
         elif line[0] in '*#;:':
             if Extractor.toHTML:
+                print listLevel, line.encode('utf-8')      # DEBUG
                 i = 0
                 for c, n in izip_longest(listLevel, line, fillvalue=''):
                     if not n or n not in '*#;:':
@@ -2119,6 +2113,7 @@ def compact(text):
                 n = line[i - 1]  # last list char
                 line = line[i:].strip()
                 if line:  # FIXME: n is '"'
+                    print 'n |%s|' % n, line.encode('utf-8') # DEBUG
                     page.append(listItem[n] % line)
             else:
                 continue
@@ -2216,7 +2211,7 @@ class OutputSplitter(object):
 
     def write(self, data):
         self.reserve(len(data))
-        self.file.write(data)
+        # DEBUG self.file.write(data)
 
     def close(self):
         self.file.close()
@@ -2370,7 +2365,7 @@ def process_dump(input_file, template_file, out_file, file_size, file_compress,
     if out_file == '-':
         output = sys.stdout
         if file_compress:
-            logging.warn("writing to stdout, so no output compression (use external tool)")
+            logging.warn("writing to stdout, so no output compression (use an external tool)")
     else:
         nextFile = NextFile(out_file)
         output = OutputSplitter(nextFile, file_size, file_compress)
@@ -2546,7 +2541,7 @@ def main():
                         help="XML wiki dump file")
     groupO = parser.add_argument_group('Output')
     groupO.add_argument("-o", "--output", default="text",
-                        help="directory for extracted files (or '-' for dumping to stdin)")
+                        help="directory for extracted files (or '-' for dumping to stdout)")
     groupO.add_argument("-b", "--bytes", default="1M",
                         help="maximum bytes per output file (default %(default)s)",
                         metavar="n[KMG]")
@@ -2568,7 +2563,7 @@ def main():
                         help="Do not expand templates")
     default_process_count = cpu_count() - 1
     parser.add_argument("--processes", type=int, default=default_process_count,
-                        help="Number of extract processes (default %(default)s)")
+                        help="Number of processes to use (default %(default)s)")
 
     groupS = parser.add_argument_group('Special')
     groupS.add_argument("-q", "--quiet", action="store_true",
