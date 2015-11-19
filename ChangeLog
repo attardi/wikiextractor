@@ -1,6 +1,7 @@
 2015-11-20  Giuseppe Attardi  <attardi@di.unipi.it>
 
 	* WikiExtractor.py (makeExternalLink): fixed.
+	(main): dropped confusing option --section.
 
 2015-10-29  Giuseppe Attardi  <attardi@di.unipi.it>
 

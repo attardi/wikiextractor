@@ -40,11 +40,10 @@ Each file will contains several documents in this [document format](http://media
       -c, --compress        compress output files using bzip
 
     Processing:
-      --html                produce HTML output, subsumes --links and --sections
+      --html                produce HTML output, subsumes --links
       -l, --links           preserve links
       -ns ns1,ns2, --namespaces ns1,ns2
 			    accepted namespaces
-      -s, --sections        preserve sections
       --templates TEMPLATES
 			    use or create file containing templates
       --no-templates        Do not expand templates

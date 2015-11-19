@@ -398,8 +398,8 @@ class Extractor(object):
     keepLinks = False
 
     ##
-    # Whether to transform sections into HTML
-    keepSections = False
+    # Whether to preserve section titles
+    keepSections = True
 
     ##
     # Whether to output HTML instead of text
@@ -2127,7 +2127,7 @@ def compact(text):
         elif (line[0] == '(' and line[-1] == ')') or line.strip('.-') == '':
             continue
         elif len(headers):
-            if not Extractor.keepSections:
+            if Extractor.keepSections:
                 items = headers.items()
                 items.sort()
                 for (i, v) in items:
@@ -2548,13 +2548,11 @@ def main():
 
     groupP = parser.add_argument_group('Processing')
     groupP.add_argument("--html", action="store_true",
-                        help="produce HTML output, subsumes --links and --sections")
+                        help="produce HTML output, subsumes --links")
     groupP.add_argument("-l", "--links", action="store_true",
                         help="preserve links")
     groupP.add_argument("-ns", "--namespaces", default="", metavar="ns1,ns2",
                         help="accepted namespaces")
-    groupP.add_argument("-s", "--sections", action="store_true",
-                        help="preserve sections")
     groupP.add_argument("--templates",
                         help="use or create file containing templates")
     groupP.add_argument("--no-templates", action="store_false",
@@ -2577,11 +2575,9 @@ def main():
     args = parser.parse_args()
 
     Extractor.keepLinks = args.links
-    Extractor.keepSections = args.sections
     Extractor.toHTML = args.html
     if args.html:
         Extractor.keepLinks = True
-        Extractor.keepSections = True
 
     expand_templates = args.no_templates
 
