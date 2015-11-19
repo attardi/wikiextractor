@@ -2091,7 +2091,6 @@ def compact(text):
         # handle lists
         elif line[0] in '*#;:':
             if Extractor.toHTML:
-                print listLevel, line.encode('utf-8')      # DEBUG
                 i = 0
                 for c, n in izip_longest(listLevel, line, fillvalue=''):
                     if not n or n not in '*#;:':
@@ -2113,7 +2112,6 @@ def compact(text):
                 n = line[i - 1]  # last list char
                 line = line[i:].strip()
                 if line:  # FIXME: n is '"'
-                    print 'n |%s|' % n, line.encode('utf-8') # DEBUG
                     page.append(listItem[n] % line)
             else:
                 continue
@@ -2211,7 +2209,7 @@ class OutputSplitter(object):
 
     def write(self, data):
         self.reserve(len(data))
-        # DEBUG self.file.write(data)
+        self.file.write(data)
 
     def close(self):
         self.file.close()
