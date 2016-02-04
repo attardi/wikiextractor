@@ -1,8 +1,8 @@
-#!/usr/bin/python
+#!/usr/bin/env python
 # -*- coding: utf-8 -*-
 
 # =============================================================================
-#  Version: 2.41 (November 19, 2015)
+#  Version: 2.42 (November 19, 2015)
 #  Author: Giuseppe Attardi (attardi@di.unipi.it), University of Pisa
 #
 #  Contributors:
@@ -16,7 +16,7 @@
 #   Radics Geza (radicsge@gmail.com)
 #
 # =============================================================================
-#  Copyright (c) 2009-2015. Giuseppe Attardi (attardi@di.unipi.it).
+#  Copyright (c) 2011-2016. Giuseppe Attardi (attardi@di.unipi.it).
 # =============================================================================
 #  This file is part of Tanl.
 #

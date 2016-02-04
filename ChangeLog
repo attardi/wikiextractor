@@ -294,39 +294,39 @@
 	2. Use full parser in order to better deal with nested and
 	   unbalanced expressions.
 
-2011-02-10  Giuseppe Attardi  <attardi@di.unipi.it>
-
-	* WikiExtractor.py: added Copyright.
-
 2012-02-15  Stefano Dei Rossi  <deirossi@semawiki.di.unipi.it>
 
 	* WikiExtractor.py (WikiExtractor): &nbsp; replaced with a simple space
 	instead of u'\u00A0'.
 
-2009-11-03  Antonio Fuschetto  <fuschett@di.unipi.it>
+2012-02-10  Giuseppe Attardi  <attardi@di.unipi.it>
+
+	* WikiExtractor.py: added Copyright.
+
+2011-11-03  Antonio Fuschetto  <fuschett@di.unipi.it>
 
 	* WikiExtractor.py: updated version to 1.6 (Oct 17).
 
-2009-10-17  Giuseppe Attardi  <attardi@di.unipi.it>
+2011-10-17  Giuseppe Attardi  <attardi@di.unipi.it>
 
 	* WikiExtractor.py: turned prefix into a parameter.
 
-2009-07-29  Antonio Fuschetto  <fuschett@di.unipi.it>
+2011-07-29  Antonio Fuschetto  <fuschett@di.unipi.it>
 
 	* WikiExtractor.py (init): fixed bugs in apostrophe_bold_pattern and
 	apostrophe_italic_pattern.
 
-2009-07-28  Antonio Fuschetto  <fuschett@di.unipi.it>
+2011-07-28  Antonio Fuschetto  <fuschett@di.unipi.it>
 
 	* WikiExtractor.py (__garbage_namespaces): added "file" namespace to
 	remove list.
 
-2009-07-10  Antonio Fuschetto  <fuschett@di.unipi.it>
+2011-07-10  Antonio Fuschetto  <fuschett@di.unipi.it>
 
 	* WikiExtractor.py (get_wiki_document_url): changed the handling of
 	URL prefix (anchors don't use prefix but a relative URLs).
 
-2009-06-26  Antonio Fuschetto  <fuschett@di.unipi.it>
+2011-06-26  Antonio Fuschetto  <fuschett@di.unipi.it>
 
 	* WikiExtractor.py (extract_document): changed the handling of
 	wikilinks, adding an anchor tag for each link with a reference to the
@@ -335,7 +335,7 @@
 	* WikiExtractor.py (WikiExtractor): changed the handling of
 	placeholders: from "[Formula 12]" to "formula_12".
 
-2009-04-06  Antonio Fuschetto  <fuschett@di.unipi.it>
+2011-04-06  Antonio Fuschetto  <fuschett@di.unipi.it>
 
 	* WikiExtractor.py (init): fixed bugs in apostrophe_bold_pattern and
 	apostrophe_italic_pattern.
@@ -345,56 +345,14 @@
 
 	* WikiExtractor.py: released version 1.1.
 
-2009-03-12  Antonio Fuschetto  <fuschett@di.unipi.it>
+2011-03-12  Antonio Fuschetto  <fuschett@di.unipi.it>
 
 	* wiki-extractor.py (main): removed the sentence splitting option.
 
 	* wiki-extractor.py: fixed some bugs; released version 1.0; changed
 	filename to "Wiki-Extractor.py" according to Tanl module names.
 
-2009-03-01  Antonio Fuschetto  <fuschett@di.unipi.it>
+2011-03-01  Antonio Fuschetto  <fuschett@di.unipi.it>
 
 	* wiki-extractor.py (main): added cross platform path management.
 
-2008-12-12  Antonio Fuschetto  <fuschett@di.unipi.it>
-
-	* wiki-extractor.py: fixed a wrong cleaning of apostrophes prior
-	italic and bold text.
-
-2008-10-27  Antonio Fuschetto  <fuschett@di.unipi.it>
-
-	* wiki-extractor.py: script complete rewriting (ver 0.8).
-
-2008-10-27  Giuseppe Attardi  <attardi@di.unipi.it>
-
-	* wiki-extractor.py: added CopyLeft.
-
-2008-07-20  Giuseppe Attardi  <attardi@di.unipi.it>
-
-	* wiki-extractor.py (main): renamed option gzip to bzip.
-
-	* wiki-extractor.py (Document.__str__): removed global variables.
-
-	* wiki-extractor.py (Document): turned split_sentences, clean_document,
-	print_document into methods.
-
-2008-07-15  Antonio Fuschetto  <fuschett@di.unipi.it>
-
-	* wiki-extractor.py: changed object serialization using standard
-	pickle module.
-
-2008-06-28  Antonio Fuschetto  <fuschett@di.unipi.it>
-
-	* wiki-extractor.py: added the management of italics with a bad format.
-
-2008-06-27  Antonio Fuschetto  <fuschett@di.unipi.it>
-
-	* wiki-extractor.py: fixed a wrong use of conversion between conding;
-	added the management of wikilink with a bad format; added the
-	menagement of unicode character (numeric entity); added the management
-	of italics like quoted text.
-
-2008-06-26  Giuseppe Attardi  <attardi@di.unipi.it>
-
-	* wiki-extractor.py (main): turned global variables _infile and
-	_outfile into locals.
