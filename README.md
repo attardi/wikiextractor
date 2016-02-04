@@ -1,7 +1,7 @@
 # wikiextractor
 [WikiExtractor.py](http://medialab.di.unipi.it/wiki/Wikipedia_Extractor) is a Python script that extracts and cleans text from a [Wikipedia database dump](http://download.wikimedia.org/).
 
-The tool is written in Python and requires no additional library.
+The tool is written in Python and requires Python 2.7 but no additional library.
 **Warning**: problems have been reported on Windows due to poor support for `StringIO` in the Python implementation on Windows.
 
 For further information, see the [project Home Page](http://medialab.di.unipi.it/wiki/Wikipedia_Extractor) or the [Wiki](https://github.com/attardi/wikiextractor/wiki).
@@ -47,6 +47,8 @@ Each file will contains several documents in this [document format](http://media
       --templates TEMPLATES
 			    use or create file containing templates
       --no-templates        Do not expand templates
+      --escapedoc           use to escape the contents of the output
+                            <doc>...</doc>
 
     Special:
       -q, --quiet           suppress reporting progress info
