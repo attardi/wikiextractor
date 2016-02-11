@@ -2,7 +2,7 @@
 # -*- coding: utf-8 -*-
 
 # =============================================================================
-#  Version: 2.42 (November 19, 2015)
+#  Version: 2.43 (February 10, 2016)
 #  Author: Giuseppe Attardi (attardi@di.unipi.it), University of Pisa
 #
 #  Contributors:
@@ -66,7 +66,7 @@ from timeit import default_timer
 # ===========================================================================
 
 # Program version
-version = '2.41'
+version = '2.43'
 
 ## PARAMS ####################################################################
 
@@ -74,6 +74,10 @@ version = '2.41'
 # Defined in <siteinfo>
 # We include as default Template, when loading external template file.
 knownNamespaces = set(['Template'])
+
+##
+# Keys for Template and Module namespaces
+templateKeys = set(['10', '828'])
 
 ##
 # The namespace used for template definitions
@@ -546,7 +550,7 @@ class Extractor(object):
             # The '=' might occurr within an HTML attribute:
             #   "&lt;ref name=value"
             # but we stop at first.
-            m = re.match(' *([^=]*?) *=(.*)', param, re.DOTALL)
+            m = re.match(' *([^= ]*?) *=(.*)', param, re.DOTALL)
             if m:
                 # This is a named parameter.  This case also handles parameter
                 # assignments like "2=xxx", where the number of an unnamed
@@ -671,7 +675,7 @@ class Extractor(object):
             # The page being included could not be identified
             return ''
 
-        # logging.debug('TEMPLATE %s: %s', title, template)
+        logging.debug('TEMPLATE %s: %s', title, template)
 
         # tplarg          = "{{{" parts "}}}"
         # parts           = [ title *( "|" part ) ]
@@ -919,7 +923,7 @@ def findBalanced(text, openDelim, closeDelim):
     positions in text containing a balanced expression.
     """
     openPat = '|'.join([re.escape(x) for x in openDelim])
-    # patter for delimiters expected after each opening delimiter
+    # pattern for delimiters expected after each opening delimiter
     afterPat = {o: re.compile(openPat + '|' + c, re.DOTALL) for o, c in izip(openDelim, closeDelim)}
     stack = []
     start = 0
@@ -1523,24 +1527,25 @@ def dropSpans(spans, text):
 
 # ----------------------------------------------------------------------
 # WikiLinks
-# See https://www.mediawiki.org/wiki/Help:Links#Internal_links
 
-# Can be nested [[File:..|..[[..]]..|..]], [[Category:...]], etc.
+# May be nested [[File:..|..[[..]]..|..]], [[Category:...]], etc.
 # Also: [[Help:IPA for Catalan|[andora]]]
 
 
 def replaceInternalLinks(text):
     """
-    Replaces external links of the form:
+    Replaces internal links of the form:
     [[title |...|label]]trail
 
     with title concatenated with trail, when present, e.g. 's' for plural.
+
+    See https://www.mediawiki.org/wiki/Help:Links#Internal_links
     """
     # call this after removal of external links, so we need not worry about
     # triple closing ]]].
     cur = 0
     res = ''
-    for s, e in findBalanced(text, ['[['], [']]']):
+    for s, e in findBalanced(text, ('[['), (']]')):
         m = tailRE.match(text, e)
         if m:
             trail = m.group(0)
@@ -1558,7 +1563,7 @@ def replaceInternalLinks(text):
             title = inner[:pipe].rstrip()
             # find last |
             curp = pipe + 1
-            for s1, e1 in findBalanced(inner, ['[['], [']]']):
+            for s1, e1 in findBalanced(inner, ('[['), (']]')):
                 last = inner.rfind('|', curp, s1)
                 if last >= 0:
                     pipe = last  # advance
@@ -1878,6 +1883,10 @@ EXT_IMAGE_REGEX = re.compile(
 
 
 def replaceExternalLinks(text):
+    """
+    https://www.mediawiki.org/wiki/Help:Links#External_links
+    [URL anchor text]
+    """
     s = ''
     cur = 0
     for m in ExtLinkBracketedRegex.finditer(text):
@@ -2241,6 +2250,7 @@ def load_templates(file, output_file=None):
     modulePrefix = moduleNamespace + ':'
     articles = 0
     page = []
+    ns = '0'
     inText = False
     if output_file:
         output = codecs.open(output_file, 'wb', 'utf-8')
@@ -2258,6 +2268,8 @@ def load_templates(file, output_file=None):
             page = []
         elif tag == 'title':
             title = m.group(3)
+        elif tag == 'ns':
+            ns = m.group(3)
         elif tag == 'text':
             inText = True
             line = line[m.start(3):m.end(3)]
@@ -2272,26 +2284,30 @@ def load_templates(file, output_file=None):
             page.append(line)
         elif tag == '/page':
             if not output_file and not templateNamespace:  # do not know it yet
-                # we reconstruct it from the first title
-                colon = title.find(':')
-                if colon > 1:
-                    templateNamespace = title[:colon]
-                    templatePrefix = title[:colon + 1]
-            # FIXME: should reconstruct also moduleNamespace
-            if title.startswith(templatePrefix):
+                # reconstruct templateNamespace and moduleNamespace from the first title
+                if ns in templateKeys:
+                    colon = title.find(':')
+                    if colon > 1:
+                        if ns == '10':
+                            templateNamespace = title[:colon]
+                            templatePrefix = title[:colon + 1]
+                        elif ns == '828':
+                            moduleNamespace = title[:colon]
+                            modulePrefix = title[:colon + 1]
+            if ns in templateKeys:
                 define_template(title, page)
-            # save templates and modules to file
-            if output_file and (title.startswith(templatePrefix) or
-                                title.startswith(modulePrefix)):
-                output.write('<page>\n')
-                output.write('   <title>%s</title>\n' % title)
-                output.write('   <ns>10</ns>\n')
-                output.write('   <text>')
-                for line in page:
-                    output.write(line)
-                output.write('   </text>\n')
-                output.write('</page>\n')
+                # save templates and modules to file
+                if output_file:
+                    output.write('<page>\n')
+                    output.write('   <title>%s</title>\n' % title)
+                    output.write('   <ns>%s</ns>\n' % ns)
+                    output.write('   <text>')
+                    for line in page:
+                        output.write(line)
+                    output.write('   </text>\n')
+                    output.write('</page>\n')
             page = []
+            ns = '0'
             articles += 1
             if articles % 100000 == 0:
                 logging.info("Preprocessed %d pages", articles)
@@ -2405,6 +2421,7 @@ def process_dump(input_file, template_file, out_file, file_size, file_compress,
     # than concatenation
     page = []
     id = None
+    ns = '0'
     last_id = None
     ordinal = 0  # page count
     inText = False
@@ -2426,6 +2443,8 @@ def process_dump(input_file, template_file, out_file, file_size, file_compress,
             id = m.group(3)
         elif tag == 'title':
             title = m.group(3)
+        elif tag == 'ns':
+            ns = m.group(3)
         elif tag == 'redirect':
             redirect = True
         elif tag == 'text':
@@ -2441,12 +2460,11 @@ def process_dump(input_file, template_file, out_file, file_size, file_compress,
         elif inText:
             page.append(line)
         elif tag == '/page':
-            colon = title.find(':')
-            if (colon < 0 or title[:colon] in acceptedNamespaces) and id != last_id and \
-                    not redirect and not title.startswith(templateNamespace):
+            if id != last_id and not redirect and ns not in templateKeys:
                 job = (id, title, page, ordinal)
                 jobs_queue.put(job)  # goes to any available extract_process
                 last_id = id
+                ns = '0'
                 ordinal += 1
             id = None
             page = []
