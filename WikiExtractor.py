@@ -2,7 +2,7 @@
 # -*- coding: utf-8 -*-
 
 # =============================================================================
-#  Version: 2.43 (February 10, 2016)
+#  Version: 2.44 (February 11, 2016)
 #  Author: Giuseppe Attardi (attardi@di.unipi.it), University of Pisa
 #
 #  Contributors:
@@ -66,7 +66,7 @@ from timeit import default_timer
 # ===========================================================================
 
 # Program version
-version = '2.43'
+version = '2.44'
 
 ## PARAMS ####################################################################
 
@@ -722,10 +722,10 @@ class Extractor(object):
         # 21637542 in enwiki.
         self.frame.append((title, params))
         instantiated = template.subst(params, self)
-        # logging.debug('instantiated %d %s', len(self.frame), instantiated)
+        logging.debug('instantiated %d %s', len(self.frame), instantiated)
         value = self.expandTemplates(instantiated)
         self.frame.pop()
-        # logging.debug('   INVOCATION> %s %d %s', title, len(self.frame), value)
+        logging.debug('   INVOCATION> %s %d %s', title, len(self.frame), value)
         return value
 
 
@@ -962,12 +962,58 @@ def findBalanced(text, openDelim, closeDelim):
 # Only minimal support
 # FIXME: import Lua modules.
 
+def if_empty(*rest):
+    """
+    This implements If_empty from English Wikipedia module:
+
+       <title>Module:If empty</title>
+       <ns>828</ns>
+       <text>local p = {}
+
+    function p.main(frame)
+            local args = require('Module:Arguments').getArgs(frame, {wrappers = 'Template:If empty', removeBlanks = false})
+
+            -- For backwards compatibility reasons, the first 8 parameters can be unset instead of being blank,
+            -- even though there's really no legitimate use case for this. At some point, this will be removed.
+            local lowestNil = math.huge
+            for i = 8,1,-1 do
+                    if args[i] == nil then
+                            args[i] = ''
+                            lowestNil = i
+                    end
+            end
+
+            for k,v in ipairs(args) do
+                    if v ~= '' then
+                            if lowestNil &lt; k then
+                                    -- If any uses of this template depend on the behavior above, add them to a tracking category.
+                                    -- This is a rather fragile, convoluted, hacky way to do it, but it ensures that this module's output won't be modified
+                                    -- by it.
+                                    frame:extensionTag('ref', '[[Category:Instances of Template:If_empty missing arguments]]', {group = 'TrackingCategory'})
+                                    frame:extensionTag('references', '', {group = 'TrackingCategory'})
+                            end
+                            return v
+                    end
+            end
+    end
+
+    return p   </text>
+    """
+    for arg in rest:
+        if arg:
+            return arg
+    return ''
+
+
 modules = {
     'convert': {
         'convert': lambda x, u, *rest: x + ' ' + u,  # no conversion
+    },
+
+    'If empty': {
+        'main': if_empty
     }
 }
-
 
 # ----------------------------------------------------------------------
 # variables
@@ -1296,7 +1342,7 @@ def sharp_invoke(module, function, frame):
         if funct:
             # find parameters in frame whose title is the one of the original
             # template invocation
-            templateTitle = fullyQualifiedTemplateTitle(function)
+            templateTitle = fullyQualifiedTemplateTitle(module)
             if not templateTitle:
                 logging.warn("Template with empty title")
             pair = next((x for x in frame if x[0] == templateTitle), None)
@@ -1365,8 +1411,9 @@ def callParserFunction(functionName, args, frame):
     try:
         if functionName == '#invoke':
             # special handling of frame
-            ret = sharp_invoke(args[0].strip(), args[1].strip(), frame)
-            # logging.debug('parserFunction> %s %s', functionName, ret)
+            arg0, arg1 = args[0].strip(), args[1].strip()
+            ret = sharp_invoke(arg0, arg1, frame)
+            # logging.debug('#invoke> %s %s %s', arg0, arg1, ret)
             return ret
         if functionName in parserFunctions:
             ret = parserFunctions[functionName](*args)

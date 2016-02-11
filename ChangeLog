@@ -1,3 +1,8 @@
+2016-02-11  Giuseppe Attardi  <attardi@di.unipi.it>
+
+	* WikiExtractor.py (if_empty): added implementation of Lua module
+	for "Template:If empty".
+
 2016-02-10  Giuseppe Attardi  <attardi@di.unipi.it>
 
 	* WikiExtractor.py (process_dump): detect templates by element
