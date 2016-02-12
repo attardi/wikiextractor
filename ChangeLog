@@ -3,6 +3,9 @@
 	* WikiExtractor.py (reduce_process): moved here creation of OutputSplitter.
 	(compact): Extractor.keepLists allows preserving lists in output.
 	(main): added new option --lists for preserving lists in output.
+	(compact): rest lislLevel entering new section.
+	(ignoredTags): removed 'div' from here, since it is in discardedTags.
+	(ignoredTags): moved 'sub' and 'sup' to discardedTags.
 
 2016-02-11  Giuseppe Attardi  <attardi@di.unipi.it>
 

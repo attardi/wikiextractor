@@ -57,6 +57,7 @@ Each file will contains several documents in this [document format](http://media
     Processing:
       --html                produce HTML output, subsumes --links
       -l, --links           preserve links
+      --lists               preserve lists
       -ns ns1,ns2, --namespaces ns1,ns2
 			    accepted namespaces
       --templates TEMPLATES

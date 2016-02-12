@@ -2,7 +2,7 @@
 # -*- coding: utf-8 -*-
 
 # =============================================================================
-#  Version: 2.46 (February 11, 2016)
+#  Version: 2.48 (February 12, 2016)
 #  Author: Giuseppe Attardi (attardi@di.unipi.it), University of Pisa
 #
 #  Contributors:
@@ -66,7 +66,7 @@ from timeit import default_timer
 # ===========================================================================
 
 # Program version
-version = '2.46'
+version = '2.48'
 
 ## PARAMS ####################################################################
 
@@ -106,7 +106,8 @@ discardElements = [
     'table', 'tr', 'td', 'th', 'caption', 'div',
     'form', 'input', 'select', 'option', 'textarea',
     'ul', 'li', 'ol', 'dl', 'dt', 'dd', 'menu', 'dir',
-    'ref', 'references', 'img', 'imagemap', 'source', 'small'
+    'ref', 'references', 'img', 'imagemap', 'source', 'small',
+    'sub', 'sup'
 ]
 
 # This is obtained from <siteinfo>
@@ -158,10 +159,10 @@ selfClosingTags = ('br', 'hr', 'nobr', 'ref', 'references', 'nowiki')
 # These tags are dropped, keeping their content.
 # handle 'a' separately, depending on keepLinks
 ignoredTags = (
-    'abbr', 'b', 'big', 'blockquote', 'center', 'cite', 'div', 'em',
+    'abbr', 'b', 'big', 'blockquote', 'center', 'cite', 'em',
     'font', 'h1', 'h2', 'h3', 'h4', 'hiero', 'i', 'kbd', 'nowiki',
     'p', 'plaintext', 's', 'span', 'strike', 'strong',
-    'sub', 'sup', 'tt', 'u', 'var'
+    'tt', 'u', 'var'
 )
 
 placeholder_tags = {'math': 'formula', 'code': 'codice'}
@@ -1514,8 +1515,8 @@ def dropNested(text, openDelim, closeDelim):
     openRE = re.compile(openDelim, re.IGNORECASE)
     closeRE = re.compile(closeDelim, re.IGNORECASE)
     # partition text in separate blocks { } { }
-    spans = []  # pairs (s, e) for each partition
-    nest = 0  # nesting level
+    spans = []                  # pairs (s, e) for each partition
+    nest = 0                    # nesting level
     start = openRE.search(text, 0)
     if not start:
         return text
@@ -1523,8 +1524,8 @@ def dropNested(text, openDelim, closeDelim):
     next = start
     while end:
         next = openRE.search(text, next.end())
-        if not next:  # termination
-            while nest:  # close all pending
+        if not next:            # termination
+            while nest:         # close all pending
                 nest -= 1
                 end0 = closeRE.search(text, end.end())
                 if end0:
@@ -1540,7 +1541,7 @@ def dropNested(text, openDelim, closeDelim):
                 # try closing more
                 last = end.end()
                 end = closeRE.search(text, end.end())
-                if not end:  # unbalanced
+                if not end:     # unbalanced
                     if spans:
                         span = (spans[0][0], last)
                     else:
@@ -1552,7 +1553,7 @@ def dropNested(text, openDelim, closeDelim):
                 # advance start, find next close
                 start = next
                 end = closeRE.search(text, next.end())
-                break  # { }
+                break           # { }
         if next != start:
             # { { }
             nest += 1
@@ -1568,7 +1569,7 @@ def dropSpans(spans, text):
     res = ''
     offset = 0
     for s, e in spans:
-        if offset <= s:  # handle nesting
+        if offset <= s:         # handle nesting
             if offset < s:
                 res += text[offset:s]
             offset = e
@@ -2111,13 +2112,13 @@ listItem = {'*': '<li>%s</li>', '#': '<li>%s</<li>', ';': '<dt>%s</dt>',
 
 def compact(text):
     """Deal with headers, lists, empty sections, residuals of tables.
-    :param text: convert to HTML
+    :param text: convert to HTML.
     """
 
-    page = []  # list of paragraph
-    headers = {}  # Headers for unfilled sections
+    page = []             # list of paragraph
+    headers = {}          # Headers for unfilled sections
     emptySection = False  # empty sections are discarded
-    listLevel = []  # nesting of lists
+    listLevel = []        # nesting of lists
 
     for line in text.split('\n'):
 
@@ -2127,20 +2128,21 @@ def compact(text):
         m = section.match(line)
         if m:
             title = m.group(2)
-            lev = len(m.group(1))
+            lev = len(m.group(1)) # header level
             if Extractor.toHTML:
                 page.append("<h%d>%s</h%d>" % (lev, title, lev))
             if title and title[-1] not in '!?':
-                title += '.'
+                title += '.'    # terminate sentence.
             headers[lev] = title
             # drop previous headers
             for i in headers.keys():
                 if i > lev:
                     del headers[i]
             emptySection = True
+            listLevel = []
             continue
         # Handle page title
-        if line.startswith('++'):
+        elif line.startswith('++'):
             title = line[2:-2]
             if title:
                 if title[-1] not in '!?':
@@ -2153,8 +2155,10 @@ def compact(text):
         # handle lists
         elif line[0] in '*#;:':
             i = 0
+            # c: current level char
+            # n: next level char
             for c, n in izip_longest(listLevel, line, fillvalue=''):
-                if not n or n not in '*#;:':
+                if not n or n not in '*#;:': # shorter or different
                     if c:
                         if Extractor.toHTML:
                             page.append(listClose[c])
@@ -2183,6 +2187,7 @@ def compact(text):
                     bullet = '1. ' if n == '#' else '- '
                     page.append('{0:{1}s}'.format(bullet, len(listLevel)) + line)
         elif len(listLevel):
+            page.append(line)
             if Extractor.toHTML:
                 for c in reversed(listLevel):
                     page.append(listClose[c])
@@ -2204,11 +2209,9 @@ def compact(text):
             page.append(line)  # first line
             emptySection = False
         elif not emptySection:
-            page.append(line)
-            # dangerous
-            # # Drop preformatted
-            # elif line[0] == ' ':
-            #     continue
+            # Drop preformatted
+            if line[0] != ' ':  # dangerous
+                page.append(line)
 
     return page
 
