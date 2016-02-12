@@ -1,7 +1,15 @@
+2016-02-12  Giuseppe Attardi  <attardi@di.unipi.it>
+
+	* WikiExtractor.py (reduce_process): moved here creation of OutputSplitter.
+	(compact): Extractor.keepLists allows preserving lists in output.
+	(main): added new option --lists for preserving lists in output.
+
 2016-02-11  Giuseppe Attardi  <attardi@di.unipi.it>
 
 	* WikiExtractor.py (if_empty): added implementation of Lua module
 	for "Template:If empty".
+	(compact): preserve lists also in text mode.
+	(process_dump): log ID and title of pages.
 
 2016-02-10  Giuseppe Attardi  <attardi@di.unipi.it>
 

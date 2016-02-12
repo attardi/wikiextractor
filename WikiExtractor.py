@@ -2,7 +2,7 @@
 # -*- coding: utf-8 -*-
 
 # =============================================================================
-#  Version: 2.44 (February 11, 2016)
+#  Version: 2.46 (February 11, 2016)
 #  Author: Giuseppe Attardi (attardi@di.unipi.it), University of Pisa
 #
 #  Contributors:
@@ -66,7 +66,7 @@ from timeit import default_timer
 # ===========================================================================
 
 # Program version
-version = '2.44'
+version = '2.46'
 
 ## PARAMS ####################################################################
 
@@ -403,8 +403,12 @@ class Extractor(object):
     keepLinks = False
 
     ##
-    # Whether to preserve section titles
+    # Whether to preserve section titles (unused)
     keepSections = True
+
+    ##
+    # Whether to preserve lists
+    keeplists = False
 
     ##
     # Whether to output HTML instead of text
@@ -2113,7 +2117,7 @@ def compact(text):
     page = []  # list of paragraph
     headers = {}  # Headers for unfilled sections
     emptySection = False  # empty sections are discarded
-    listLevel = ''  # nesting of lists
+    listLevel = []  # nesting of lists
 
     for line in text.split('\n'):
 
@@ -2148,34 +2152,40 @@ def compact(text):
             continue
         # handle lists
         elif line[0] in '*#;:':
-            if Extractor.toHTML:
-                i = 0
-                for c, n in izip_longest(listLevel, line, fillvalue=''):
-                    if not n or n not in '*#;:':
-                        if c:
+            i = 0
+            for c, n in izip_longest(listLevel, line, fillvalue=''):
+                if not n or n not in '*#;:':
+                    if c:
+                        if Extractor.toHTML:
                             page.append(listClose[c])
-                            listLevel = listLevel[:-1]
-                            continue
-                        else:
-                            break
-                    # n != ''
-                    if c != n and (not c or (c not in ';:' and n not in ';:')):
-                        if c:
-                            # close level
+                        listLevel = listLevel[:-1]
+                        continue
+                    else:
+                        break
+                # n != ''
+                if c != n and (not c or (c not in ';:' and n not in ';:')):
+                    if c:
+                        # close level
+                        if Extractor.toHTML:
                             page.append(listClose[c])
-                            listLevel = listLevel[:-1]
-                        listLevel += n
+                        listLevel = listLevel[:-1]
+                    listLevel += n
+                    if Extractor.toHTML:
                         page.append(listOpen[n])
-                    i += 1
-                n = line[i - 1]  # last list char
-                line = line[i:].strip()
-                if line:  # FIXME: n is '"'
+                i += 1
+            n = line[i - 1]  # last list char
+            line = line[i:].strip()
+            if line:  # FIXME: n is '"'
+                if Extractor.toHTML:
                     page.append(listItem[n] % line)
-            else:
-                continue
+                elif Extractor.keepLists:
+                    # FIXME: use item count for #-lines
+                    bullet = '1. ' if n == '#' else '- '
+                    page.append('{0:{1}s}'.format(bullet, len(listLevel)) + line)
         elif len(listLevel):
-            for c in reversed(listLevel):
-                page.append(listClose[c])
+            if Extractor.toHTML:
+                for c in reversed(listLevel):
+                    page.append(listClose[c])
             listLevel = []
 
         # Drop residuals of lists
@@ -2188,7 +2198,7 @@ def compact(text):
             if Extractor.keepSections:
                 items = headers.items()
                 items.sort()
-                for (i, v) in items:
+                for i, v in items:
                     page.append(v)
             headers.clear()
             page.append(line)  # first line
@@ -2425,14 +2435,6 @@ def process_dump(input_file, template_file, out_file, file_size, file_compress,
         template_load_elapsed = default_timer() - template_load_start
         logging.info("Loaded %d templates in %.1fs", len(templates), template_load_elapsed)
 
-    if out_file == '-':
-        output = sys.stdout
-        if file_compress:
-            logging.warn("writing to stdout, so no output compression (use an external tool)")
-    else:
-        nextFile = NextFile(out_file)
-        output = OutputSplitter(nextFile, file_size, file_compress)
-
     # process pages
     logging.info("Starting page extraction from %s.", input_file)
     extract_start = default_timer()
@@ -2445,8 +2447,10 @@ def process_dump(input_file, template_file, out_file, file_size, file_compress,
     # output queue
     output_queue = Queue(maxsize=maxsize)
 
+    if out_file == '-':
+        out_file = None
     # Reduce job that sorts and prints output
-    reduce = Process(target=reduce_process, args=(output_queue, output))
+    reduce = Process(target=reduce_process, args=(output_queue, out_file, file_size, file_compress))
     reduce.start()
 
     # initialize jobs queue
@@ -2510,6 +2514,7 @@ def process_dump(input_file, template_file, out_file, file_size, file_compress,
             if id != last_id and not redirect and ns not in templateKeys:
                 job = (id, title, page, ordinal)
                 jobs_queue.put(job)  # goes to any available extract_process
+                logging.info('%s\t%s', id, title)
                 last_id = id
                 ns = '0'
                 ordinal += 1
@@ -2559,12 +2564,22 @@ def extract_process(jobs_queue, output_queue):
             break
 
 
-def reduce_process(output_queue, output):
+def reduce_process(output_queue, out_file=None, file_size=0, file_compress=True):
     """Pull finished article text, write series of files (or stdout)
     :param output_queue: text to be output.
-    :param output: file object where to print.
+    :param out_file: filename where to print.
+    :param file_size: max file size.
+    :param file_compress: whether to compress output.
     """
 
+    if out_file:
+        nextFile = NextFile(out_file)
+        output = OutputSplitter(nextFile, file_size, file_compress)
+    else:
+        output = sys.stdout
+        if file_compress:
+            logging.warn("writing to stdout, so no output compression (use an external tool)")
+    
     interval_start = default_timer()
     period = 100000
     # FIXME: use a heap
@@ -2618,6 +2633,8 @@ def main():
                         help="produce HTML output, subsumes --links")
     groupP.add_argument("-l", "--links", action="store_true",
                         help="preserve links")
+    groupP.add_argument("--lists", action="store_true",
+                        help="preserve lists")
     groupP.add_argument("-ns", "--namespaces", default="", metavar="ns1,ns2",
                         help="accepted namespaces")
     groupP.add_argument("--templates",
@@ -2644,6 +2661,7 @@ def main():
     args = parser.parse_args()
 
     Extractor.keepLinks = args.links
+    Extractor.keepLists = args.lists
     Extractor.toHTML = args.html
     if args.html:
         Extractor.keepLinks = True

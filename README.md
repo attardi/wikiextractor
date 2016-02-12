@@ -2,7 +2,6 @@
 [WikiExtractor.py](http://medialab.di.unipi.it/wiki/Wikipedia_Extractor) is a Python script that extracts and cleans text from a [Wikipedia database dump](http://download.wikimedia.org/).
 
 The tool is written in Python and requires Python 2.7 but no additional library.
-**Warning**: problems have been reported on Windows with the use of multiprocessing.
 
 For further information, see the [project Home Page](http://medialab.di.unipi.it/wiki/Wikipedia_Extractor) or the [Wiki](https://github.com/attardi/wikiextractor/wiki).
 
@@ -18,10 +17,16 @@ Cirrus dumps are available at:
 
 WikiExtractor performs template expansion by preprocesssng the whole dump and extracting template definitions.
 
-The latest version includes the following performance improvements:
+In order to speed up processing:
 
-- multiprocessing is used for dealing with articles in parallel (this requires a Python installation with proper implementation of the StringIO library)
-- a cache is kept of parsed templates.
+- multiprocessing is used for dealing with articles in parallel
+- a cache is kept of parsed templates (only useful for repeated extractions).
+
+## Installation
+
+The script may be invoked directly, however it can be installed by doing:
+
+    (sudo) python setup.py install
 
 ## Usage
 The script is invoked with a Wikipedia dump file as an argument.
