@@ -2,7 +2,7 @@
 # -*- coding: utf-8 -*-
 #
 # =============================================================================
-#  Version: 2.8 (Jan 10, 2015)
+#  Version: 2.9 (Feb 13, 2016)
 #  Author: Giuseppe Attardi (attardi@di.unipi.it), University of Pisa
 
 # =============================================================================
@@ -39,7 +39,7 @@ import Queue, threading, multiprocessing
 
 
 # Program version
-version = '2.8'
+version = '2.9'
 
 # ----------------------------------------------------------------------
 # READER
@@ -48,10 +48,11 @@ tagRE = re.compile(r'(.*?)<(/?\w+)[^>]*>(?:([^<]*)(<.*?>)?)?')
 #tagRE = re.compile(r'(.*?)<(/?\w+)[^>]*>([^<]*)')
 #                    1     2            3
 
-def process_data(input_file, id, templates=False):
+def process_data(input_file, ids, templates=False):
     """
     :param input_file: name of the wikipedia dump file.
-    :param id: article id
+    :param ids: article ids (single or range first-last).
+    :param templates: collect also templates
     """
 
     if input_file.lower().endswith("bz2"):
@@ -60,8 +61,16 @@ def process_data(input_file, id, templates=False):
         opener = open
 
     input = opener(input_file)
+    print '<mediawiki>'
 
+    rang = ids.split('-')
+    first = int(rang[0])
+    if len(rang) == 1:
+        last = first
+    else:
+        last = int(rang[1])
     page = []
+    curid = 0
     for line in input:
         line = line.decode('utf-8')
         if '<' not in line:         # faster than doing re.search()
@@ -76,11 +85,13 @@ def process_data(input_file, id, templates=False):
             page = []
             page.append(line)
             inArticle = False
-        elif tag == 'id':
-            curid = m.group(3)
-            if id == curid:
+        elif tag == 'id' and not curid: # other <id> are present
+            curid = int(m.group(3))
+            if first <= curid <= last:
                 page.append(line)
                 inArticle = True
+            elif curid > last and not templates:
+                break
             elif not inArticle and not templates:
                 page = []
         elif tag == 'title':
@@ -95,12 +106,14 @@ def process_data(input_file, id, templates=False):
             if page:
                 page.append(line)
                 print ''.join(page).encode('utf-8')
-                if not templates:
+                if not templates and curid == last:
                     break
+            curid = 0
             page = []
         elif page:
             page.append(line)
 
+    print '</mediawiki>'
     input.close()
 
 def main():
@@ -110,9 +123,9 @@ def main():
     parser.add_argument("input",
                         help="XML wiki dump file")
     parser.add_argument("--id", default="",
-                        help="article number")
+                        help="article number, or range first-last")
     parser.add_argument("--template", action="store_true",
-                        help="template number")
+                        help="extract also all templates")
     parser.add_argument("-v", "--version", action="version",
                         version='%(prog)s ' + version,
                         help="print program version")

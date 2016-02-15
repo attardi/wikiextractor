@@ -2,7 +2,7 @@
 # -*- coding: utf-8 -*-
 
 # =============================================================================
-#  Version: 2.48 (February 12, 2016)
+#  Version: 2.49 (February 14, 2016)
 #  Author: Giuseppe Attardi (attardi@di.unipi.it), University of Pisa
 #
 #  Contributors:
@@ -46,6 +46,7 @@ This version performs template expansion by preprocesssng the whole dump and
 collecting template definitions.
 """
 
+import sys
 import argparse
 import bz2
 import codecs
@@ -54,19 +55,18 @@ import fileinput
 import logging
 import os.path
 import re  # TODO use regex when it will be standard
-import sys
 import time
 import urllib
 from cStringIO import StringIO
 from htmlentitydefs import name2codepoint
 from itertools import izip, izip_longest
-from multiprocessing import Queue, Process, cpu_count
+from multiprocessing import Queue, Process, Array, cpu_count
 from timeit import default_timer
 
 # ===========================================================================
 
 # Program version
-version = '2.48'
+version = '2.49'
 
 ## PARAMS ####################################################################
 
@@ -394,7 +394,6 @@ class TemplateArg(object):
 
 substWords = 'subst:|safesubst:'
 
-
 class Extractor(object):
     """
     An extraction task on a article.
@@ -415,13 +414,20 @@ class Extractor(object):
     # Whether to output HTML instead of text
     toHTML = False
 
-    def __init__(self, id, title, page):
+    ##
+    # Whether to expand templates
+    expand_templates = True
+
+
+    def __init__(self, id, title, lines):
         """
-        :param page: a list of lines.
+        :param id: id of page.
+        :param title: tutle of page.
+        :param lines: a list of lines.
         """
         self.id = id
         self.title = title
-        self.page = page
+        self.text = ''.join(lines)
         self.magicWords = MagicWords()
         self.frame = []
         self.recursion_exceeded_1_errs = 0  # template recursion within expandTemplates()
@@ -433,8 +439,7 @@ class Extractor(object):
         """
         :param out: a memory file.
         """
-        logging.debug("%s\t%s", self.id, self.title)
-        text = ''.join(self.page)
+        logging.info("%s\t%s", self.id, self.title)
         url = get_url(self.id)
         header = '<doc id="%s" url="%s" title="%s">\n' % (self.id, url, self.title)
         # Separate header from text with a newline.
@@ -447,7 +452,7 @@ class Extractor(object):
         self.magicWords['currentday'] = time.strftime('%d')
         self.magicWords['currenthour'] = time.strftime('%H')
         self.magicWords['currenttime'] = time.strftime('%H:%M:%S')
-        text = clean(self, text)
+        text = self.clean()
         footer = "\n</doc>\n"
         out.write(header)
         for line in compact(text):
@@ -461,6 +466,112 @@ class Extractor(object):
         if any(errs):
             logging.warn("Template errors in article '%s' (%s): title(%d) recursion(%d, %d, %d)",
                          self.title, self.id, *errs)
+
+    def clean(self):
+        """
+        Transforms wiki markup. If the command line flag --escapedoc is set then the text is also escaped
+        @see https://www.mediawiki.org/wiki/Help:Formatting
+        """
+        text = self.text
+        self.text = ''          # save memory
+        if Extractor.expand_templates:
+            # expand templates
+            # See: http://www.mediawiki.org/wiki/Help:Templates
+            text = self.expandTemplates(text)
+        else:
+            # Drop transclusions (template, parser functions)
+            text = dropNested(text, r'{{', r'}}')
+
+        # Drop tables
+        text = dropNested(text, r'{\|', r'\|}')
+
+        # replace external links
+        text = replaceExternalLinks(text)
+
+        # replace internal links
+        text = replaceInternalLinks(text)
+
+        # drop MagicWords behavioral switches
+        text = magicWordsRE.sub('', text)
+
+        # ############### Process HTML ###############
+
+        # turn into HTML, except for the content of <syntaxhighlight>
+        res = ''
+        cur = 0
+        for m in syntaxhighlight.finditer(text):
+            end = m.end()
+            res += unescape(text[cur:m.start()]) + m.group(1)
+            cur = end
+        text = res + unescape(text[cur:])
+
+        # Handle bold/italic/quote
+        if self.toHTML:
+            text = bold_italic.sub(r'<b>\1</b>', text)
+            text = bold.sub(r'<b>\1</b>', text)
+            text = italic.sub(r'<i>\1</i>', text)
+        else:
+            text = bold_italic.sub(r'\1', text)
+            text = bold.sub(r'\1', text)
+            text = italic_quote.sub(r'"\1"', text)
+            text = italic.sub(r'"\1"', text)
+            text = quote_quote.sub(r'"\1"', text)
+        # residuals of unbalanced quotes
+        text = text.replace("'''", '').replace("''", '"')
+
+        # Collect spans
+
+        spans = []
+        # Drop HTML comments
+        for m in comment.finditer(text):
+            spans.append((m.start(), m.end()))
+
+        # Drop self-closing tags
+        for pattern in selfClosing_tag_patterns:
+            for m in pattern.finditer(text):
+                spans.append((m.start(), m.end()))
+
+        # Drop ignored tags
+        for left, right in ignored_tag_patterns:
+            for m in left.finditer(text):
+                spans.append((m.start(), m.end()))
+            for m in right.finditer(text):
+                spans.append((m.start(), m.end()))
+
+        # Bulk remove all spans
+        text = dropSpans(spans, text)
+
+        # Drop discarded elements
+        for tag in discardElements:
+            text = dropNested(text, r'<\s*%s\b[^>/]*>' % tag, r'<\s*/\s*%s>' % tag)
+
+        if not self.toHTML:
+            # Turn into text what is left (&amp;nbsp;) and <syntaxhighlight>
+            text = unescape(text)
+
+        # Expand placeholders
+        for pattern, placeholder in placeholder_tag_patterns:
+            index = 1
+            for match in pattern.finditer(text):
+                text = text.replace(match.group(), '%s_%d' % (placeholder, index))
+                index += 1
+
+        text = text.replace('<<', u'«').replace('>>', u'»')
+
+        #############################################
+
+        # Cleanup text
+        text = text.replace('\t', ' ')
+        text = spaces.sub(' ', text)
+        text = dots.sub('...', text)
+        text = re.sub(u' (,:\.\)\]»)', r'\1', text)
+        text = re.sub(u'(\[\(«) ', r'\1', text)
+        text = re.sub(r'\n\W+?\n', '\n', text, flags=re.U)  # lines with only punctuations
+        text = text.replace(',,', ',').replace(',.', '.')
+        if escape_doc:
+            text = cgi.escape(text)
+        return text
+
 
     # ----------------------------------------------------------------------
     # Expand templates
@@ -1993,114 +2104,6 @@ tailRE = re.compile('\w+')
 
 syntaxhighlight = re.compile('&lt;syntaxhighlight .*?&gt;(.*?)&lt;/syntaxhighlight&gt;', re.DOTALL)
 
-expand_templates = True
-
-
-def clean(extractor, text):
-    """
-    Transforms wiki markup. If the command line flag --escapedoc is set then the text is also escaped
-    @see https://www.mediawiki.org/wiki/Help:Formatting
-    """
-
-    if expand_templates:
-        # expand templates
-        # See: http://www.mediawiki.org/wiki/Help:Templates
-        text = extractor.expandTemplates(text)
-    else:
-        # Drop transclusions (template, parser functions)
-        text = dropNested(text, r'{{', r'}}')
-
-    # Drop tables
-    text = dropNested(text, r'{\|', r'\|}')
-
-    # replace external links
-    text = replaceExternalLinks(text)
-
-    # replace internal links
-    text = replaceInternalLinks(text)
-
-    # drop MagicWords behavioral switches
-    text = magicWordsRE.sub('', text)
-
-    # ############### Process HTML ###############
-
-    # turn into HTML, except for the content of <syntaxhighlight>
-    res = ''
-    cur = 0
-    for m in syntaxhighlight.finditer(text):
-        end = m.end()
-        res += unescape(text[cur:m.start()]) + m.group(1)
-        cur = end
-    text = res + unescape(text[cur:])
-
-    # Handle bold/italic/quote
-    if extractor.toHTML:
-        text = bold_italic.sub(r'<b>\1</b>', text)
-        text = bold.sub(r'<b>\1</b>', text)
-        text = italic.sub(r'<i>\1</i>', text)
-    else:
-        text = bold_italic.sub(r'\1', text)
-        text = bold.sub(r'\1', text)
-        text = italic_quote.sub(r'"\1"', text)
-        text = italic.sub(r'"\1"', text)
-        text = quote_quote.sub(r'"\1"', text)
-    # residuals of unbalanced quotes
-    text = text.replace("'''", '').replace("''", '"')
-
-    # Collect spans
-
-    spans = []
-    # Drop HTML comments
-    for m in comment.finditer(text):
-        spans.append((m.start(), m.end()))
-
-    # Drop self-closing tags
-    for pattern in selfClosing_tag_patterns:
-        for m in pattern.finditer(text):
-            spans.append((m.start(), m.end()))
-
-    # Drop ignored tags
-    for left, right in ignored_tag_patterns:
-        for m in left.finditer(text):
-            spans.append((m.start(), m.end()))
-        for m in right.finditer(text):
-            spans.append((m.start(), m.end()))
-
-    # Bulk remove all spans
-    text = dropSpans(spans, text)
-
-    # Drop discarded elements
-    for tag in discardElements:
-        text = dropNested(text, r'<\s*%s\b[^>/]*>' % tag, r'<\s*/\s*%s>' % tag)
-
-    if not extractor.toHTML:
-        # Turn into text what is left (&amp;nbsp;) and <syntaxhighlight>
-        text = unescape(text)
-
-    # Expand placeholders
-    for pattern, placeholder in placeholder_tag_patterns:
-        index = 1
-        for match in pattern.finditer(text):
-            text = text.replace(match.group(), '%s_%d' % (placeholder, index))
-            index += 1
-
-    text = text.replace('<<', u'«').replace('>>', u'»')
-
-    #############################################
-
-    # Cleanup text
-    text = text.replace('\t', ' ')
-    text = spaces.sub(' ', text)
-    text = dots.sub('...', text)
-    text = re.sub(u' (,:\.\)\]»)', r'\1', text)
-    text = re.sub(u'(\[\(«) ', r'\1', text)
-    text = re.sub(r'\n\W+?\n', '\n', text, flags=re.U)  # lines with only punctuations
-    text = text.replace(',,', ',').replace(',.', '.')
-    if escape_doc:
-        text = cgi.escape(text)
-    return text
-
-
 # skip level 1, it is page name level
 section = re.compile(r'(==+)\s*(.*?)\s*\1')
 
@@ -2308,13 +2311,57 @@ def load_templates(file, output_file=None):
     templatePrefix = templateNamespace + ':'
     global moduleNamespace, modulePrefix
     modulePrefix = moduleNamespace + ':'
-    articles = 0
-    page = []
-    ns = '0'
-    inText = False
     if output_file:
         output = codecs.open(output_file, 'wb', 'utf-8')
-    for line in file:
+    for page_count, page_data in enumerate(pages_from(file)):
+        id, title, ns, page = page_data
+        if not output_file and (not templateNamespace or
+                                not moduleNamespace):  # do not know it yet
+            # reconstruct templateNamespace and moduleNamespace from the first title
+            if ns in templateKeys:
+                colon = title.find(':')
+                if colon > 1:
+                    if ns == '10':
+                        templateNamespace = title[:colon]
+                        templatePrefix = title[:colon + 1]
+                    elif ns == '828':
+                        moduleNamespace = title[:colon]
+                        modulePrefix = title[:colon + 1]
+        if ns in templateKeys:
+            text = ''.join(page)
+            define_template(title, text)
+            # save templates and modules to file
+            if output_file:
+                output.write('<page>\n')
+                output.write('   <title>%s</title>\n' % title)
+                output.write('   <ns>%s</ns>\n' % ns)
+                output.write('   <id>%s</id>\n' % id)
+                output.write('   <text>')
+                for line in page:
+                    output.write(line)
+                output.write('   </text>\n')
+                output.write('</page>\n')
+        if page_count and page_count % 100000 == 0:
+            logging.info("Preprocessed %d pages", page_count)
+    if output_file:
+        output.close()
+        logging.info("Saved %d templates to '%s'", len(templates), output_file)
+
+
+def pages_from(input):
+    """
+    Scans input extracting pages.
+    :return: (id, title, namespace, page), page is a list of lines.
+    """
+    # we collect individual lines, since str.join() is significantly faster
+    # than concatenation
+    page = []
+    id = None
+    ns = '0'
+    last_id = None
+    inText = False
+    redirect = False
+    for line in input:
         line = line.decode('utf-8')
         if '<' not in line:  # faster than doing re.search()
             if inText:
@@ -2326,10 +2373,15 @@ def load_templates(file, output_file=None):
         tag = m.group(2)
         if tag == 'page':
             page = []
+            redirect = False
+        elif tag == 'id' and not id:
+            id = m.group(3)
         elif tag == 'title':
             title = m.group(3)
         elif tag == 'ns':
             ns = m.group(3)
+        elif tag == 'redirect':
+            redirect = True
         elif tag == 'text':
             inText = True
             line = line[m.start(3):m.end(3)]
@@ -2343,37 +2395,12 @@ def load_templates(file, output_file=None):
         elif inText:
             page.append(line)
         elif tag == '/page':
-            if not output_file and not templateNamespace:  # do not know it yet
-                # reconstruct templateNamespace and moduleNamespace from the first title
-                if ns in templateKeys:
-                    colon = title.find(':')
-                    if colon > 1:
-                        if ns == '10':
-                            templateNamespace = title[:colon]
-                            templatePrefix = title[:colon + 1]
-                        elif ns == '828':
-                            moduleNamespace = title[:colon]
-                            modulePrefix = title[:colon + 1]
-            if ns in templateKeys:
-                define_template(title, page)
-                # save templates and modules to file
-                if output_file:
-                    output.write('<page>\n')
-                    output.write('   <title>%s</title>\n' % title)
-                    output.write('   <ns>%s</ns>\n' % ns)
-                    output.write('   <text>')
-                    for line in page:
-                        output.write(line)
-                    output.write('   </text>\n')
-                    output.write('</page>\n')
+            if id != last_id and not redirect:
+                yield (id, title, ns, page)
+                last_id = id
+                ns = '0'
+            id = None
             page = []
-            ns = '0'
-            articles += 1
-            if articles % 100000 == 0:
-                logging.info("Preprocessed %d pages", articles)
-    if output_file:
-        output.close()
-        logging.info("Saved %d templates to '%s'", len(templates), output_file)
 
 
 def process_dump(input_file, template_file, out_file, file_size, file_compress,
@@ -2419,7 +2446,7 @@ def process_dump(input_file, template_file, out_file, file_size, file_compress,
         elif tag == '/siteinfo':
             break
 
-    if expand_templates:
+    if Extractor.expand_templates:
         # preprocess
         template_load_start = default_timer()
         if template_file and os.path.exists(template_file):
@@ -2452,17 +2479,22 @@ def process_dump(input_file, template_file, out_file, file_size, file_compress,
 
     if out_file == '-':
         out_file = None
-    # Reduce job that sorts and prints output
-    reduce = Process(target=reduce_process, args=(output_queue, out_file, file_size, file_compress))
+
+    worker_count = max(1, process_count)
+
+    # reduce job that sorts and prints output
+    reduce = Process(target=reduce_process,
+                     args=(output_queue,
+                           out_file, file_size, file_compress))
     reduce.start()
 
     # initialize jobs queue
     jobs_queue = Queue(maxsize=maxsize)
 
     # start worker processes
-    logging.info("Using %d extract processes.", process_count)
+    logging.info("Using %d extract processes.", worker_count)
     workers = []
-    for _ in xrange(max(1, process_count)):
+    for i in xrange(worker_count):
         extractor = Process(target=extract_process,
                             args=(jobs_queue, output_queue))
         extractor.daemon = True  # only live while parent process lives
@@ -2470,59 +2502,14 @@ def process_dump(input_file, template_file, out_file, file_size, file_compress,
         workers.append(extractor)
 
     # Mapper process
-
-    # we collect individual lines, since str.join() is significantly faster
-    # than concatenation
-    page = []
-    id = None
-    ns = '0'
-    last_id = None
-    ordinal = 0  # page count
-    inText = False
-    redirect = False
-    for line in input:
-        line = line.decode('utf-8')
-        if '<' not in line:  # faster than doing re.search()
-            if inText:
-                page.append(line)
-            continue
-        m = tagRE.search(line)
-        if not m:
-            continue
-        tag = m.group(2)
-        if tag == 'page':
-            page = []
-            redirect = False
-        elif tag == 'id' and not id:
-            id = m.group(3)
-        elif tag == 'title':
-            title = m.group(3)
-        elif tag == 'ns':
-            ns = m.group(3)
-        elif tag == 'redirect':
-            redirect = True
-        elif tag == 'text':
-            inText = True
-            line = line[m.start(3):m.end(3)]
-            page.append(line)
-            if m.lastindex == 4:  # open-close
-                inText = False
-        elif tag == '/text':
-            if m.group(1):
-                page.append(m.group(1))
-            inText = False
-        elif inText:
-            page.append(line)
-        elif tag == '/page':
-            if id != last_id and not redirect and ns not in templateKeys:
-                job = (id, title, page, ordinal)
-                jobs_queue.put(job)  # goes to any available extract_process
-                logging.info('%s\t%s', id, title)
-                last_id = id
-                ns = '0'
-                ordinal += 1
-            id = None
-            page = []
+    page_num = 0
+    for page_data in pages_from(input):
+        id, title, ns, page = page_data
+        if ns not in templateKeys:
+            job = (id, title, page, page_num)
+            # logging.info('Put: %s %s', id, page_num) # DEBUG
+            jobs_queue.put(job) # goes to any available extract_process
+            page_num += 1
 
     input.close()
 
@@ -2538,12 +2525,10 @@ def process_dump(input_file, template_file, out_file, file_size, file_compress,
     # wait for it to finish
     reduce.join()
 
-    if output != sys.stdout:
-        output.close()
     extract_duration = default_timer() - extract_start
-    extract_rate = ordinal / extract_duration
+    extract_rate = page_num / extract_duration
     logging.info("Finished %d-process extraction of %d articles in %.1fs (%.1f art/s)",
-                 process_count, ordinal, extract_duration, extract_rate)
+                 process_count, page_num, extract_duration, extract_rate)
 
 
 # ----------------------------------------------------------------------
@@ -2556,18 +2541,27 @@ def extract_process(jobs_queue, output_queue):
     :param output_queue: where to queue extracted text for output.
     """
     while True:
-        job = jobs_queue.get()  # job is (id, title, page, ordinal)
+        job = jobs_queue.get()  # job is (id, title, page, page_num)
         if job:
-            out = StringIO()  # memory buffer
-            Extractor(*job[:3]).extract(out)  # (id, title, page)
-            text = out.getvalue()
-            output_queue.put((job[3], text))  # (ordinal, extracted_text)
+            id, title, page, page_num = job
+            # logging.info('Got: %s %s', id, page_num) # DEBUG
+            out = StringIO()                 # memory buffer
+            try:
+                Extractor(*job[:3]).extract(out) # (id, title, page)
+                text = out.getvalue()
+            except:
+                text = ''
+                logging.error('Processing page: %s %s', id, title)
+            # logging.info('Done: %s %s', id, page_num) # DEBUG
+            output_queue.put((page_num, text))
             out.close()
         else:
             break
 
 
-def reduce_process(output_queue, out_file=None, file_size=0, file_compress=True):
+period = 100000                 # progress report period
+def reduce_process(output_queue,
+                   out_file=None, file_size=0, file_compress=True):
     """Pull finished article text, write series of files (or stdout)
     :param output_queue: text to be output.
     :param out_file: filename where to print.
@@ -2584,27 +2578,33 @@ def reduce_process(output_queue, out_file=None, file_size=0, file_compress=True)
             logging.warn("writing to stdout, so no output compression (use an external tool)")
     
     interval_start = default_timer()
-    period = 100000
     # FIXME: use a heap
-    ordering_buffer = {}  # collected pages
-    next_ordinal = 0  # sequence number of pages
+    collected_pages = {}        # collected pages
+    next_page = 0               # sequence numbering of page
     while True:
-        if next_ordinal in ordering_buffer:
-            output.write(ordering_buffer.pop(next_ordinal))
-            next_ordinal += 1
+        if next_page in collected_pages:
+            output.write(collected_pages.pop(next_page))
+            next_page += 1
             # progress report
-            if next_ordinal % period == 0:
+            if next_page % period == 0:
                 interval_rate = period / (default_timer() - interval_start)
                 logging.info("Extracted %d articles (%.1f art/s)",
-                             next_ordinal, interval_rate)
+                             next_page, interval_rate)
                 interval_start = default_timer()
         else:
             # mapper puts None to signal finish
             pair = output_queue.get()
             if not pair:
                 break
-            ordinal, text = pair
-            ordering_buffer[ordinal] = text
+            page_num, text = pair
+            collected_pages[page_num] = text
+            # FIXME: if an extractor dies, process stalls; the other processes
+            # continue to produce pairs, filling up memory.
+            if len(collected_pages) > 200: # DEBUG
+                logging.debug('Collected %d, wait: %d, %d', len(collected_pages),
+                              next_page, next_page == page_num)
+    if output != sys.stdout:
+        output.close()
 
 
 # ----------------------------------------------------------------------
@@ -2615,7 +2615,7 @@ minFileSize = 200 * 1024
 
 def main():
     global urlbase, acceptedNamespaces
-    global expand_templates, templateCache, escape_doc
+    global templateCache, escape_doc
 
     parser = argparse.ArgumentParser(prog=os.path.basename(sys.argv[0]),
                                      formatter_class=argparse.RawDescriptionHelpFormatter,
@@ -2669,7 +2669,7 @@ def main():
     if args.html:
         Extractor.keepLinks = True
 
-    expand_templates = args.no_templates
+    Extractor.expand_templates = args.no_templates
     escape_doc = args.escapedoc
 
     try:
@@ -2708,17 +2708,11 @@ def main():
                 with open(args.templates) as file:
                     load_templates(file)
 
-        with open(input_file) as file:
-            page = file.read().decode('utf-8')
-            m = re.search(r'<id>(.*)</id>', page)
-            id = m.group(1) if m else 0
-            m = re.search(r'<title>(.*)</title>', page)
-            if m:
-                title = m.group(1)
-            else:
-                logging.error('Missing title element')
-                return
-            Extractor(id, title, [page]).extract(sys.stdout)
+        file = fileinput.FileInput(input_file, openhook=fileinput.hook_compressed)
+        for page_data in pages_from(file):
+            id, title, ns, page = page_data
+            Extractor(id, title, page).extract(sys.stdout)
+        file.close()
         return
 
     output_path = args.output

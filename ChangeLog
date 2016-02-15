@@ -1,3 +1,19 @@
+2016-02-15  Giuseppe Attardi  <attardi@di.unipi.it>
+
+	* WikiExtractor.py (Extractor.clean): turned into method.
+
+2016-02-14  Giuseppe Attardi  <attardi@di.unipi.it>
+
+	* WikiExtractor.py (load_templates): save also <id> in templates.
+	(pages_from): common iterator for extracting pages from dump, used
+	both for analyzing pages, templates and single articles.
+
+2016-02-13  Giuseppe Attardi  <attardi@di.unipi.it>
+
+	* WikiExtractor.py (reduce_process): close file here.
+
+	* extractPage.py (process_data): allow range of ids.
+
 2016-02-12  Giuseppe Attardi  <attardi@di.unipi.it>
 
 	* WikiExtractor.py (reduce_process): moved here creation of OutputSplitter.
