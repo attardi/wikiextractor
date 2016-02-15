@@ -1,6 +1,7 @@
 2016-02-15  Giuseppe Attardi  <attardi@di.unipi.it>
 
 	* WikiExtractor.py (Extractor.clean): turned into method.
+	(process_dump): control spool length to avoid filing up memory.
 
 2016-02-14  Giuseppe Attardi  <attardi@di.unipi.it>
 

@@ -2,7 +2,7 @@
 # -*- coding: utf-8 -*-
 
 # =============================================================================
-#  Version: 2.49 (February 14, 2016)
+#  Version: 2.50 (February 15, 2016)
 #  Author: Giuseppe Attardi (attardi@di.unipi.it), University of Pisa
 #
 #  Contributors:
@@ -60,13 +60,13 @@ import urllib
 from cStringIO import StringIO
 from htmlentitydefs import name2codepoint
 from itertools import izip, izip_longest
-from multiprocessing import Queue, Process, Array, cpu_count
+from multiprocessing import Queue, Process, Array, Value, cpu_count
 from timeit import default_timer
 
 # ===========================================================================
 
 # Program version
-version = '2.49'
+version = '2.50'
 
 ## PARAMS ####################################################################
 
@@ -439,7 +439,7 @@ class Extractor(object):
         """
         :param out: a memory file.
         """
-        logging.info("%s\t%s", self.id, self.title)
+        logging.debug("%s\t%s", self.id, self.title)
         url = get_url(self.id)
         header = '<doc id="%s" url="%s" title="%s">\n' % (self.id, url, self.title)
         # Separate header from text with a newline.
@@ -2482,9 +2482,13 @@ def process_dump(input_file, template_file, out_file, file_size, file_compress,
 
     worker_count = max(1, process_count)
 
+    # load balancing
+    max_spool_length = 10000
+    spool_length = Value('i', 0)
+
     # reduce job that sorts and prints output
     reduce = Process(target=reduce_process,
-                     args=(output_queue,
+                     args=(output_queue, spool_length,
                            out_file, file_size, file_compress))
     reduce.start()
 
@@ -2506,6 +2510,9 @@ def process_dump(input_file, template_file, out_file, file_size, file_compress,
     for page_data in pages_from(input):
         id, title, ns, page = page_data
         if ns not in templateKeys:
+            # slow down
+            while spool_length.value > max_spool_length:
+                time.sleep(10)
             job = (id, title, page, page_num)
             # logging.info('Put: %s %s', id, page_num) # DEBUG
             jobs_queue.put(job) # goes to any available extract_process
@@ -2559,11 +2566,12 @@ def extract_process(jobs_queue, output_queue):
             break
 
 
-period = 100000                 # progress report period
-def reduce_process(output_queue,
+report_period = 10000           # progress report period
+def reduce_process(output_queue, spool_length,
                    out_file=None, file_size=0, file_compress=True):
     """Pull finished article text, write series of files (or stdout)
     :param output_queue: text to be output.
+    :param spool_length: spool length.
     :param out_file: filename where to print.
     :param file_size: max file size.
     :param file_compress: whether to compress output.
@@ -2579,15 +2587,15 @@ def reduce_process(output_queue,
     
     interval_start = default_timer()
     # FIXME: use a heap
-    collected_pages = {}        # collected pages
-    next_page = 0               # sequence numbering of page
+    spool = {}        # collected pages
+    next_page = 0     # sequence numbering of page
     while True:
-        if next_page in collected_pages:
-            output.write(collected_pages.pop(next_page))
+        if next_page in spool:
+            output.write(spool.pop(next_page))
             next_page += 1
             # progress report
-            if next_page % period == 0:
-                interval_rate = period / (default_timer() - interval_start)
+            if next_page % report_period == 0:
+                interval_rate = report_period / (default_timer() - interval_start)
                 logging.info("Extracted %d articles (%.1f art/s)",
                              next_page, interval_rate)
                 interval_start = default_timer()
@@ -2597,11 +2605,13 @@ def reduce_process(output_queue,
             if not pair:
                 break
             page_num, text = pair
-            collected_pages[page_num] = text
+            spool[page_num] = text
+            # tell mapper our load:
+            spool_length.value = len(spool)
             # FIXME: if an extractor dies, process stalls; the other processes
             # continue to produce pairs, filling up memory.
-            if len(collected_pages) > 200: # DEBUG
-                logging.debug('Collected %d, wait: %d, %d', len(collected_pages),
+            if len(spool) > 200: # DEBUG
+                logging.debug('Collected %d, wait: %d, %d', len(spool),
                               next_page, next_page == page_num)
     if output != sys.stdout:
         output.close()
