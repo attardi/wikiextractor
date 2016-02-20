@@ -2512,9 +2512,10 @@ def process_dump(input_file, template_file, out_file, file_size, file_compress,
         if ns not in templateKeys:
             # slow down
             delay = 0
-            while spool_length.value > max_spool_length:
-                time.sleep(10)
-                delay += 10
+            if spool_length.value > max_spool_length:
+                while spool_length.value > max_spool_length/10:
+                    time.sleep(10)
+                    delay += 10
             if delay:
                 logging.info('Delay %ds', delay)
             job = (id, title, page, page_num)
