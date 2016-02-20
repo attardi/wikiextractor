@@ -2516,7 +2516,7 @@ def process_dump(input_file, template_file, out_file, file_size, file_compress,
                 time.sleep(10)
                 delay += 10
             if delay:
-                logging.info('Delay &ds', delay)
+                logging.info('Delay %ds', delay)
             job = (id, title, page, page_num)
             jobs_queue.put(job) # goes to any available extract_process
             page_num += 1
