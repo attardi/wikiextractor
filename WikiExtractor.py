@@ -2,7 +2,7 @@
 # -*- coding: utf-8 -*-
 
 # =============================================================================
-#  Version: 2.51 (February 20, 2016)
+#  Version: 2.52 (March 6, 2016)
 #  Author: Giuseppe Attardi (attardi@di.unipi.it), University of Pisa
 #
 #  Contributors:
@@ -66,7 +66,7 @@ from timeit import default_timer
 # ===========================================================================
 
 # Program version
-version = '2.51'
+version = '2.52'
 
 ## PARAMS ####################################################################
 
@@ -500,9 +500,8 @@ class Extractor(object):
         res = ''
         cur = 0
         for m in syntaxhighlight.finditer(text):
-            end = m.end()
             res += unescape(text[cur:m.start()]) + m.group(1)
-            cur = end
+            cur = m.end()
         text = res + unescape(text[cur:])
 
         # Handle bold/italic/quote
@@ -2449,19 +2448,20 @@ def process_dump(input_file, template_file, out_file, file_size, file_compress,
     if Extractor.expand_templates:
         # preprocess
         template_load_start = default_timer()
-        if template_file and os.path.exists(template_file):
-            logging.info("Preprocessing '%s' to collect template definitions: this may take some time.", template_file)
-            file = fileinput.FileInput(template_file, openhook=fileinput.hook_compressed)
-            load_templates(file)
-            file.close()
-        else:
-            if input_file == '-':
-                # can't scan then reset stdin; must error w/ suggestion to specify template_file
-                raise ValueError("to use templates with stdin dump, must supply explicit template-file")
-            logging.info("Preprocessing '%s' to collect template definitions: this may take some time.", input_file)
-            load_templates(input, template_file)
-            input.close()
-            input = fileinput.FileInput(input_file, openhook=fileinput.hook_compressed)
+        if template_file:
+            if os.path.exists(template_file):
+                logging.info("Preprocessing '%s' to collect template definitions: this may take some time.", template_file)
+                file = fileinput.FileInput(template_file, openhook=fileinput.hook_compressed)
+                load_templates(file)
+                file.close()
+            else:
+                if input_file == '-':
+                    # can't scan then reset stdin; must error w/ suggestion to specify template_file
+                    raise ValueError("to use templates with stdin dump, must supply explicit template-file")
+                logging.info("Preprocessing '%s' to collect template definitions: this may take some time.", input_file)
+                load_templates(input, template_file)
+                input.close()
+                input = fileinput.FileInput(input_file, openhook=fileinput.hook_compressed)
         template_load_elapsed = default_timer() - template_load_start
         logging.info("Loaded %d templates in %.1fs", len(templates), template_load_elapsed)
 
@@ -2513,6 +2513,7 @@ def process_dump(input_file, template_file, out_file, file_size, file_compress,
             # slow down
             delay = 0
             if spool_length.value > max_spool_length:
+                # reduce to 10%
                 while spool_length.value > max_spool_length/10:
                     time.sleep(10)
                     delay += 10
