@@ -2,7 +2,7 @@
 # -*- coding: utf-8 -*-
 
 # =============================================================================
-#  Version: 2.52 (March 6, 2016)
+#  Version: 2.53 (March 6, 2016)
 #  Author: Giuseppe Attardi (attardi@di.unipi.it), University of Pisa
 #
 #  Contributors:
@@ -66,7 +66,7 @@ from timeit import default_timer
 # ===========================================================================
 
 # Program version
-version = '2.52'
+version = '2.53'
 
 ## PARAMS ####################################################################
 
@@ -1029,7 +1029,7 @@ def findMatchingBraces(text, ldelim=0):
                 cur = end
 
 
-def findBalanced(text, openDelim, closeDelim):
+def findBalanced(text, openDelim=['[['], closeDelim=[']]']):
     """
     Assuming that text contains a properly balanced expression using
     :param openDelim: as opening delimiters and
@@ -1707,7 +1707,7 @@ def replaceInternalLinks(text):
     # triple closing ]]].
     cur = 0
     res = ''
-    for s, e in findBalanced(text, ('[['), (']]')):
+    for s, e in findBalanced(text):
         m = tailRE.match(text, e)
         if m:
             trail = m.group(0)
@@ -1725,7 +1725,7 @@ def replaceInternalLinks(text):
             title = inner[:pipe].rstrip()
             # find last |
             curp = pipe + 1
-            for s1, e1 in findBalanced(inner, ('[['), (']]')):
+            for s1, e1 in findBalanced(inner):
                 last = inner.rfind('|', curp, s1)
                 if last >= 0:
                     pipe = last  # advance
