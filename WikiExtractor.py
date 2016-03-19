@@ -2,7 +2,7 @@
 # -*- coding: utf-8 -*-
 
 # =============================================================================
-#  Version: 2.53 (March 6, 2016)
+#  Version: 2.54 (March 19, 2016)
 #  Author: Giuseppe Attardi (attardi@di.unipi.it), University of Pisa
 #
 #  Contributors:
@@ -42,7 +42,7 @@ Each file will contain several documents in the format:
         ...
         </doc>
 
-This version performs template expansion by preprocesssng the whole dump and
+Template expansion requires preprocesssng first the whole dump and
 collecting template definitions.
 """
 
@@ -66,7 +66,7 @@ from timeit import default_timer
 # ===========================================================================
 
 # Program version
-version = '2.53'
+version = '2.54'
 
 ## PARAMS ####################################################################
 
@@ -403,7 +403,7 @@ class Extractor(object):
     keepLinks = False
 
     ##
-    # Whether to preserve section titles (unused)
+    # Whether to preserve section titles
     keepSections = True
 
     ##
@@ -2040,6 +2040,9 @@ ExtLinkBracketedRegex = re.compile(
     '\[(((?i)' + '|'.join(wgUrlProtocols) + ')' + EXT_LINK_URL_CLASS + r'+)' +
     r'\s*((?:' + ANCHOR_CLASS + r'|\[\[' + ANCHOR_CLASS + r'+\]\])' + r'*?)\]',
     re.S | re.U)
+# A simpler alternative:
+# ExtLinkBracketedRegex = re.compile(r'\[(.*?)\](?!])')
+
 EXT_IMAGE_REGEX = re.compile(
     r"""^(http://|https://)([^][<>"\x00-\x20\x7F\s]+)
     /([A-Za-z0-9_.,~%\-+&;#*?!=()@\x80-\xFF]+)\.((?i)gif|png|jpg|jpeg)$""",
@@ -2659,6 +2662,8 @@ def main():
                         help="produce HTML output, subsumes --links")
     groupP.add_argument("-l", "--links", action="store_true",
                         help="preserve links")
+    groupP.add_argument("-s", "--sections", action="store_true",
+                        help="preserve sections")
     groupP.add_argument("--lists", action="store_true",
                         help="preserve lists")
     groupP.add_argument("-ns", "--namespaces", default="", metavar="ns1,ns2",
@@ -2687,6 +2692,7 @@ def main():
     args = parser.parse_args()
 
     Extractor.keepLinks = args.links
+    Extractor.keepSections = args.sections
     Extractor.keepLists = args.lists
     Extractor.toHTML = args.html
     if args.html:
