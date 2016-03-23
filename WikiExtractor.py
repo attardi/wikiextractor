@@ -2,7 +2,7 @@
 # -*- coding: utf-8 -*-
 
 # =============================================================================
-#  Version: 2.54 (March 19, 2016)
+#  Version: 2.55 (March 23, 2016)
 #  Author: Giuseppe Attardi (attardi@di.unipi.it), University of Pisa
 #
 #  Contributors:
@@ -66,7 +66,7 @@ from timeit import default_timer
 # ===========================================================================
 
 # Program version
-version = '2.54'
+version = '2.55'
 
 ## PARAMS ####################################################################
 
@@ -2187,12 +2187,18 @@ def compact(text):
             n = line[i - 1]  # last list char
             line = line[i:].strip()
             if line:  # FIXME: n is '"'
-                if Extractor.toHTML:
-                    page.append(listItem[n] % line)
-                elif Extractor.keepLists:
+                if Extractor.keepLists:
+                    # emit open sections
+                    items = headers.items()
+                    items.sort()
+                    for i, v in items:
+                        page.append(v)
+                    headers.clear()
                     # FIXME: use item count for #-lines
                     bullet = '1. ' if n == '#' else '- '
                     page.append('{0:{1}s}'.format(bullet, len(listLevel)) + line)
+                elif Extractor.toHTML:
+                    page.append(listItem[n] % line)
         elif len(listLevel):
             page.append(line)
             if Extractor.toHTML:

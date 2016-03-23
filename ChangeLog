@@ -1,3 +1,7 @@
+2016-03-23  Giuseppe Attardi  <attardi@di.unipi.it>
+
+	* WikiExtractor.py (compact): properly emit section headers when Extractor.keepSections.
+
 2016-03-19  Giuseppe Attardi  <attardi@di.unipi.it>
 
 	* WikiExtractor.py (main): restored option --sections.
