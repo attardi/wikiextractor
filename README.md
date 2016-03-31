@@ -65,6 +65,8 @@ Each file will contains several documents in this [document format](http://media
       --no-templates        Do not expand templates
       --escapedoc           use to escape the contents of the output
                             <doc>...</doc>
+      --no-doc              the output won't have the lines <doc> and </doc>
+      --no-title            the output won't have the titles of the articles
 
     Special:
       -q, --quiet           suppress reporting progress info
