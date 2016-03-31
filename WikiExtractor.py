@@ -441,9 +441,13 @@ class Extractor(object):
         """
         logging.debug("%s\t%s", self.id, self.title)
         url = get_url(self.id)
-        header = '<doc id="%s" url="%s" title="%s">\n' % (self.id, url, self.title)
-        # Separate header from text with a newline.
-        header += self.title + '\n\n'
+        header = ''
+        if not no_doc:
+            header = '<doc id="%s" url="%s" title="%s">\n' % (self.id, url, self.title)
+        if not no_title:
+            header += self.title + '\n'
+        if not no_doc and not no_title:
+            header += '\n'  # Separate header from text with a newline.
         header = header.encode('utf-8')
         self.magicWords['pagename'] = self.title
         self.magicWords['fullpagename'] = self.title
@@ -453,8 +457,12 @@ class Extractor(object):
         self.magicWords['currenthour'] = time.strftime('%H')
         self.magicWords['currenttime'] = time.strftime('%H:%M:%S')
         text = self.clean()
-        footer = "\n</doc>\n"
-        out.write(header)
+        if no_doc:
+            footer = '\n'
+        else:
+            footer = '\n</doc>\n'
+        if header:
+            out.write(header)
         for line in compact(text):
             out.write(line.encode('utf-8'))
             out.write('\n')
@@ -2647,7 +2655,7 @@ minFileSize = 200 * 1024
 
 def main():
     global urlbase, acceptedNamespaces
-    global templateCache, escape_doc
+    global templateCache, escape_doc, no_doc, no_title
 
     parser = argparse.ArgumentParser(prog=os.path.basename(sys.argv[0]),
                                      formatter_class=argparse.RawDescriptionHelpFormatter,
@@ -2677,9 +2685,13 @@ def main():
     groupP.add_argument("--templates",
                         help="use or create file containing templates")
     groupP.add_argument("--no-templates", action="store_false",
-                        help="Do not expand templates")
+                        help="do not expand templates")
     groupP.add_argument("--escapedoc", action="store_true",
                         help="use to escape the contents of the output <doc>...</doc>")
+    groupP.add_argument("--no-doc", action="store_true",
+                        help="the output won't have the lines <doc> and </doc>")
+    groupP.add_argument("--no-title", action="store_true",
+                        help="the output won't have the titles of the articles")
     default_process_count = cpu_count() - 1
     parser.add_argument("--processes", type=int, default=default_process_count,
                         help="Number of processes to use (default %(default)s)")
@@ -2706,6 +2718,8 @@ def main():
 
     Extractor.expand_templates = args.no_templates
     escape_doc = args.escapedoc
+    no_doc = args.no_doc
+    no_title = args.no_title
 
     try:
         power = 'kmg'.find(args.bytes[-1].lower()) + 1
