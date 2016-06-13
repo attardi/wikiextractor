@@ -1,3 +1,9 @@
+2016-03-23  Seth Cleveland <scleveland@turnitin.com>
+
+	* WikiExtractor.py: add filtering options -- min text length, xml
+	namespace, and disambig pages. Added option to print the revision
+	id with each document.
+
 2016-03-23  Giuseppe Attardi  <attardi@di.unipi.it>
 
 	* WikiExtractor.py (compact): properly emit section headers when Extractor.keepSections.
