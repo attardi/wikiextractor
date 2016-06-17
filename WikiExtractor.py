@@ -2593,6 +2593,7 @@ def extract_process(i, jobs_queue, output_queue):
                 logging.error('Processing page: %s %s', id, title)
             output_queue.put((page_num, text))
             out.truncate(0)
+            out.seek(0)
         else:
             logging.debug('Quit extractor')
             break
