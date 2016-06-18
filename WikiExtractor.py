@@ -458,7 +458,6 @@ class Extractor(object):
         header = '<doc id="%s" url="%s" title="%s">\n' % (self.id, url, self.title)
         # Separate header from text with a newline.
         header += self.title + '\n\n'
-        header = header.encode('utf-8')
         self.magicWords['pagename'] = self.title
         self.magicWords['fullpagename'] = self.title
         self.magicWords['currentyear'] = time.strftime('%Y')
@@ -470,7 +469,7 @@ class Extractor(object):
         footer = "\n</doc>\n"
         out.write(header)
         for line in compact(text):
-            out.write(line.encode('utf-8'))
+            out.write(line)
             out.write('\n')
         out.write(footer)
         errs = (self.template_title_errs,
@@ -2316,7 +2315,7 @@ class OutputSplitter(object):
         if self.compress:
             return bz2.BZ2File(filename + '.bz2', 'w')
         else:
-            return open(filename, 'w')
+            return open(filename, 'wb')
 
 
 # ----------------------------------------------------------------------
@@ -2615,7 +2614,7 @@ def reduce_process(output_queue, spool_length,
         nextFile = NextFile(out_file)
         output = OutputSplitter(nextFile, file_size, file_compress)
     else:
-        output = sys.stdout
+        output = sys.stdout if PY2 else sys.stdout.buffer
         if file_compress:
             logging.warn("writing to stdout, so no output compression (use an external tool)")
     
@@ -2625,7 +2624,7 @@ def reduce_process(output_queue, spool_length,
     next_page = 0     # sequence numbering of page
     while True:
         if next_page in spool:
-            output.write(spool.pop(next_page))
+            output.write(spool.pop(next_page).encode('utf-8'))
             next_page += 1
             # tell mapper our load:
             spool_length.value = len(spool)
