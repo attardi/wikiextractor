@@ -2,7 +2,7 @@
 # -*- coding: utf-8 -*-
 
 # =============================================================================
-#  Version: 2.55 (March 23, 2016)
+#  Version: 2.56 (June 19, 2016)
 #  Author: Giuseppe Attardi (attardi@di.unipi.it), University of Pisa
 #
 #  Contributors:
@@ -14,6 +14,7 @@
 #   Pedro Assis (pedroh2306@gmail.com)
 #   Wim Muskee (wimmuskee@gmail.com)
 #   Radics Geza (radicsge@gmail.com)
+#   orangain (orangain@gmail.com)
 #
 # =============================================================================
 #  Copyright (c) 2011-2016. Giuseppe Attardi (attardi@di.unipi.it).
@@ -80,7 +81,7 @@ else:
 # ===========================================================================
 
 # Program version
-version = '2.55'
+version = '2.56'
 
 ## PARAMS ####################################################################
 
