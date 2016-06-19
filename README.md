@@ -33,11 +33,25 @@ The script is invoked with a Wikipedia dump file as an argument.
 The output is stored in several files of similar size in a given directory.
 Each file will contains several documents in this [document format](http://medialab.di.unipi.it/wiki/Document_Format).
 
-    usage: WikiExtractor.py [-h] [-o OUTPUT] [-b n[KMG]] [-c] [--html] [-l]
-			    [-ns ns1,ns2] [-s] [--templates TEMPLATES]
-			    [--no-templates] [--processes PROCESSES] [-q] [--debug]
-			    [-a] [-v]
-			    input
+    usage: WikiExtractor.py [-h] [-o OUTPUT] [-b n[KMG]] [-c] [--html] [-l] [-s]
+                            [--lists] [-ns ns1,ns2] [-xns ns1,ns2]
+                            [--templates TEMPLATES] [--no-templates] [--escapedoc]
+                            [-r] [--min_text_length MIN_TEXT_LENGTH]
+                            [--filter_disambig_pages] [--processes PROCESSES] [-q]
+                            [--debug] [-a] [-v]
+                            input
+
+    Wikipedia Extractor:
+    Extracts and cleans text from a Wikipedia database dump and stores output in a
+    number of files of similar size in a given directory.
+    Each file will contain several documents in the format:
+
+        <doc id="" revid="" url="" title="">
+            ...
+            </doc>
+
+    Template expansion requires preprocesssng first the whole dump and
+    collecting template definitions.
 
     positional arguments:
       input                 XML wiki dump file
@@ -48,7 +62,7 @@ Each file will contains several documents in this [document format](http://media
 
     Output:
       -o OUTPUT, --output OUTPUT
-			    a directory where to store the extracted files (or '-' for dumping to
+                            directory for extracted files (or '-' for dumping to
                             stdout)
       -b n[KMG], --bytes n[KMG]
                             maximum bytes per output file (default 1M)
@@ -57,20 +71,32 @@ Each file will contains several documents in this [document format](http://media
     Processing:
       --html                produce HTML output, subsumes --links
       -l, --links           preserve links
+      -s, --sections        preserve sections
       --lists               preserve lists
       -ns ns1,ns2, --namespaces ns1,ns2
-			    accepted namespaces
+                            accepted link namespaces
+      -xns ns1,ns2, --xml_namespaces ns1,ns2
+                            accepted page xml namespaces -- 0 for main/articles
       --templates TEMPLATES
-			    use or create file containing templates
+                            use or create file containing templates
       --no-templates        Do not expand templates
       --escapedoc           use to escape the contents of the output
                             <doc>...</doc>
+      -r, --revision        Include the document revision id (default=False)
+      --min_text_length MIN_TEXT_LENGTH
+                            Minimum expanded text length required to write
+                            document (default=0)
+      --filter_disambig_pages
+                            Remove pages from output that contain disabmiguation
+                            markup (default=False)
 
     Special:
       -q, --quiet           suppress reporting progress info
       --debug               print debug info
-      -a, --article         analyze a file containing a single article (debug option)
+      -a, --article         analyze a file containing a single article (debug
+                            option)
       -v, --version         print program version
+
 
 Saving templates to a file will speed up performing extraction the next time,
 assuming template definitions have not changed.

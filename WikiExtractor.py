@@ -2,7 +2,7 @@
 # -*- coding: utf-8 -*-
 
 # =============================================================================
-#  Version: 2.56 (June 19, 2016)
+#  Version: 2.57 (June 19, 2016)
 #  Author: Giuseppe Attardi (attardi@di.unipi.it), University of Pisa
 #
 #  Contributors:
@@ -15,6 +15,7 @@
 #   Wim Muskee (wimmuskee@gmail.com)
 #   Radics Geza (radicsge@gmail.com)
 #   orangain (orangain@gmail.com)
+#   Seth Cleveland (scleveland@turnitin.com)
 #
 # =============================================================================
 #  Copyright (c) 2011-2016. Giuseppe Attardi (attardi@di.unipi.it).
@@ -39,7 +40,7 @@ Extracts and cleans text from a Wikipedia database dump and stores output in a
 number of files of similar size in a given directory.
 Each file will contain several documents in the format:
 
-    <doc id="" url="" title="">
+    <doc id="" revid="" url="" title="">
         ...
         </doc>
 
@@ -81,7 +82,7 @@ else:
 # ===========================================================================
 
 # Program version
-version = '2.56'
+version = '2.57'
 
 ## PARAMS ####################################################################
 
@@ -106,12 +107,21 @@ templatePrefix = ''
 moduleNamespace = ''
 
 ##
-# Recognize only these namespaces
+# Recognize only these namespaces in links
 # w: Internal links to the Wikipedia
 # wiktionary: Wiki dictionary
 # wikt: shortcut for Wiktionary
 #
 acceptedNamespaces = ['w', 'wiktionary', 'wikt']
+
+
+##
+# Desired xml namespaces to extract -- allXMLNamespaces for everything, use
+# the integers from https://en.wikipedia.org/wiki/Wikipedia:Namespace to filter
+# pages
+allXMLNamespaces = set()
+acceptedXMLNamespaces = allXMLNamespaces
+
 
 ##
 # Drop these elements from article text
@@ -127,6 +137,27 @@ discardElements = [
 
 # This is obtained from <siteinfo>
 urlbase = ''
+
+##
+# Filter disambiguation pages
+filter_disambig_pages = False
+filter_disambig_page_pattern = re.compile("{{disambig(uation)?(\|[^}]*)?}}")
+
+##
+# page filtering logic -- remove templates, un desired xml namespaces, and disambig pages
+def keepPage(ns, page):
+    # remove modules and templates from output
+    if ns in templateKeys:
+        return False
+    # filter this page based on namespace, unless we want all namespaces
+    if not (acceptedXMLNamespaces is allXMLNamespaces) and ns not in acceptedXMLNamespaces:
+        return False
+    # remove disambig pages if desired
+    if filter_disambig_pages:
+        for line in page:
+            if filter_disambig_page_pattern.match(line):
+                return False
+    return True
 
 
 def get_url(uid):
@@ -433,14 +464,22 @@ class Extractor(object):
     # Whether to expand templates
     expand_templates = True
 
+    ##
+    # Print the wikipedia article revision
+    print_revision = False
 
-    def __init__(self, id, title, lines):
+    ##
+    # Minimum expanded text length required to print document
+    min_text_length = 0
+
+    def __init__(self, id, revid, title, lines):
         """
         :param id: id of page.
         :param title: tutle of page.
         :param lines: a list of lines.
         """
         self.id = id
+        self.revid = revid
         self.title = title
         self.text = ''.join(lines)
         self.magicWords = MagicWords()
@@ -456,7 +495,10 @@ class Extractor(object):
         """
         logging.debug("%s\t%s", self.id, self.title)
         url = get_url(self.id)
-        header = '<doc id="%s" url="%s" title="%s">\n' % (self.id, url, self.title)
+        if Extractor.print_revision:
+            header = '<doc id="%s" revid="%s" url="%s" title="%s">\n' % (self.id, self.revid, url, self.title)
+        else:
+            header = '<doc id="%s" url="%s" title="%s">\n' % (self.id, url, self.title)
         # Separate header from text with a newline.
         header += self.title + '\n\n'
         self.magicWords['pagename'] = self.title
@@ -466,10 +508,12 @@ class Extractor(object):
         self.magicWords['currentday'] = time.strftime('%d')
         self.magicWords['currenthour'] = time.strftime('%H')
         self.magicWords['currenttime'] = time.strftime('%H:%M:%S')
-        text = self.clean()
+        text = [line.encode('utf-8') for line in compact(self.clean())]
         footer = "\n</doc>\n"
+        if sum(len(line) for line in text) < Extractor.min_text_length:
+            return
         out.write(header)
-        for line in compact(text):
+        for line in text:
             out.write(line)
             out.write('\n')
         out.write(footer)
@@ -2338,7 +2382,7 @@ def load_templates(file, output_file=None):
     if output_file:
         output = codecs.open(output_file, 'wb', 'utf-8')
     for page_count, page_data in enumerate(pages_from(file)):
-        id, title, ns, page = page_data
+        id, revid, title, ns, page = page_data
         if not output_file and (not templateNamespace or
                                 not moduleNamespace):  # do not know it yet
             # reconstruct templateNamespace and moduleNamespace from the first title
@@ -2383,8 +2427,10 @@ def pages_from(input):
     id = None
     ns = '0'
     last_id = None
+    revid = None
     inText = False
     redirect = False
+    title = None
     for line in input:
         line = line.decode('utf-8')
         if '<' not in line:  # faster than doing re.search()
@@ -2398,8 +2444,10 @@ def pages_from(input):
         if tag == 'page':
             page = []
             redirect = False
-        elif tag == 'id' and not id: # skip nested <id>
+        elif tag == 'id' and not id:
             id = m.group(3)
+        elif tag == 'id' and id:
+            revid = m.group(3)
         elif tag == 'title':
             title = m.group(3)
         elif tag == 'ns':
@@ -2420,10 +2468,12 @@ def pages_from(input):
             page.append(line)
         elif tag == '/page':
             if id != last_id and not redirect:
-                yield (id, title, ns, page)
+                yield (id, revid, title, ns, page)
                 last_id = id
                 ns = '0'
             id = None
+            revid = None
+            title = None
             page = []
 
 
@@ -2441,6 +2491,7 @@ def process_dump(input_file, template_file, out_file, file_size, file_compress,
     global knownNamespaces
     global templateNamespace, templatePrefix
     global moduleNamespace, modulePrefix
+    global allXMLNamespaces, acceptedXMLNamespaces
 
     if input_file == '-':
         input = sys.stdin
@@ -2533,8 +2584,8 @@ def process_dump(input_file, template_file, out_file, file_size, file_compress,
     # Mapper process
     page_num = 0
     for page_data in pages_from(input):
-        id, title, ns, page = page_data
-        if ns not in templateKeys:
+        id, revid, title, ns, page = page_data
+        if keepPage(ns, page):
             # slow down
             delay = 0
             if spool_length.value > max_spool_length:
@@ -2544,7 +2595,7 @@ def process_dump(input_file, template_file, out_file, file_size, file_compress,
                     delay += 10
             if delay:
                 logging.info('Delay %ds', delay)
-            job = (id, title, page, page_num)
+            job = (id, revid, title, page, page_num)
             jobs_queue.put(job) # goes to any available extract_process
             page_num += 1
         page = None             # free memory
@@ -2583,15 +2634,16 @@ def extract_process(i, jobs_queue, output_queue):
     while True:
         job = jobs_queue.get()  # job is (id, title, page, page_num)
         if job:
-            id, title, page, page_num = job
+            id, revid, title, page, page_num = job
             try:
-                e = Extractor(*job[:3]) # (id, title, page)
+                e = Extractor(*job[:4]) # (id, revid, title, page)
                 page = None              # free memory
                 e.extract(out)
                 text = out.getvalue()
             except:
                 text = ''
                 logging.error('Processing page: %s %s', id, title)
+
             output_queue.put((page_num, text))
             out.truncate(0)
             out.seek(0)
@@ -2661,7 +2713,7 @@ minFileSize = 200 * 1024
 
 
 def main():
-    global urlbase, acceptedNamespaces
+    global urlbase, acceptedNamespaces, acceptedXMLNamespaces, filter_disambig_pages
     global templateCache, escape_doc
 
     parser = argparse.ArgumentParser(prog=os.path.basename(sys.argv[0]),
@@ -2688,13 +2740,21 @@ def main():
     groupP.add_argument("--lists", action="store_true",
                         help="preserve lists")
     groupP.add_argument("-ns", "--namespaces", default="", metavar="ns1,ns2",
-                        help="accepted namespaces")
+                        help="accepted link namespaces")
+    groupP.add_argument("-xns", "--xml_namespaces", default="", metavar="ns1,ns2",
+                        help="accepted page xml namespaces -- 0 for main/articles")
     groupP.add_argument("--templates",
                         help="use or create file containing templates")
     groupP.add_argument("--no-templates", action="store_false",
                         help="Do not expand templates")
     groupP.add_argument("--escapedoc", action="store_true",
                         help="use to escape the contents of the output <doc>...</doc>")
+    groupP.add_argument("-r", "--revision", action="store_true", default=Extractor.print_revision,
+                        help="Include the document revision id (default=%(default)s)")
+    groupP.add_argument("--min_text_length", type=int, default=Extractor.min_text_length,
+                        help="Minimum expanded text length required to write document (default=%(default)s)")
+    groupP.add_argument("--filter_disambig_pages", action="store_true", default=filter_disambig_pages,
+                        help="Remove pages from output that contain disabmiguation markup (default=%(default)s)")
     default_process_count = cpu_count() - 1
     parser.add_argument("--processes", type=int, default=default_process_count,
                         help="Number of processes to use (default %(default)s)")
@@ -2716,11 +2776,14 @@ def main():
     Extractor.keepSections = args.sections
     Extractor.keepLists = args.lists
     Extractor.toHTML = args.html
+    Extractor.print_revision = args.revision
+    Extractor.min_text_length = args.min_text_length
     if args.html:
         Extractor.keepLinks = True
 
     Extractor.expand_templates = args.no_templates
     escape_doc = args.escapedoc
+    filter_disambig_pages = args.filter_disambig_pages
 
     try:
         power = 'kmg'.find(args.bytes[-1].lower()) + 1
@@ -2733,6 +2796,9 @@ def main():
 
     if args.namespaces:
         acceptedNamespaces = set(args.namespaces.split(','))
+
+    if args.xml_namespaces:
+        acceptedXMLNamespaces = set([unicode(ns) for ns in args.xml_namespaces.split(',')])
 
     FORMAT = '%(levelname)s: %(message)s'
     logging.basicConfig(format=FORMAT)
@@ -2760,8 +2826,8 @@ def main():
 
         file = fileinput.FileInput(input_file, openhook=fileinput.hook_compressed)
         for page_data in pages_from(file):
-            id, title, ns, page = page_data
-            Extractor(id, title, page).extract(sys.stdout)
+            id, revid, title, ns, page = page_data
+            Extractor(id, revid, title, page).extract(sys.stdout)
         file.close()
         return
 
