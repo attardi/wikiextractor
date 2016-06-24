@@ -82,7 +82,7 @@ else:
 # ===========================================================================
 
 # Program version
-version = '2.57'
+version = '2.58'
 
 ## PARAMS ####################################################################
 
@@ -508,7 +508,7 @@ class Extractor(object):
         self.magicWords['currentday'] = time.strftime('%d')
         self.magicWords['currenthour'] = time.strftime('%H')
         self.magicWords['currenttime'] = time.strftime('%H:%M:%S')
-        text = [line.encode('utf-8') for line in compact(self.clean())]
+        text = compact(self.clean())
         footer = "\n</doc>\n"
         if sum(len(line) for line in text) < Extractor.min_text_length:
             return
@@ -2642,7 +2642,7 @@ def extract_process(i, jobs_queue, output_queue):
                 text = out.getvalue()
             except:
                 text = ''
-                logging.error('Processing page: %s %s', id, title)
+                logging.exception('Processing page: %s %s', id, title)
 
             output_queue.put((page_num, text))
             out.truncate(0)
