@@ -60,6 +60,7 @@ import logging
 import os.path
 import re  # TODO use regex when it will be standard
 import time
+import csv
 from io import StringIO
 from multiprocessing import Queue, Process, Value, cpu_count
 from timeit import default_timer
@@ -495,9 +496,12 @@ class Extractor(object):
         """
         logging.debug("%s\t%s", self.id, self.title)
         url = get_url(self.id)
+        csv_info = []
         if Extractor.print_revision:
             header = '<doc id="%s" revid="%s" url="%s" title="%s">\n' % (self.id, self.revid, url, self.title)
+            csv_info = [self.id, self.revid, url, self.title]
         else:
+            csv_info = [self.id, url, self.title]
             header = '<doc id="%s" url="%s" title="%s">\n' % (self.id, url, self.title)
         # Separate header from text with a newline.
         header += self.title + '\n\n'
@@ -512,11 +516,15 @@ class Extractor(object):
         footer = "\n</doc>\n"
         if sum(len(line) for line in text) < Extractor.min_text_length:
             return
-        out.write(header)
-        for line in text:
-            out.write(line)
-            out.write('\n')
-        out.write(footer)
+        if Extractor.csv:
+            csv_writer = csv.writer(out)
+            csv_writer.writerow(csv_info + ["\n".join(text)])
+        else:
+            out.write(header)
+            for line in text:
+                out.write(line)
+                out.write('\n')
+            out.write(footer)
         errs = (self.template_title_errs,
                 self.recursion_exceeded_1_errs,
                 self.recursion_exceeded_2_errs,
@@ -2729,6 +2737,8 @@ def main():
                         metavar="n[KMG]")
     groupO.add_argument("-c", "--compress", action="store_true",
                         help="compress output files using bzip")
+    groupO.add_argument("--csv", action="store_true",
+                        help="output csv instead of xml")
 
     groupP = parser.add_argument_group('Processing')
     groupP.add_argument("--html", action="store_true",
@@ -2777,6 +2787,7 @@ def main():
     Extractor.keepLists = args.lists
     Extractor.toHTML = args.html
     Extractor.print_revision = args.revision
+    Extractor.csv = args.csv
     Extractor.min_text_length = args.min_text_length
     if args.html:
         Extractor.keepLinks = True
