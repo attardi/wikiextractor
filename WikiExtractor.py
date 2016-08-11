@@ -2,7 +2,7 @@
 # -*- coding: utf-8 -*-
 
 # =============================================================================
-#  Version: 2.57 (June 19, 2016)
+#  Version: 2.59 (Aug 11, 2016)
 #  Author: Giuseppe Attardi (attardi@di.unipi.it), University of Pisa
 #
 #  Contributors:
@@ -82,7 +82,7 @@ else:
 # ===========================================================================
 
 # Program version
-version = '2.58'
+version = '2.59'
 
 ## PARAMS ####################################################################
 
@@ -465,6 +465,10 @@ class Extractor(object):
     expand_templates = True
 
     ##
+    ## Whether to escape doc content
+    escape_doc = False
+
+    ##
     # Print the wikipedia article revision
     print_revision = False
 
@@ -527,7 +531,8 @@ class Extractor(object):
 
     def clean(self):
         """
-        Transforms wiki markup. If the command line flag --escapedoc is set then the text is also escaped
+        Transforms wiki markup.
+        If the command line flag --escapedoc is set then the text is also escaped.
         @see https://www.mediawiki.org/wiki/Help:Formatting
         """
         text = self.text
@@ -625,7 +630,7 @@ class Extractor(object):
         text = re.sub('(\[\(«) ', r'\1', text)
         text = re.sub(r'\n\W+?\n', '\n', text, flags=re.U)  # lines with only punctuations
         text = text.replace(',,', ',').replace(',.', '.')
-        if escape_doc:
+        if Extractor.escape_doc:
             text = cgi.escape(text)
         return text
 
@@ -2711,10 +2716,9 @@ def reduce_process(output_queue, spool_length,
 # Minimum size of output files
 minFileSize = 200 * 1024
 
-
 def main():
     global urlbase, acceptedNamespaces, acceptedXMLNamespaces, filter_disambig_pages
-    global templateCache, escape_doc
+    global templateCache
 
     parser = argparse.ArgumentParser(prog=os.path.basename(sys.argv[0]),
                                      formatter_class=argparse.RawDescriptionHelpFormatter,
@@ -2782,7 +2786,7 @@ def main():
         Extractor.keepLinks = True
 
     Extractor.expand_templates = args.no_templates
-    escape_doc = args.escapedoc
+    Extractor.escape_doc = args.escapedoc
     filter_disambig_pages = args.filter_disambig_pages
 
     try:
