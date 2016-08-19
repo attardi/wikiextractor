@@ -2,7 +2,7 @@
 # -*- coding: utf-8 -*-
 
 # =============================================================================
-#  Version: 2.59 (Aug 11, 2016)
+#  Version: 2.60 (Aug 19, 2016)
 #  Author: Giuseppe Attardi (attardi@di.unipi.it), University of Pisa
 #
 #  Contributors:
@@ -82,7 +82,7 @@ else:
 # ===========================================================================
 
 # Program version
-version = '2.59'
+version = '2.60'
 
 ## PARAMS ####################################################################
 
@@ -454,7 +454,7 @@ class Extractor(object):
 
     ##
     # Whether to preserve lists
-    keeplists = False
+    keepLists = False
 
     ##
     # Whether to output HTML instead of text
