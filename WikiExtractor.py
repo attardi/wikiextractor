@@ -504,7 +504,10 @@ class Extractor(object):
         else:
             header = '<doc id="%s" url="%s" title="%s">\n' % (self.id, url, self.title)
         # Separate header from text with a newline.
-        header += self.title + '\n\n'
+        if self.toHTML:
+            header += '<h1> ' + self.title + '</h1> \n\n'
+        else:
+            header += self.title + '\n\n'
         self.magicWords['pagename'] = self.title
         self.magicWords['fullpagename'] = self.title
         self.magicWords['currentyear'] = time.strftime('%Y')
