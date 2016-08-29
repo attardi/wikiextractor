@@ -1,3 +1,35 @@
+2016-08-29  Giuseppe Attardi  <attardi@di.unipi.it>
+
+	* WikiExtractor.py (callParserFunction): reworked order of
+	evaluation of template parameters, according to
+	   https://www.mediawiki.org/wiki/Help:Templates#Order_of_evaluation
+        Template parameters are fully evaluated before they are passed to the template.
+	The branching parser function are an exception, since evaluation
+	depends on values tested.
+
+	* WikiExtractor.py (callParserFunction): reworked handling of
+	parser function.
+	Handle expansion of:
+	   {{numero romano|1999}}
+	where Template:Numero romano = {{{{{|safesubst:}}}#invoke:Numero romano|main}}
+	and parameter body has no arguments, by getting them from frame.
+	Instead expansion of:
+	   {{Str endswith|1999|a.C.}}
+	where Template:Str endswith = {{#ifeq:{{#invoke:String|sub|s={{{1|}}}| -{{#invoke:String|len|s={{{2}}}}} |ignore_errors=true}}|{{{2|}}}|sì}}
+	uses parameters in template.
+
+	(Extractor.extract): Adds an h1 tag for title if --html is
+	passed. Patch contributed by okb1100 on GitHub.
+
+2016-08-26  Giuseppe Attardi  <attardi@di.unipi.it>
+
+	* WikiExtractor.py (nowiki): handle <nowiki>...</nowiki>.
+
+2016-08-22  Giuseppe Attardi  <attardi@di.unipi.it>
+
+	* WikiExtractor.py (Extractor.extract): fixed UTF-8 encoding with
+	option -a.
+
 2016-08-19  Giuseppe Attardi  <attardi@di.unipi.it>
 
 	* WikiExtractor.py (Extractor): fixed misspelled keepLists.

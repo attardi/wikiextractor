@@ -190,7 +190,7 @@ def main():
         formatter_class=argparse.RawDescriptionHelpFormatter,
                                      description=__doc__)
     parser.add_argument("input",
-                        help="XML wiki dump file")
+                        help="Cirrus Json wiki dump file")
     groupO = parser.add_argument_group('Output')
     groupO.add_argument("-o", "--output", default="text",
                         help="directory for extracted files (or '-' for dumping to stdin)")
