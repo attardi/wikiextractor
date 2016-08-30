@@ -2,7 +2,7 @@
 # -*- coding: utf-8 -*-
 
 # =============================================================================
-#  Version: 2.63 (Aug 26, 2016)
+#  Version: 2.64 (Aug 20, 2016)
 #  Author: Giuseppe Attardi (attardi@di.unipi.it), University of Pisa
 #
 #  Contributors:
@@ -83,7 +83,7 @@ else:
 # ===========================================================================
 
 # Program version
-version = '2.63'
+version = '2.64'
 
 ## PARAMS ####################################################################
 
@@ -527,6 +527,7 @@ class Extractor(object):
         """
         :param out: a memory file.
         """
+        logging.info('%s\t%s', self.id, self.title)
         url = get_url(self.id)
         if Extractor.print_revision:
             header = '<doc id="%s" revid="%s" url="%s" title="%s">\n' % (self.id, self.revid, url, self.title)
@@ -588,7 +589,7 @@ class Extractor(object):
         res = ''
         cur = 0
         for m in nowiki.finditer(wikitext, cur):
-            res += self.transform1(wikitext[cur:m.start()]) + wikitext[m.start() + 8:m.end() - 9]
+            res += self.transform1(wikitext[cur:m.start()]) + wikitext[m.start():m.end()]
             cur = m.end()
         # leftover
         res += self.transform1(wikitext[cur:])
@@ -621,6 +622,8 @@ class Extractor(object):
         # $text = $this->formatHeadings( $text, $origText, $isMain );
 
         # Drop tables
+        # first drop residual templates, or else empty parameter |} might look like end of table.
+        text = dropNested(text, r'{{', r'}}')
         text = dropNested(text, r'{\|', r'\|}')
 
         # Handle bold/italic/quote
@@ -882,7 +885,7 @@ class Extractor(object):
 
         if self.frame.depth >= self.maxTemplateRecursionLevels:
             self.recursion_exceeded_2_errs += 1
-            # logging.debug('%*sINVOCATION> %s', self.frame.depth, '', body)
+            # logging.debug('%*sEXPAND> %s', self.frame.depth, '', body)
             return ''
 
         logging.debug('%*sEXPAND %s', self.frame.depth, '', body)

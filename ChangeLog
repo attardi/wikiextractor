@@ -1,3 +1,11 @@
+2016-08-30  Giuseppe Attardi  <attardi@di.unipi.it>
+
+	* WikiExtractor.py (Extractor.wiki2text): drop templates before
+	dropping tables.
+
+	* WikiExtractor.py (Extractor.transform): Keep <nowiki> or else
+	furhter expansion will be triggered.
+
 2016-08-29  Giuseppe Attardi  <attardi@di.unipi.it>
 
 	* WikiExtractor.py (callParserFunction): reworked order of
@@ -18,9 +26,11 @@
 	where Template:Str endswith = {{#ifeq:{{#invoke:String|sub|s={{{1|}}}| -{{#invoke:String|len|s={{{2}}}}} |ignore_errors=true}}|{{{2|}}}|sì}}
 	uses parameters in template.
 
-	(Extractor.extract): Adds an h1 tag for title if --html is
+	* WikiExtractor.py (Extractor.extract): Adds an h1 tag for title if --html is
 	passed. Patch contributed by okb1100 on GitHub.
 
+	* WikiExtractor.py (modules): added partial emulation of modules String and Roman.
+	)
 2016-08-26  Giuseppe Attardi  <attardi@di.unipi.it>
 
 	* WikiExtractor.py (nowiki): handle <nowiki>...</nowiki>.
