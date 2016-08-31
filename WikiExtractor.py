@@ -2,7 +2,7 @@
 # -*- coding: utf-8 -*-
 
 # =============================================================================
-#  Version: 2.64 (Aug 20, 2016)
+#  Version: 2.65 (Aug 30, 2016)
 #  Author: Giuseppe Attardi (attardi@di.unipi.it), University of Pisa
 #
 #  Contributors:
@@ -83,7 +83,7 @@ else:
 # ===========================================================================
 
 # Program version
-version = '2.64'
+version = '2.65'
 
 ## PARAMS ####################################################################
 
@@ -117,14 +117,6 @@ acceptedNamespaces = ['w', 'wiktionary', 'wikt']
 
 
 ##
-# Desired xml namespaces to extract -- allXMLNamespaces for everything, use
-# the integers from https://en.wikipedia.org/wiki/Wikipedia:Namespace to filter
-# pages
-allXMLNamespaces = set()
-acceptedXMLNamespaces = allXMLNamespaces
-
-
-##
 # Drop these elements from article text
 #
 discardElements = [
@@ -145,13 +137,9 @@ filter_disambig_pages = False
 filter_disambig_page_pattern = re.compile("{{disambig(uation)?(\|[^}]*)?}}")
 
 ##
-# page filtering logic -- remove templates, un desired xml namespaces, and disambig pages
+# page filtering logic -- remove templates, undesired xml namespaces, and disambiguation pages
 def keepPage(ns, page):
-    # remove modules and templates from output
-    if ns in templateKeys:
-        return False
-    # filter this page based on namespace, unless we want all namespaces
-    if not (acceptedXMLNamespaces is allXMLNamespaces) and ns not in acceptedXMLNamespaces:
+    if ns != '0':               # Aritcle
         return False
     # remove disambig pages if desired
     if filter_disambig_pages:
@@ -665,7 +653,6 @@ class Extractor(object):
     def clean(self, text):
         """
         Removes irrelevant parts from :param: text.
-        If the command line flag --escapedoc is set then the text is also HTML escaped.
         """
 
         # Collect spans
@@ -717,7 +704,7 @@ class Extractor(object):
         text = re.sub('(\[\(«) ', r'\1', text)
         text = re.sub(r'\n\W+?\n', '\n', text, flags=re.U)  # lines with only punctuations
         text = text.replace(',,', ',').replace(',.', '.')
-        if Extractor.escape_doc:
+        if Extractor.toHTML:
             text = cgi.escape(text)
         return text
 
@@ -752,6 +739,7 @@ class Extractor(object):
         """
         # Test template expansion at:
         # https://en.wikipedia.org/wiki/Special:ExpandTemplates
+        # https://it.wikipedia.org/wiki/Speciale:EspandiTemplate
 
         res = ''
         if self.frame.depth >= self.maxTemplateRecursionLevels:
@@ -815,7 +803,7 @@ class Extractor(object):
             # The '=' might occurr within an HTML attribute:
             #   "&lt;ref name=value"
             # but we stop at first.
-            m = re.match(' *([^= ]*?) *=(.*)', param, re.DOTALL)
+            m = re.match(' *([^=]*?) *?=(.*)', param, re.DOTALL)
             if m:
                 # This is a named parameter.  This case also handles parameter
                 # assignments like "2=xxx", where the number of an unnamed
@@ -1118,6 +1106,7 @@ def findMatchingBraces(text, ldelim=0):
     #   {{{{ }}}} -> { {{{ }}} }
     #   {{{{{ }}}}} -> {{ {{{ }}} }}
     #   {{#if:{{{{{#if:{{{nominee|}}}|nominee|candidate}}|}}}|...}}
+    #   {{{!}} {{!}}}
 
     # Handle:
     #   {{{{{|safesubst:}}}#Invoke:String|replace|{{{1|{{{{{|safesubst:}}}PAGENAME}}}}}|%s+%([^%(]-%)$||plain=false}}
@@ -1171,7 +1160,7 @@ def findMatchingBraces(text, ldelim=0):
                     break
                 elif len(stack) == 1 and 0 < stack[0] < ldelim:
                     # ambiguous {{{{{ }}} }}
-                    yield m1.start() + stack[0], end
+                    #yield m1.start() + stack[0], end
                     cur = end
                     break
             elif brac == '[':  # [[
@@ -1529,10 +1518,7 @@ def ucfirst(string):
     We can't use title() since it coverts all words.
     """
     if string:
-        if len(string) > 1:
-            return string[0].upper() + string[1:]
-        else:
-            return string.upper()
+        return string[0].upper() + string[1:]
     else:
         return ''
 
@@ -2638,7 +2624,7 @@ def load_templates(file, output_file=None):
 def pages_from(input):
     """
     Scans input extracting pages.
-    :return: (id, title, namespace, page), page is a list of lines.
+    :return: (id, revid, title, namespace key, page), page is a list of lines.
     """
     # we collect individual lines, since str.join() is significantly faster
     # than concatenation
@@ -2710,7 +2696,6 @@ def process_dump(input_file, template_file, out_file, file_size, file_compress,
     global knownNamespaces
     global templateNamespace, templatePrefix
     global moduleNamespace, modulePrefix
-    global allXMLNamespaces, acceptedXMLNamespaces
 
     if input_file == '-':
         input = sys.stdin
@@ -2746,7 +2731,9 @@ def process_dump(input_file, template_file, out_file, file_size, file_compress,
         if template_file:
             if os.path.exists(template_file):
                 logging.info("Preprocessing '%s' to collect template definitions: this may take some time.", template_file)
-                file = fileinput.FileInput(template_file, openhook=fileinput.hook_compressed)
+                # can't use with here:'
+                file = fileinput.FileInput(template_file,
+                                         openhook=fileinput.hook_compressed)
                 load_templates(file)
                 file.close()
             else:
@@ -2931,7 +2918,7 @@ def reduce_process(output_queue, spool_length,
 minFileSize = 200 * 1024
 
 def main():
-    global urlbase, acceptedNamespaces, acceptedXMLNamespaces, filter_disambig_pages
+    global urlbase, acceptedNamespaces, filter_disambig_pages
     global templateCache
 
     parser = argparse.ArgumentParser(prog=os.path.basename(sys.argv[0]),
@@ -2958,15 +2945,11 @@ def main():
     groupP.add_argument("--lists", action="store_true",
                         help="preserve lists")
     groupP.add_argument("-ns", "--namespaces", default="", metavar="ns1,ns2",
-                        help="accepted link namespaces")
-    groupP.add_argument("-xns", "--xml_namespaces", default="", metavar="ns1,ns2",
-                        help="accepted page xml namespaces -- 0 for main/articles")
+                        help="accepted namespaces in links")
     groupP.add_argument("--templates",
                         help="use or create file containing templates")
     groupP.add_argument("--no-templates", action="store_false",
                         help="Do not expand templates")
-    groupP.add_argument("--escapedoc", action="store_true",
-                        help="use to escape the contents of the output <doc>...</doc>")
     groupP.add_argument("-r", "--revision", action="store_true", default=Extractor.print_revision,
                         help="Include the document revision id (default=%(default)s)")
     groupP.add_argument("--min_text_length", type=int, default=Extractor.min_text_length,
@@ -3000,7 +2983,6 @@ def main():
         Extractor.keepLinks = True
 
     Extractor.expand_templates = args.no_templates
-    Extractor.escape_doc = args.escapedoc
     filter_disambig_pages = args.filter_disambig_pages
 
     try:
@@ -3014,9 +2996,6 @@ def main():
 
     if args.namespaces:
         acceptedNamespaces = set(args.namespaces.split(','))
-
-    if args.xml_namespaces:
-        acceptedXMLNamespaces = set([unicode(ns) for ns in args.xml_namespaces.split(',')])
 
     FORMAT = '%(levelname)s: %(message)s'
     logging.basicConfig(format=FORMAT)

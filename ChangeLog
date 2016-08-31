@@ -1,10 +1,21 @@
+2016-08-31  Giuseppe Attardi  <attardi@di.unipi.it>
+
+	* WikiExtractor.py (findMatchingBraces): fixed ambiguous cases
+	like {{{!}} {{!}}}
+
 2016-08-30  Giuseppe Attardi  <attardi@di.unipi.it>
 
 	* WikiExtractor.py (Extractor.wiki2text): drop templates before
 	dropping tables.
+	(Extractor.templateParams): fixed RE for separating var from value.
+
+	(main): removed option xml_namespaces, since we extract only
+	articles, i.e. those with namespace 0.
+
+	(Extractor.clean): removed option --escapedoc, use --html instead.
 
 	* WikiExtractor.py (Extractor.transform): Keep <nowiki> or else
-	furhter expansion will be triggered.
+	further expansion will be triggered.
 
 2016-08-29  Giuseppe Attardi  <attardi@di.unipi.it>
 
