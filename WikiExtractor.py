@@ -2642,6 +2642,8 @@ def pages_from(input):
             if inText:
                 page.append(line)
             continue
+        if '<text xml:space="preserve" />' in line: # fix issue #63: wrong article ID saved
+            line = '<text xml:space="preserve"></text>\n' # fix issue #63: wrong article ID saved
         m = tagRE.search(line)
         if not m:
             continue
