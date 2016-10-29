@@ -15,7 +15,7 @@ Cirrus dumps are available at:
 
 # Details
 
-WikiExtractor performs template expansion by preprocesssng the whole dump and extracting template definitions.
+WikiExtractor performs template expansion by preprocessing the whole dump and extracting template definitions.
 
 In order to speed up processing:
 
