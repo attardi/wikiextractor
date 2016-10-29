@@ -1,5 +1,9 @@
 from setuptools import setup
 
+def readme():
+    with open('README.md') as f:
+        return f.read()
+
 setup(
     name='wikiextractor',
 
@@ -13,9 +17,5 @@ setup(
 
     license="GPL 3.0",
     keywords=['text', 'nlp'],
-    entry_points={
-        'scripts': [
-            'wikiextractor = WikiExtractor.py'
-        ]
-    }
+    scripts=['WikiExtractor.py']
 )
