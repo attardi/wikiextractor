@@ -8,6 +8,7 @@ setup(
     author='Giuseppe Attardi',
     author_email='attardi@di.unipi.it',
     version='2.42',
+    packages=[''],
 
     url='https://github.com/attardi/wikiextractor',
 
