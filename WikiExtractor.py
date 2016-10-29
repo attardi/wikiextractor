@@ -2,7 +2,7 @@
 # -*- coding: utf-8 -*-
 
 # =============================================================================
-#  Version: 2.65 (Aug 30, 2016)
+#  Version: 2.66 (Oct 29, 2016)
 #  Author: Giuseppe Attardi (attardi@di.unipi.it), University of Pisa
 #
 #  Contributors:
@@ -83,7 +83,7 @@ else:
 # ===========================================================================
 
 # Program version
-version = '2.65'
+version = '2.66'
 
 ## PARAMS ####################################################################
 
@@ -2660,6 +2660,9 @@ def pages_from(input):
         elif tag == 'redirect':
             redirect = True
         elif tag == 'text':
+            if m.lastindex == 3 and line[m.start(3)-2] == '/': # self closing
+                # <text xml:space="preserve" />
+                continue
             inText = True
             line = line[m.start(3):m.end(3)]
             page.append(line)
