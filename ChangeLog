@@ -1,5 +1,7 @@
 2016-10-29  Giuseppe Attardi  <attardi@di.unipi.it>
 
+	* setup.py: use scripts instead of console_scripts.
+
 	* WikiExtractor.py (pages_from): handle self closing <text />.
 
 2016-08-31  Giuseppe Attardi  <attardi@di.unipi.it>
