@@ -35,7 +35,7 @@ Each file will contains several documents in this [document format](http://media
 
     usage: WikiExtractor.py [-h] [-o OUTPUT] [-b n[KMG]] [-c] [--html] [-l] [-s]
                             [--lists] [-ns ns1,ns2] [-xns ns1,ns2]
-                            [--templates TEMPLATES] [--no-templates] [--escapedoc]
+                            [--templates TEMPLATES] [--no-templates]
                             [-r] [--min_text_length MIN_TEXT_LENGTH]
                             [--filter_disambig_pages] [--processes PROCESSES] [-q]
                             [--debug] [-a] [-v]
@@ -80,8 +80,6 @@ Each file will contains several documents in this [document format](http://media
       --templates TEMPLATES
                             use or create file containing templates
       --no-templates        Do not expand templates
-      --escapedoc           use to escape the contents of the output
-                            <doc>...</doc>
       -r, --revision        Include the document revision id (default=False)
       --min_text_length MIN_TEXT_LENGTH
                             Minimum expanded text length required to write
