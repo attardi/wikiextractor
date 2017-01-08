@@ -704,6 +704,7 @@ class Extractor(object):
         text = re.sub('(\[\(«) ', r'\1', text)
         text = re.sub(r'\n\W+?\n', '\n', text, flags=re.U)  # lines with only punctuations
         text = text.replace(',,', ',').replace(',.', '.')
+
         if Extractor.toHTML:
             text = cgi.escape(text)
         return text
@@ -2379,7 +2380,6 @@ listClose = {'*': '</ul>', '#': '</ol>', ';': '</dl>', ':': '</dl>'}
 listItem = {'*': '<li>%s</li>', '#': '<li>%s</<li>', ';': '<dt>%s</dt>',
             ':': '<dd>%s</dd>'}
 
-
 def compact(text):
     """Deal with headers, lists, empty sections, residuals of tables.
     :param text: convert to HTML.
@@ -2392,8 +2392,12 @@ def compact(text):
 
     for line in text.split('\n'):
 
-        if not line:
-            continue
+        # Let's keep only one empty line that indicates the end of a paragraph
+        if line.strip() == '':
+          l=len(page)
+          if l > 0 and page[l-1] != '':
+            page.append('')
+          continue
         # Handle section titles
         m = section.match(line)
         if m:
