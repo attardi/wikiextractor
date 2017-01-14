@@ -73,11 +73,13 @@ if PY2:
     range = xrange  # Overwrite by Python 3 name
     chr = unichr    # Overwrite by Python 3 name
     text_type = unicode
+    binary_type = str
 else:
     from urllib.parse import quote
     from html.entities import name2codepoint
     from itertools import zip_longest
     text_type = str
+    binary_type = bytes
 
 
 # ===========================================================================
@@ -2637,7 +2639,7 @@ def pages_from(input):
     redirect = False
     title = None
     for line in input:
-        if PY2: line = line.decode('utf-8')
+        if isinstance(line, binary_type): line = line.decode('utf-8')
         if '<' not in line:  # faster than doing re.search()
             if inText:
                 page.append(line)
@@ -2707,7 +2709,7 @@ def process_dump(input_file, template_file, out_file, file_size, file_compress,
 
     # collect siteinfo
     for line in input:
-        if PY2: line = line.decode('utf-8')
+        if isinstance(line, binary_type): line = line.decode('utf-8')
         m = tagRE.search(line)
         if not m:
             continue
