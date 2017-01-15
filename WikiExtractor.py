@@ -2,7 +2,7 @@
 # -*- coding: utf-8 -*-
 
 # =============================================================================
-#  Version: 2.67 (Jan 4, 2017)
+#  Version: 2.68 (Jan 15, 2017)
 #  Author: Giuseppe Attardi (attardi@di.unipi.it), University of Pisa
 #
 #  Contributors:
@@ -66,6 +66,7 @@ from timeit import default_timer
 
 
 PY2 = sys.version_info[0] == 2
+# Python 2.7 compatibiity
 if PY2:
     from urllib import quote
     from htmlentitydefs import name2codepoint
@@ -83,7 +84,7 @@ else:
 # ===========================================================================
 
 # Program version
-version = '2.67'
+version = '2.68'
 
 ## PARAMS ####################################################################
 
@@ -2392,7 +2393,9 @@ def compact(text):
 
     for line in text.split('\n'):
 
-        if not line:
+        if not line:            # collapse empty lines
+            if page and page[-1]:
+                page.append('')
             continue
         # Handle section titles
         m = section.match(line)
@@ -2637,7 +2640,7 @@ def pages_from(input):
     redirect = False
     title = None
     for line in input:
-        if PY2: line = line.decode('utf-8')
+        if text_type == unicode: line = line.decode('utf-8')
         if '<' not in line:  # faster than doing re.search()
             if inText:
                 page.append(line)
@@ -2707,7 +2710,7 @@ def process_dump(input_file, template_file, out_file, file_size, file_compress,
 
     # collect siteinfo
     for line in input:
-        if PY2: line = line.decode('utf-8')
+        if text_type == unicode: line = line.decode('utf-8')
         m = tagRE.search(line)
         if not m:
             continue
