@@ -2762,6 +2762,7 @@ def process_dump(input_file, template_file, out_file, file_size, file_compress,
     # - pages to be processed are dispatched to workers
     # - a reduce process collects the results, sort them and print them.
 
+    process_count = max(1, process_count)
     maxsize = 10 * process_count
     # output queue
     output_queue = Queue(maxsize=maxsize)
@@ -2769,7 +2770,7 @@ def process_dump(input_file, template_file, out_file, file_size, file_compress,
     if out_file == '-':
         out_file = None
 
-    worker_count = max(1, process_count)
+    worker_count = process_count
 
     # load balancing
     max_spool_length = 10000
@@ -2963,7 +2964,7 @@ def main():
                         help="Minimum expanded text length required to write document (default=%(default)s)")
     groupP.add_argument("--filter_disambig_pages", action="store_true", default=filter_disambig_pages,
                         help="Remove pages from output that contain disabmiguation markup (default=%(default)s)")
-    default_process_count = cpu_count() - 1
+    default_process_count = max(1, cpu_count() - 1)
     parser.add_argument("--processes", type=int, default=default_process_count,
                         help="Number of processes to use (default %(default)s)")
 
