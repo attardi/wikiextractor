@@ -2,7 +2,7 @@
 # -*- coding: utf-8 -*-
 
 # =============================================================================
-#  Version: 2.68 (Jan 15, 2017)
+#  Version: 2.69 (Jan 15, 2017)
 #  Author: Giuseppe Attardi (attardi@di.unipi.it), University of Pisa
 #
 #  Contributors:
@@ -84,7 +84,7 @@ else:
 # ===========================================================================
 
 # Program version
-version = '2.68'
+version = '2.69'
 
 ## PARAMS ####################################################################
 
@@ -2640,7 +2640,7 @@ def pages_from(input):
     redirect = False
     title = None
     for line in input:
-        if text_type == unicode: line = line.decode('utf-8')
+        if not isinstance(line, text_type): line = line.decode('utf-8')
         if '<' not in line:  # faster than doing re.search()
             if inText:
                 page.append(line)
@@ -2710,7 +2710,8 @@ def process_dump(input_file, template_file, out_file, file_size, file_compress,
 
     # collect siteinfo
     for line in input:
-        if text_type == unicode: line = line.decode('utf-8')
+        # When an input file is .bz2 or .gz, line can be a bytes even in Python 3.
+        if not isinstance(line, text_type): line = line.decode('utf-8')
         m = tagRE.search(line)
         if not m:
             continue
