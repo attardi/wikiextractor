@@ -86,4 +86,5 @@ ENV/
 # Spyder project settings
 .spyderproject
 
-
+# Go files used for local testing
+*.go
