@@ -2,7 +2,7 @@
 # -*- coding: utf-8 -*-
 
 # =============================================================================
-#  Version: 2.66 (Oct 29, 2016)
+#  Version: 2.69 (Jan 15, 2017)
 #  Author: Giuseppe Attardi (attardi@di.unipi.it), University of Pisa
 #
 #  Contributors:
@@ -66,6 +66,7 @@ from timeit import default_timer
 
 
 PY2 = sys.version_info[0] == 2
+# Python 2.7 compatibiity
 if PY2:
     from urllib import quote
     from htmlentitydefs import name2codepoint
@@ -83,7 +84,7 @@ else:
 # ===========================================================================
 
 # Program version
-version = '2.66'
+version = '2.69'
 
 ## PARAMS ####################################################################
 
@@ -2408,7 +2409,9 @@ def compact(text):
 
     for line in text.split('\n'):
 
-        if not line:
+        if not line:            # collapse empty lines
+            if page and page[-1]:
+                page.append('')
             continue
         # Handle section titles
         m = section.match(line)
@@ -2653,7 +2656,7 @@ def pages_from(input):
     redirect = False
     title = None
     for line in input:
-        line = line.decode('utf-8')
+        if not isinstance(line, text_type): line = line.decode('utf-8')
         if '<' not in line:  # faster than doing re.search()
             if inText:
                 page.append(line)
@@ -2723,7 +2726,8 @@ def process_dump(input_file, template_file, out_file, file_size, file_compress,
 
     # collect siteinfo
     for line in input:
-        line = line.decode('utf-8')
+        # When an input file is .bz2 or .gz, line can be a bytes even in Python 3.
+        if not isinstance(line, text_type): line = line.decode('utf-8')
         m = tagRE.search(line)
         if not m:
             continue
@@ -2774,6 +2778,7 @@ def process_dump(input_file, template_file, out_file, file_size, file_compress,
     # - pages to be processed are dispatched to workers
     # - a reduce process collects the results, sort them and print them.
 
+    process_count = max(1, process_count)
     maxsize = 10 * process_count
     # output queue
     output_queue = Queue(maxsize=maxsize)
@@ -2781,7 +2786,7 @@ def process_dump(input_file, template_file, out_file, file_size, file_compress,
     if out_file == '-':
         out_file = None
 
-    worker_count = max(1, process_count)
+    worker_count = process_count
 
     # load balancing
     max_spool_length = 10000
@@ -2979,7 +2984,7 @@ def main():
                         help="The output won't have the lines <doc> and </doc>")
     groupP.add_argument("--no-title", action="store_true",
                         help="The output won't have the titles of the articles")
-    default_process_count = cpu_count() - 1
+    default_process_count = max(1, cpu_count() - 1)
     parser.add_argument("--processes", type=int, default=default_process_count,
                         help="Number of processes to use (default %(default)s)")
 
