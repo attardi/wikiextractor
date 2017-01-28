@@ -2390,11 +2390,18 @@ def compact(text):
     headers = {}          # Headers for unfilled sections
     emptySection = False  # empty sections are discarded
     listLevel = []        # nesting of lists
-
+    listCount = []        # count of each list (it should be always in the same length of listLevel)
     for line in text.split('\n'):
-
         if not line:            # collapse empty lines
-            if page and page[-1]:
+            # if there is an opening list, close it if we see an empty line
+            if len(listLevel):
+                page.append(line)
+                if Extractor.toHTML:
+                    for c in reversed(listLevel):
+                        page.append(listClose[c])
+                listLevel = []
+                listCount = []
+            elif page and page[-1]:
                 page.append('')
             continue
         # Handle section titles
@@ -2413,6 +2420,7 @@ def compact(text):
                     del headers[i]
             emptySection = True
             listLevel = []
+            listCount = []
             continue
         # Handle page title
         elif line.startswith('++'):
@@ -2436,6 +2444,7 @@ def compact(text):
                         if Extractor.toHTML:
                             page.append(listClose[c])
                         listLevel = listLevel[:-1]
+                        listCount = listCount[:-1]
                         continue
                     else:
                         break
@@ -2446,7 +2455,9 @@ def compact(text):
                         if Extractor.toHTML:
                             page.append(listClose[c])
                         listLevel = listLevel[:-1]
+                        listCount = listCount[:-1]
                     listLevel += n
+                    listCount.append(0)
                     if Extractor.toHTML:
                         page.append(listOpen[n])
                 i += 1
@@ -2456,20 +2467,22 @@ def compact(text):
                 if Extractor.keepLists:
                     # emit open sections
                     items = sorted(headers.items())
-                    for i, v in items:
+                    for _, v in items:
                         page.append(v)
                     headers.clear()
-                    # FIXME: use item count for #-lines
-                    bullet = '1. ' if n == '#' else '- '
+                    # use item count for #-lines
+                    listCount[i - 1] += 1
+                    bullet = '%d. ' % listCount[i - 1] if n == '#' else '- '
                     page.append('{0:{1}s}'.format(bullet, len(listLevel)) + line)
                 elif Extractor.toHTML:
                     page.append(listItem[n] % line)
         elif len(listLevel):
-            page.append(line)
             if Extractor.toHTML:
                 for c in reversed(listLevel):
                     page.append(listClose[c])
             listLevel = []
+            listCount = []
+            page.append(line)
 
         # Drop residuals of lists
         elif line[0] in '{|' or line[-1] == '}':
