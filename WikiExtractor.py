@@ -546,7 +546,6 @@ class Extractor(object):
             logging.warn("Template errors in article '%s' (%s): title(%d) recursion(%d, %d, %d)",
                          self.title, self.id, *errs)
 
-
     def transform(self, wikitext):
         """
         Transforms wiki markup.
@@ -561,7 +560,6 @@ class Extractor(object):
         # leftover
         res += self.transform1(wikitext[cur:])
         return res
-
 
     def transform1(self, text):
         """Transform text not containing <nowiki>"""
@@ -628,7 +626,6 @@ class Extractor(object):
         text = res + unescape(text[cur:])
         return text
 
-
     def clean(self, text):
         """
         Removes irrelevant parts from :param: text.
@@ -684,6 +681,9 @@ class Extractor(object):
         text = re.sub(r'\n\W+?\n', '\n', text, flags=re.U)  # lines with only punctuations
         text = text.replace(',,', ',').replace(',.', '.')
         if keep_tables:
+            # the following regular expressions are used to remove the wikiml chartacters around table strucutures
+            # yet keep the content. The order here is imporant so we remove certain markup like {| and then
+            # then the future html attributes such as 'style'. Finally we drop the remaining '|-' that delimits cells.
             text = re.sub(r'!(?:\s)?style=\"[a-z]+:(?:\d+)%;\"', r'', text)
             text = re.sub(r'!(?:\s)?style="[a-z]+:(?:\d+)%;[a-z]+:(?:#)?(?:[0-9a-z]+)?"', r'', text)
             text = text.replace('|-', '')
