@@ -525,11 +525,7 @@ class Extractor(object):
         #
         text = self.transform(text)
         text = self.wiki2text(text)
-        # the text is still present
-        # NOTE: Something in the combination of clean and compact is dropping the tables
-        # If we remove these calls thant the data is there but the odd wikiml formatting type characters remain
-        text = self.clean(text)
-        text = compact(text)
+        text = compact(self.clean(text))
         footer = "\n</doc>\n"
         if sum(len(line) for line in text) < Extractor.min_text_length:
             return
