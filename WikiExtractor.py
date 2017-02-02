@@ -129,6 +129,7 @@ filter_disambig_page_pattern = re.compile("{{disambig(uation)?(\|[^}]*)?}}")
 # Drop tables from the article
 keep_tables = False
 
+
 ##
 # page filtering logic -- remove templates, undesired xml namespaces, and disambiguation pages
 def keepPage(ns, page):
@@ -324,6 +325,7 @@ class Template(list):
         tpl.append(TemplateText(body[start:]))  # leftover
         return tpl
 
+
     def subst(self, params, extractor, depth=0):
         # We perform parameter substitutions recursively.
         # We also limit the maximum number of iterations to avoid too long or
@@ -353,6 +355,7 @@ class Template(list):
 
 class TemplateText(text_type):
     """Fixed text of template"""
+
 
     def subst(self, params, extractor, depth):
         return self
@@ -390,6 +393,7 @@ class TemplateArg(object):
         else:
             return '{{{%s}}}' % self.name
 
+
     def subst(self, params, extractor, depth):
         """
         Substitute value for this argument from dict :param params:
@@ -418,11 +422,14 @@ class Frame(object):
         self.prev = prev
         self.depth = prev.depth + 1 if prev else 0
 
+
     def push(self, title, args):
         return Frame(title, args, self)
 
+
     def pop(self):
         return self.prev
+
 
     def __str__(self):
         res = ''
@@ -546,6 +553,7 @@ class Extractor(object):
             logging.warn("Template errors in article '%s' (%s): title(%d) recursion(%d, %d, %d)",
                          self.title, self.id, *errs)
 
+
     def transform(self, wikitext):
         """
         Transforms wiki markup.
@@ -561,6 +569,7 @@ class Extractor(object):
         res += self.transform1(wikitext[cur:])
         return res
 
+
     def transform1(self, text):
         """Transform text not containing <nowiki>"""
         if Extractor.expand_templates:
@@ -570,6 +579,7 @@ class Extractor(object):
         else:
             # Drop transclusions (template, parser functions)
             return dropNested(text, r'{{', r'}}')
+
 
     def wiki2text(self, text):
         #
@@ -625,6 +635,7 @@ class Extractor(object):
             cur = m.end()
         text = res + unescape(text[cur:])
         return text
+
 
     def clean(self, text):
         """
@@ -702,6 +713,7 @@ class Extractor(object):
     # check for template beginning
     reOpen = re.compile('(?<!{){{(?!{)', re.DOTALL)
 
+
     def expand(self, wikitext):
         """
         :param wikitext: the text to be expanded.
@@ -741,6 +753,7 @@ class Extractor(object):
         res += wikitext[cur:]
         # logging.debug('%*sexpand> %s', self.frame.depth, '', res)
         return res
+
 
     def templateParams(self, parameters):
         """
@@ -809,6 +822,7 @@ class Extractor(object):
                 templateParams[str(unnamedParameterCounter)] = param
         # logging.debug('%*stemplateParams> %s', self.frame.length, '', '|'.join(templateParams.values()))
         return templateParams
+
 
     def expandTemplate(self, body):
         """Expands template invocation.
@@ -1282,6 +1296,7 @@ def functionParams(args, vars):
         params[var] = value
     return params
 
+
 def string_sub(args):
     params = functionParams(args, ('s', 'i', 'j'))
     s = params.get('s', '')
@@ -1297,6 +1312,7 @@ def string_len(args):
     params = functionParams(args, ('s'))
     s = params.get('s', '')
     return len(s)
+
 
 def string_find(args):
     params = functionParams(args, ('source', 'target', 'start', 'plain'))
