@@ -11,7 +11,7 @@ setup(
                 'database dump',
     author='Giuseppe Attardi',
     author_email='attardi@di.unipi.it',
-    version='2.66',
+    version='2.69',
 
     url='https://github.com/attardi/wikiextractor',
 

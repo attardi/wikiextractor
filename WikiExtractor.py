@@ -117,18 +117,6 @@ moduleNamespace = ''
 acceptedNamespaces = ['w', 'wiktionary', 'wikt']
 
 
-##
-# Drop these elements from article text
-#
-discardElements = [
-    'gallery', 'timeline', 'noinclude', 'pre',
-    'table', 'tr', 'td', 'th', 'caption', 'div',
-    'form', 'input', 'select', 'option', 'textarea',
-    'ul', 'li', 'ol', 'dl', 'dt', 'dd', 'menu', 'dir',
-    'ref', 'references', 'img', 'imagemap', 'source', 'small',
-    'sub', 'sup', 'indicator'
-]
-
 # This is obtained from <siteinfo>
 urlbase = ''
 
@@ -136,6 +124,11 @@ urlbase = ''
 # Filter disambiguation pages
 filter_disambig_pages = False
 filter_disambig_page_pattern = re.compile("{{disambig(uation)?(\|[^}]*)?}}")
+
+##
+# Drop tables from the article
+keep_tables = False
+
 
 ##
 # page filtering logic -- remove templates, undesired xml namespaces, and disambiguation pages
@@ -191,15 +184,6 @@ def get_url(uid):
 # ------------------------------------------------------------------------------
 
 selfClosingTags = ('br', 'hr', 'nobr', 'ref', 'references', 'nowiki')
-
-# These tags are dropped, keeping their content.
-# handle 'a' separately, depending on keepLinks
-ignoredTags = (
-    'abbr', 'b', 'big', 'blockquote', 'center', 'cite', 'em',
-    'font', 'h1', 'h2', 'h3', 'h4', 'hiero', 'i', 'kbd',
-    'p', 'plaintext', 's', 'span', 'strike', 'strong',
-    'tt', 'u', 'var'
-)
 
 placeholder_tags = {'math': 'formula', 'code': 'codice'}
 
@@ -285,10 +269,6 @@ def ignoreTag(tag):
     right = re.compile(r'</\s*%s>' % tag, re.IGNORECASE)
     ignored_tag_patterns.append((left, right))
 
-
-for tag in ignoredTags:
-    ignoreTag(tag)
-
 # Match selfClosing HTML tags
 selfClosing_tag_patterns = [
     re.compile(r'<\s*%s\b[^>]*/\s*>' % tag, re.DOTALL | re.IGNORECASE) for tag in selfClosingTags
@@ -345,6 +325,7 @@ class Template(list):
         tpl.append(TemplateText(body[start:]))  # leftover
         return tpl
 
+
     def subst(self, params, extractor, depth=0):
         # We perform parameter substitutions recursively.
         # We also limit the maximum number of iterations to avoid too long or
@@ -374,6 +355,7 @@ class Template(list):
 
 class TemplateText(text_type):
     """Fixed text of template"""
+
 
     def subst(self, params, extractor, depth):
         return self
@@ -411,6 +393,7 @@ class TemplateArg(object):
         else:
             return '{{{%s}}}' % self.name
 
+
     def subst(self, params, extractor, depth):
         """
         Substitute value for this argument from dict :param params:
@@ -439,11 +422,14 @@ class Frame(object):
         self.prev = prev
         self.depth = prev.depth + 1 if prev else 0
 
+
     def push(self, title, args):
         return Frame(title, args, self)
 
+
     def pop(self):
         return self.prev
+
 
     def __str__(self):
         res = ''
@@ -546,7 +532,6 @@ class Extractor(object):
         #
         text = self.transform(text)
         text = self.wiki2text(text)
-
         text = compact(self.clean(text))
         footer = "\n</doc>\n"
         if sum(len(line) for line in text) < Extractor.min_text_length:
@@ -584,7 +569,7 @@ class Extractor(object):
         res += self.transform1(wikitext[cur:])
         return res
 
-        
+
     def transform1(self, text):
         """Transform text not containing <nowiki>"""
         if Extractor.expand_templates:
@@ -594,6 +579,7 @@ class Extractor(object):
         else:
             # Drop transclusions (template, parser functions)
             return dropNested(text, r'{{', r'}}')
+
 
     def wiki2text(self, text):
         #
@@ -612,8 +598,9 @@ class Extractor(object):
 
         # Drop tables
         # first drop residual templates, or else empty parameter |} might look like end of table.
-        text = dropNested(text, r'{{', r'}}')
-        text = dropNested(text, r'{\|', r'\|}')
+        if not keep_tables:
+            text = dropNested(text, r'{{', r'}}')
+            text = dropNested(text, r'{\|', r'\|}')
 
         # Handle bold/italic/quote
         if self.toHTML:
@@ -647,7 +634,6 @@ class Extractor(object):
             res += unescape(text[cur:m.start()]) + m.group(1)
             cur = m.end()
         text = res + unescape(text[cur:])
-
         return text
 
 
@@ -705,6 +691,14 @@ class Extractor(object):
         text = re.sub('(\[\(«) ', r'\1', text)
         text = re.sub(r'\n\W+?\n', '\n', text, flags=re.U)  # lines with only punctuations
         text = text.replace(',,', ',').replace(',.', '.')
+        if keep_tables:
+            # the following regular expressions are used to remove the wikiml chartacters around table strucutures
+            # yet keep the content. The order here is imporant so we remove certain markup like {| and then
+            # then the future html attributes such as 'style'. Finally we drop the remaining '|-' that delimits cells.
+            text = re.sub(r'!(?:\s)?style=\"[a-z]+:(?:\d+)%;\"', r'', text)
+            text = re.sub(r'!(?:\s)?style="[a-z]+:(?:\d+)%;[a-z]+:(?:#)?(?:[0-9a-z]+)?"', r'', text)
+            text = text.replace('|-', '')
+            text = text.replace('|', '')
         if Extractor.toHTML:
             text = cgi.escape(text)
         return text
@@ -718,6 +712,7 @@ class Extractor(object):
 
     # check for template beginning
     reOpen = re.compile('(?<!{){{(?!{)', re.DOTALL)
+
 
     def expand(self, wikitext):
         """
@@ -758,6 +753,7 @@ class Extractor(object):
         res += wikitext[cur:]
         # logging.debug('%*sexpand> %s', self.frame.depth, '', res)
         return res
+
 
     def templateParams(self, parameters):
         """
@@ -827,6 +823,7 @@ class Extractor(object):
         # logging.debug('%*stemplateParams> %s', self.frame.length, '', '|'.join(templateParams.values()))
         return templateParams
 
+
     def expandTemplate(self, body):
         """Expands template invocation.
         :param body: the parts of a template.
@@ -878,7 +875,6 @@ class Extractor(object):
             return ''
 
         logging.debug('%*sEXPAND %s', self.frame.depth, '', body)
-
         parts = splitParts(body)
         # title is the portion before the first |
         title = parts[0].strip()
@@ -1043,6 +1039,7 @@ def splitParts(paramsList):
     sep = '|'
     parameters = []
     cur = 0
+
     for s, e in findMatchingBraces(paramsList):
         par = paramsList[cur:s].split(sep)
         if par:
@@ -1299,6 +1296,7 @@ def functionParams(args, vars):
         params[var] = value
     return params
 
+
 def string_sub(args):
     params = functionParams(args, ('s', 'i', 'j'))
     s = params.get('s', '')
@@ -1315,6 +1313,7 @@ def string_len(args):
     s = params.get('s', '')
     return len(s)
 
+
 def string_find(args):
     params = functionParams(args, ('source', 'target', 'start', 'plain'))
     source = params.get('source', '')
@@ -1327,7 +1326,7 @@ def string_find(args):
         return source.find(pattern, start) + 1 # lua is 1-based
     else:
         return (re.compile(pattern).search(source, start) or -1) + 1
-        
+
 # ----------------------------------------------------------------------
 # Module:Roman
 # http://en.wikipedia.org/w/index.php?title=Module:Roman
@@ -1337,11 +1336,11 @@ def string_find(args):
 def roman_main(args):
     """Convert first arg to roman numeral if <= 5000 else :return: second arg."""
     num = int(float(args.get('1')))
- 
+
     # Return a message for numbers too big to be expressed in Roman numerals.
     if 0 > num or num >= 5000:
         return args.get('2', 'N/A')
- 
+
     def toRoman(n, romanNumeralMap):
         """convert integer to Roman numeral"""
         result = ""
@@ -1356,7 +1355,7 @@ def roman_main(args):
         (1000, "M"),
         (900, "CM"), (500, "D"), (400, "CD"), (100, "C"),
         (90, "XC"), (50, "L"), (40, "XL"), (10, "X"),
-        (9, "IX"), (5, "V"), (4, "IV"), (1, "I") 
+        (9, "IX"), (5, "V"), (4, "IV"), (1, "I")
     )
     return toRoman(num, smallRomans)
 
@@ -2502,7 +2501,6 @@ def compact(text):
             # Drop preformatted
             if line[0] != ' ':  # dangerous
                 page.append(line)
-
     return page
 
 
@@ -2898,7 +2896,7 @@ def reduce_process(output_queue, spool_length,
         output = sys.stdout if PY2 else sys.stdout.buffer
         if file_compress:
             logging.warn("writing to stdout, so no output compression (use an external tool)")
-    
+
     interval_start = default_timer()
     # FIXME: use a heap
     spool = {}        # collected pages
@@ -2939,8 +2937,9 @@ def reduce_process(output_queue, spool_length,
 minFileSize = 200 * 1024
 
 def main():
-    global urlbase, acceptedNamespaces, filter_disambig_pages
+    global urlbase, acceptedNamespaces, filter_disambig_pages, keep_tables
     global templateCache
+    global discardElements
 
     parser = argparse.ArgumentParser(prog=os.path.basename(sys.argv[0]),
                                      formatter_class=argparse.RawDescriptionHelpFormatter,
@@ -2977,6 +2976,12 @@ def main():
                         help="Minimum expanded text length required to write document (default=%(default)s)")
     groupP.add_argument("--filter_disambig_pages", action="store_true", default=filter_disambig_pages,
                         help="Remove pages from output that contain disabmiguation markup (default=%(default)s)")
+    groupP.add_argument("-it", "--ignored_tags", default="", metavar="abbr,b,big",
+                        help="comma separated list of tags that will be dropped, keeping their content")
+    groupP.add_argument("-de", "--discard_elements", default="", metavar="gallery,timeline,noinclude",
+                        help="comma separated list of elements that will be removed from the article text")
+    groupP.add_argument("--keep_tables", action="store_true", default=keep_tables,
+                        help="Preserve tables in the output article text (default=%(default)s)")
     default_process_count = max(1, cpu_count() - 1)
     parser.add_argument("--processes", type=int, default=default_process_count,
                         help="Number of processes to use (default %(default)s)")
@@ -3005,6 +3010,7 @@ def main():
 
     Extractor.expand_templates = args.no_templates
     filter_disambig_pages = args.filter_disambig_pages
+    keep_tables = args.keep_tables
 
     try:
         power = 'kmg'.find(args.bytes[-1].lower()) + 1
@@ -3018,6 +3024,33 @@ def main():
     if args.namespaces:
         acceptedNamespaces = set(args.namespaces.split(','))
 
+    # ignoredTags and discardElemets have default values already supplied, if passed in the defaults are overwritten
+    if args.ignored_tags:
+        ignoredTags = set(args.ignored_tags.split(','))
+    else:
+        ignoredTags = [
+            'abbr', 'b', 'big', 'blockquote', 'center', 'cite', 'em',
+            'font', 'h1', 'h2', 'h3', 'h4', 'hiero', 'i', 'kbd',
+            'p', 'plaintext', 's', 'span', 'strike', 'strong',
+            'tt', 'u', 'var'
+        ]
+
+    # 'a' tag is handled separately
+    for tag in ignoredTags:
+        ignoreTag(tag)
+
+    if args.discard_elements:
+        discardElements = set(args.discard_elements.split(','))
+    else:
+        discardElements = [
+            'gallery', 'timeline', 'noinclude', 'pre',
+            'table', 'tr', 'td', 'th', 'caption', 'div',
+            'form', 'input', 'select', 'option', 'textarea',
+            'ul', 'li', 'ol', 'dl', 'dt', 'dd', 'menu', 'dir',
+            'ref', 'references', 'img', 'imagemap', 'source', 'small',
+            'sub', 'sup', 'indicator'
+        ]
+
     FORMAT = '%(levelname)s: %(message)s'
     logging.basicConfig(format=FORMAT)
 
@@ -3026,6 +3059,7 @@ def main():
         logger.setLevel(logging.INFO)
     if args.debug:
         logger.setLevel(logging.DEBUG)
+
 
     input_file = args.input
 

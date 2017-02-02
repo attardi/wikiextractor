@@ -87,6 +87,12 @@ Each file will contains several documents in this [document format](http://media
       --filter_disambig_pages
                             Remove pages from output that contain disabmiguation
                             markup (default=False)
+      -it, --ignored_tags
+                            comma separated list of tags that will be dropped, keeping their content
+      -de, --discard_elements
+                            comma separated list of elements that will be removed from the article text
+      --keep_tables
+                            Preserve tables in the output article text (default=False)
 
     Special:
       -q, --quiet           suppress reporting progress info
