@@ -2,7 +2,7 @@
 # -*- coding: utf-8 -*-
 
 # =============================================================================
-#  Version: 2.69 (Jan 15, 2017)
+#  Version: 2.70 (Feb 6, 2017)
 #  Author: Giuseppe Attardi (attardi@di.unipi.it), University of Pisa
 #
 #  Contributors:
@@ -84,7 +84,7 @@ else:
 # ===========================================================================
 
 # Program version
-version = '2.69'
+version = '2.70'
 
 ## PARAMS ####################################################################
 
@@ -433,7 +433,7 @@ class Frame(object):
 
     def __str__(self):
         res = ''
-        prev = this.prev
+        prev = self.prev
         while prev:
             if res: res += ', '
             res += '(%s, %s)' % (prev.title, prev.args)
