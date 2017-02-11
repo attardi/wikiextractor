@@ -44,8 +44,15 @@ Each file will contain several documents in the format:
         ...
         </doc>
 
+If the program is invoked with the --json flag, then each file will
+contain several documents formatted as json ojects, one per line, with
+the following structure
+
+    {"id": "", "revid": "", "url":"", "title": "", "text": "..."}
+
 Template expansion requires preprocesssng first the whole dump and
 collecting template definitions.
+
 """
 
 from __future__ import unicode_literals, division
@@ -60,6 +67,7 @@ import logging
 import os.path
 import re  # TODO use regex when it will be standard
 import time
+import json
 from io import StringIO
 from multiprocessing import Queue, Process, Value, cpu_count
 from timeit import default_timer
@@ -465,6 +473,10 @@ class Extractor(object):
     toHTML = False
 
     ##
+    # Whether to write json instead of the xml-like default output format
+    write_json = False
+    
+    ##
     # Whether to expand templates
     expand_templates = True
 
@@ -497,22 +509,55 @@ class Extractor(object):
         self.recursion_exceeded_3_errs = 0  # parameter recursion
         self.template_title_errs = 0
 
+    def write_output(self, out, text):
+        """
+        :param out: a memory file
+        :param text: the text of the page
+        """
+        url = get_url(self.id)
+        if Extractor.write_json:
+            json_data = {
+                'id': self.id,
+                'url': url,
+                'title': self.title,
+                'text': "\n".join(text)
+            }
+            if Extractor.print_revision:
+                json_data['revid'] = self.revid
+            # We don't use json.dump(data, out) because we want to be
+            # able to encode the string if the output is sys.stdout
+            out_str = json.dumps(json_data, ensure_ascii=False)
+            if out == sys.stdout:   # option -a or -o -
+                out_str = out_str.encode('utf-8')
+            out.write(out_str)
+            out.write('\n')
+        else:
+            if Extractor.print_revision:
+                header = '<doc id="%s" revid="%s" url="%s" title="%s">\n' % (self.id, self.revid, url, self.title)
+            else:
+                header = '<doc id="%s" url="%s" title="%s">\n' % (self.id, url, self.title)
+            footer = "\n</doc>\n"
+            if out == sys.stdout:   # option -a or -o -
+                header = header.encode('utf-8')
+            out.write(header)
+            for line in text:
+                if out == sys.stdout:   # option -a or -o -
+                    line = line.encode('utf-8')
+                out.write(line)
+                out.write('\n')
+            out.write(footer)
 
     def extract(self, out):
         """
         :param out: a memory file.
         """
         logging.info('%s\t%s', self.id, self.title)
-        url = get_url(self.id)
-        if Extractor.print_revision:
-            header = '<doc id="%s" revid="%s" url="%s" title="%s">\n' % (self.id, self.revid, url, self.title)
-        else:
-            header = '<doc id="%s" url="%s" title="%s">\n' % (self.id, url, self.title)
+        
         # Separate header from text with a newline.
         if self.toHTML:
-            header += '<h1>' + self.title + '</h1>\n'
+            title_str = '<h1>' + self.title + '</h1>'
         else:
-            header += self.title + '\n\n'
+            title_str = self.title + '\n'
         # https://www.mediawiki.org/wiki/Help:Magic_words
         self.magicWords['PAGENAME'] = self.title
         self.magicWords['FULLPAGENAME'] = self.title
@@ -533,18 +578,13 @@ class Extractor(object):
         text = self.transform(text)
         text = self.wiki2text(text)
         text = compact(self.clean(text))
-        footer = "\n</doc>\n"
+        text = [title_str] + text
+        
         if sum(len(line) for line in text) < Extractor.min_text_length:
             return
-        if out == sys.stdout:   # option -a or -o -
-            header = header.encode('utf-8')
-        out.write(header)
-        for line in text:
-            if out == sys.stdout:   # option -a or -o -
-                line = line.encode('utf-8')
-            out.write(line)
-            out.write('\n')
-        out.write(footer)
+        
+        self.write_output(out, text)
+        
         errs = (self.template_title_errs,
                 self.recursion_exceeded_1_errs,
                 self.recursion_exceeded_2_errs,
@@ -2954,6 +2994,9 @@ def main():
                         metavar="n[KMG]")
     groupO.add_argument("-c", "--compress", action="store_true",
                         help="compress output files using bzip")
+    groupO.add_argument("--json", action="store_true",
+                        help="write output in json format instead of the default one")
+
 
     groupP = parser.add_argument_group('Processing')
     groupP.add_argument("--html", action="store_true",
@@ -3003,6 +3046,7 @@ def main():
     Extractor.keepSections = args.sections
     Extractor.keepLists = args.lists
     Extractor.toHTML = args.html
+    Extractor.write_json = args.json
     Extractor.print_revision = args.revision
     Extractor.min_text_length = args.min_text_length
     if args.html:
