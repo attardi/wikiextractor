@@ -2999,6 +2999,7 @@ def main():
     global urlbase, acceptedNamespaces, filter_disambig_pages, keep_tables
     global templateCache
     global discardElements
+    global ignoredTags
 
     parser = argparse.ArgumentParser(prog=os.path.basename(sys.argv[0]),
                                      formatter_class=argparse.RawDescriptionHelpFormatter,
