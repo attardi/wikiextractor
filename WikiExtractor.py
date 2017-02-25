@@ -2,7 +2,7 @@
 # -*- coding: utf-8 -*-
 
 # =============================================================================
-#  Version: 2.70 (Feb 6, 2017)
+#  Version: 2.71 (Feb 25, 2017)
 #  Author: Giuseppe Attardi (attardi@di.unipi.it), University of Pisa
 #
 #  Contributors:
@@ -92,7 +92,7 @@ else:
 # ===========================================================================
 
 # Program version
-version = '2.70'
+version = '2.71'
 
 ## PARAMS ####################################################################
 
@@ -137,6 +137,16 @@ filter_disambig_page_pattern = re.compile("{{disambig(uation)?(\|[^}]*)?}}")
 # Drop tables from the article
 keep_tables = False
 
+##
+# Elements to be discarded
+discardElements = set([
+    'gallery', 'timeline', 'noinclude', 'pre',
+    'table', 'tr', 'td', 'th', 'caption', 'div',
+    'form', 'input', 'select', 'option', 'textarea',
+    'ul', 'li', 'ol', 'dl', 'dt', 'dd', 'menu', 'dir',
+    'ref', 'references', 'img', 'imagemap', 'source', 'small',
+    'sub', 'sup', 'indicator'
+])
 
 ##
 # page filtering logic -- remove templates, undesired xml namespaces, and disambiguation pages
@@ -3085,15 +3095,6 @@ def main():
 
     if args.discard_elements:
         discardElements = set(args.discard_elements.split(','))
-    else:
-        discardElements = [
-            'gallery', 'timeline', 'noinclude', 'pre',
-            'table', 'tr', 'td', 'th', 'caption', 'div',
-            'form', 'input', 'select', 'option', 'textarea',
-            'ul', 'li', 'ol', 'dl', 'dt', 'dd', 'menu', 'dir',
-            'ref', 'references', 'img', 'imagemap', 'source', 'small',
-            'sub', 'sup', 'indicator'
-        ]
 
     FORMAT = '%(levelname)s: %(message)s'
     logging.basicConfig(format=FORMAT)
