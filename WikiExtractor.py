@@ -138,6 +138,15 @@ filter_disambig_page_pattern = re.compile("{{disambig(uation)?(\|[^}]*)?}}")
 keep_tables = False
 
 ##
+# Ignored tags
+ignoredTags = set([
+    'abbr', 'b', 'big', 'blockquote', 'center', 'cite', 'em',
+    'font', 'h1', 'h2', 'h3', 'h4', 'hiero', 'i', 'kbd',
+    'p', 'plaintext', 's', 'span', 'strike', 'strong',
+    'tt', 'u', 'var'
+])
+
+##
 # Elements to be discarded
 discardElements = set([
     'gallery', 'timeline', 'noinclude', 'pre',
@@ -3081,13 +3090,6 @@ def main():
     # ignoredTags and discardElemets have default values already supplied, if passed in the defaults are overwritten
     if args.ignored_tags:
         ignoredTags = set(args.ignored_tags.split(','))
-    else:
-        ignoredTags = [
-            'abbr', 'b', 'big', 'blockquote', 'center', 'cite', 'em',
-            'font', 'h1', 'h2', 'h3', 'h4', 'hiero', 'i', 'kbd',
-            'p', 'plaintext', 's', 'span', 'strike', 'strong',
-            'tt', 'u', 'var'
-        ]
 
     # 'a' tag is handled separately
     for tag in ignoredTags:
