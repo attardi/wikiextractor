@@ -201,35 +201,6 @@ options = SimpleNamespace(
     ],
 )
 
-"""
-globals
------
-discardElements
-knownNamespaces
-moduleNamespace, modulePrefix
-moduleNamespace, modulePrefix
-redirects
-templateCache
-templateNamespace, templatePrefix
-templateNamespace, templatePrefix
-templates
-urlbase
-urlbase, acceptedNamespaces, filter_disambig_pages, keep_tables
-wgContLang
-wgExtraInterlanguageLinkPrefixes
-
-Extractor attributes
-----
-expand_templates
-keepLinks
-keepLists
-keepSections
-min_text_length
-print_revision
-toHTML
-write_json
-
-"""
 ##
 # Keys for Template and Module namespaces
 templateKeys = set(['10', '828'])
