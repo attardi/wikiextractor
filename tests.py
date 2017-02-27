@@ -3,6 +3,7 @@
 from __future__ import unicode_literals
 
 import sys
+import os.path
 import unittest
 
 from WikiExtractor import (
@@ -87,12 +88,12 @@ class TestNextFile(unittest.TestCase):
 
     def test_next(self):
         f = NextFile('out')
-        self.assertEqual(next(f), 'out/AA/wiki_00')
-        self.assertEqual(next(f), 'out/AA/wiki_01')
+        self.assertEqual(next(f), 'out{}AA/wiki_00'.format(os.path.sep))
+        self.assertEqual(next(f), 'out{}AA/wiki_01'.format(os.path.sep))
         for _ in range(97):
             next(f)
-        self.assertEqual(next(f), 'out/AA/wiki_99')
-        self.assertEqual(next(f), 'out/AB/wiki_00')
+        self.assertEqual(next(f), 'out{}AA/wiki_99'.format(os.path.sep))
+        self.assertEqual(next(f), 'out{}AB/wiki_00'.format(os.path.sep))
 
 
 if __name__ == '__main__':
