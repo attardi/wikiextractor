@@ -45,14 +45,16 @@ Each file will contains several documents in this [document format](http://media
                                 input
 
         Wikipedia Extractor:
-        Extracts and cleans text from a Wikipedia database dump and stores output in a number of files of similar size in a given directory.
+        Extracts and cleans text from a Wikipedia database dump and stores output in a number of files 
+        of similar size in a given directory.
         Each file will contain several documents in the format:
 
             <doc id="" revid="" url="" title="">
                 ...
                 </doc>
 
-        If the program is invoked with the --json flag, then each file will contain several documents formatted as json ojects, one per line, with the following structure
+        If the program is invoked with the --json flag, then each file will contain several documents 
+        formatted as json ojects, one per line, with the following structure
 
             {"id": "", "revid": "", "url":"", "title": "", "text": "..."}
 
