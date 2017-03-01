@@ -127,18 +127,23 @@ For further information, visit [the documentation](http://attardi.github.io/wiki
 
 ## Example: Howto make offline content of your MediaWiki as web pages
 Make dump of your mediawiki:
+
         php5 /var/lib/mediawiki/maintenance/dumpBackup.php --current > /tmp/dump.xml
 
 Extract data from dump to one big file (param --html is necessary):
+
         ./WikiExtractor.py -o - -xns 0,2,14,100,102,104,106,108,110,112,114,116 --links --all_links -b 200M --html --redirect_insert --keep_tables -q /tmp/dump.xml > /tmp/wiki.data 
 
 Create single html pages and index.html:
+
         cat /tmp/wiki.data | ./makehtmlfiles.pl /tmp/offline
 
 Optional you can copy images:
+
         cd /var/lib/mediawiki/images
         find 0 1 2 3 4 5 6 7 8 9 a b c d e f -type f -exec cp -f {} /tmp/offline/images/ \;
 
 View offline content of yout wikimedia (without skins, images, templates, ...):
+
         links file:///tmp/offline/index.html
 
