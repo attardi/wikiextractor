@@ -59,7 +59,7 @@ foreach $line ( <STDIN> ) {
         print $FILE "$html_head";
         print $FILE "\n<!-- $line -->\n";
         # insert to index
-        $index{"$title"} = uri_escape("$filename");
+        $index{"$title"} = "$filename";
 
         # prepare relative path - update URI references
         $relative_path = $basedir;
@@ -80,13 +80,14 @@ foreach $line ( <STDIN> ) {
     # fix URI 
     decode_entities($line);
     $line =~ s#href="(.*?)"#href="$relative_path\1.$suffix"#g;
-    $line =~ s/(?<=href=")([^"]*)/($a=$1)=~s, |%20,_,g;"$a"/ge ;
-    $line =~ s/(?<=href="http)([^"]*)/($a=$1)=~s,%3A,:,g;"$a"/ge ;
+    $line =~ s/(?<=href=")([^"]*)/($a=$1)=~s, |%20,_,g;"$a"/ge;
+    $line =~ s/(?<=href="http)([^"]*)/($a=$1)=~s,%3A,:,g;"$a"/ge;
+    $line =~ s#(?<=href="http)([^"]*)#($a=$1)=~s,%2F,/,g;"$a"#ge;
 
     # fix images
     $line =~ s#img src="(.*?)"#img src="$relative_path../images/\u\1"#g;
-    $line =~ s/(?<=img src=")([^"]*)/($a=$1)=~s, |%20,_,g;"$a"/ge ;
-    $line =~ s/(?<=img src="http)([^"]*)/($a=$1)=~s,%3A,:,g;"$a"/ge ;
+    $line =~ s/(?<=img src=")([^"]*)/($a=$1)=~s, |%20,_,g;"$a"/ge;
+    $line =~ s/(?<=img src="http)([^"]*)/($a=$1)=~s,%3A,:,g;"$a"/ge;
 
     print $FILE "$line";
 }
