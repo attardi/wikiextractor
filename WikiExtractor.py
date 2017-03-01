@@ -133,6 +133,9 @@ options = SimpleNamespace(
     #
     acceptedNamespaces=['w', 'wiktionary', 'wikt'],
 
+
+    acceptedXMLNamespaces=['0'],
+
     # This is obtained from <siteinfo>
     urlbase='',
 
@@ -212,7 +215,8 @@ filter_disambig_page_pattern = re.compile("{{disambig(uation)?(\|[^}]*)?}}")
 ##
 # page filtering logic -- remove templates, undesired xml namespaces, and disambiguation pages
 def keepPage(ns, page):
-    if ns != '0':               # Aritcle
+    #if ns != '0':               # Aritcle
+    if ns not in acceptedXMLNamespaces:
         return False
     # remove disambig pages if desired
     if options.filter_disambig_pages:
@@ -2055,6 +2059,7 @@ def replaceInternalLinks(text):
                 curp = e1
             label = inner[pipe + 1:].strip()
         res += text[cur:s] + makeInternalLink(title, label) + trail
+#        logging.error('%s',  makeInternalLink(title, label))
         cur = end
     return res + text[cur:]
 
@@ -2326,15 +2331,27 @@ def replaceInternalLinks(text):
 
 def makeInternalLink(title, label):
     colon = title.find(':')
-    if colon > 0 and title[:colon] not in options.acceptedNamespaces:
-        return ''
+    if not options.keepAllLinks:
+        if colon > 0 and title[:colon] not in options.acceptedNamespaces:
+            return '['+ title + ']'
     if colon == 0:
         # drop also :File:
         colon2 = title.find(':', colon + 1)
         if colon2 > 1 and title[colon + 1:colon2] not in options.acceptedNamespaces:
-            return ''
+            if options.keepAllLinks:
+                # remove first colons
+                title = title.lstrip(':')
+                label = label.lstrip(':')
+            else:
+                return '['+ title + ']'
     if options.keepLinks:
-        return '<a href="%s">%s</a>' % (quote(title.encode('utf-8')), label)
+        if title[:colon] == 'Image':
+            #logging.error('%s: %s -> %s', title[:colon], title, label)
+            title_short = title.split(':', 1)
+            label_short = label.split('|')
+            return '<img src="%s" alt="%s">' % (quote(title_short[1].encode('utf-8')), label_short[-1])
+        else:
+            return '<a href="%s">%s</a>' % (quote(title.encode('utf-8')), label)
     else:
         return label
 
@@ -2542,6 +2559,11 @@ def compact(text):
             listLevel = []
             listCount = []
             page.append(line)
+        elif line[0] == ' ':
+            if options.toHTML:
+                page.append("<pre>%s</pre>" % (line))
+            else:
+                page.append(line)
 
         # Drop residuals of lists
         elif line[0] in '{|' or line[-1] == '}':
@@ -2731,7 +2753,7 @@ def pages_from(input):
         elif tag == 'ns':
             ns = m.group(3)
         elif tag == 'redirect':
-            redirect = True
+            redirect = False if options.redirect_insert else True
         elif tag == 'text':
             if m.lastindex == 3 and line[m.start(3)-2] == '/': # self closing
                 # <text xml:space="preserve" />
@@ -3005,6 +3027,7 @@ def reduce_process(opts, output_queue, spool_length,
 minFileSize = 200 * 1024
 
 def main():
+    global acceptedXMLNamespaces
 
     parser = argparse.ArgumentParser(prog=os.path.basename(sys.argv[0]),
                                      formatter_class=argparse.RawDescriptionHelpFormatter,
@@ -3028,12 +3051,16 @@ def main():
                         help="produce HTML output, subsumes --links")
     groupP.add_argument("-l", "--links", action="store_true",
                         help="preserve links")
+    groupP.add_argument("--all_links", action="store_true",
+                        help="preserve all links (with links to all namespaces)")
     groupP.add_argument("-s", "--sections", action="store_true",
                         help="preserve sections")
     groupP.add_argument("--lists", action="store_true",
                         help="preserve lists")
     groupP.add_argument("-ns", "--namespaces", default="", metavar="ns1,ns2",
                         help="accepted namespaces in links")
+    groupP.add_argument("-xns", "--xml_namespaces", default="", metavar="ns1,ns2",
+                        help="accepted page xml namespaces -- 0 for main/articles")
     groupP.add_argument("--templates",
                         help="use or create file containing templates")
     groupP.add_argument("--no-templates", action="store_false",
@@ -3053,6 +3080,8 @@ def main():
     default_process_count = max(1, cpu_count() - 1)
     parser.add_argument("--processes", type=int, default=default_process_count,
                         help="Number of processes to use (default %(default)s)")
+    groupP.add_argument("--redirect_insert", action="store_true",
+                        help="Insert redirect pages to output")
 
     groupS = parser.add_argument_group('Special')
     groupS.add_argument("-q", "--quiet", action="store_true",
@@ -3068,12 +3097,14 @@ def main():
     args = parser.parse_args()
 
     options.keepLinks = args.links
+    options.keepAllLinks = args.all_links
     options.keepSections = args.sections
     options.keepLists = args.lists
     options.toHTML = args.html
     options.write_json = args.json
     options.print_revision = args.revision
     options.min_text_length = args.min_text_length
+    options.redirect_insert = args.redirect_insert
     if args.html:
         options.keepLinks = True
 
@@ -3110,6 +3141,9 @@ def main():
 
     if args.discard_elements:
         options.discardElements = set(args.discard_elements.split(','))
+
+    if args.xml_namespaces:
+        acceptedXMLNamespaces = set([unicode(ns) for ns in args.xml_namespaces.split(',')])
 
     FORMAT = '%(levelname)s: %(message)s'
     logging.basicConfig(format=FORMAT)

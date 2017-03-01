@@ -33,73 +33,88 @@ The script is invoked with a Wikipedia dump file as an argument.
 The output is stored in several files of similar size in a given directory.
 Each file will contains several documents in this [document format](http://medialab.di.unipi.it/wiki/Document_Format).
 
-    usage: WikiExtractor.py [-h] [-o OUTPUT] [-b n[KMG]] [-c] [--html] [-l] [-s]
-                            [--lists] [-ns ns1,ns2] [-xns ns1,ns2]
-                            [--templates TEMPLATES] [--no-templates]
-                            [-r] [--min_text_length MIN_TEXT_LENGTH]
-                            [--filter_disambig_pages] [--processes PROCESSES] [-q]
-                            [--debug] [-a] [-v]
-                            input
+        usage: WikiExtractor.py [-h] [-o OUTPUT] [-b n[KMG]] [-c] [--json] [--html]
+                                [-l] [--all_links] [-s] [--lists] [-ns ns1,ns2]
+                                [-xns ns1,ns2] [--templates TEMPLATES]
+                                [--no-templates] [-r]
+                                [--min_text_length MIN_TEXT_LENGTH]
+                                [--filter_disambig_pages] [-it abbr,b,big]
+                                [-de gallery,timeline,noinclude] [--keep_tables]
+                                [--processes PROCESSES] [--redirect_insert] [-q]
+                                [--debug] [-a] [-v]
+                                input
 
-    Wikipedia Extractor:
-    Extracts and cleans text from a Wikipedia database dump and stores output in a
-    number of files of similar size in a given directory.
-    Each file will contain several documents in the format:
+        Wikipedia Extractor:
+        Extracts and cleans text from a Wikipedia database dump and stores output in a
+        number of files of similar size in a given directory.
+        Each file will contain several documents in the format:
 
-        <doc id="" revid="" url="" title="">
-            ...
-            </doc>
+            <doc id="" revid="" url="" title="">
+                ...
+                </doc>
 
-    Template expansion requires preprocesssng first the whole dump and
-    collecting template definitions.
+        If the program is invoked with the --json flag, then each file will
+        contain several documents formatted as json ojects, one per line, with
+        the following structure
 
-    positional arguments:
-      input                 XML wiki dump file
+            {"id": "", "revid": "", "url":"", "title": "", "text": "..."}
 
-    optional arguments:
-      -h, --help            show this help message and exit
-      --processes PROCESSES number of processes to use (default: number of CPU cores)
+        Template expansion requires preprocesssng first the whole dump and
+        collecting template definitions.
 
-    Output:
-      -o OUTPUT, --output OUTPUT
-                            directory for extracted files (or '-' for dumping to
-                            stdout)
-      -b n[KMG], --bytes n[KMG]
-                            maximum bytes per output file (default 1M)
-      -c, --compress        compress output files using bzip
+        positional arguments:
+          input                 XML wiki dump file
 
-    Processing:
-      --html                produce HTML output, subsumes --links
-      -l, --links           preserve links
-      -s, --sections        preserve sections
-      --lists               preserve lists
-      -ns ns1,ns2, --namespaces ns1,ns2
-                            accepted link namespaces
-      -xns ns1,ns2, --xml_namespaces ns1,ns2
-                            accepted page xml namespaces -- 0 for main/articles
-      --templates TEMPLATES
-                            use or create file containing templates
-      --no-templates        Do not expand templates
-      -r, --revision        Include the document revision id (default=False)
-      --min_text_length MIN_TEXT_LENGTH
-                            Minimum expanded text length required to write
-                            document (default=0)
-      --filter_disambig_pages
-                            Remove pages from output that contain disabmiguation
-                            markup (default=False)
-      -it, --ignored_tags
-                            comma separated list of tags that will be dropped, keeping their content
-      -de, --discard_elements
-                            comma separated list of elements that will be removed from the article text
-      --keep_tables
-                            Preserve tables in the output article text (default=False)
+        optional arguments:
+          -h, --help            show this help message and exit
+          --processes PROCESSES
+                                Number of processes to use (default 3)
 
-    Special:
-      -q, --quiet           suppress reporting progress info
-      --debug               print debug info
-      -a, --article         analyze a file containing a single article (debug
-                            option)
-      -v, --version         print program version
+        Output:
+          -o OUTPUT, --output OUTPUT
+                                directory for extracted files (or '-' for dumping to
+                                stdout)
+          -b n[KMG], --bytes n[KMG]
+                                maximum bytes per output file (default 1M)
+          -c, --compress        compress output files using bzip
+          --json                write output in json format instead of the default one
+
+        Processing:
+          --html                produce HTML output, subsumes --links
+          -l, --links           preserve links
+          --all_links           preserve all links (with links to all namespaces)
+          -s, --sections        preserve sections
+          --lists               preserve lists
+          -ns ns1,ns2, --namespaces ns1,ns2
+                                accepted namespaces in links
+          -xns ns1,ns2, --xml_namespaces ns1,ns2
+                                accepted page xml namespaces -- 0 for main/articles
+          --templates TEMPLATES
+                                use or create file containing templates
+          --no-templates        Do not expand templates
+          -r, --revision        Include the document revision id (default=False)
+          --min_text_length MIN_TEXT_LENGTH
+                                Minimum expanded text length required to write
+                                document (default=0)
+          --filter_disambig_pages
+                                Remove pages from output that contain disabmiguation
+                                markup (default=False)
+          -it abbr,b,big, --ignored_tags abbr,b,big
+                                comma separated list of tags that will be dropped,
+                                keeping their content
+          -de gallery,timeline,noinclude, --discard_elements gallery,timeline,noinclude
+                                comma separated list of elements that will be removed
+                                from the article text
+          --keep_tables         Preserve tables in the output article text
+                                (default=False)
+          --redirect_insert     Insert redirect pages to output
+
+        Special:
+          -q, --quiet           suppress reporting progress info
+          --debug               print debug info
+          -a, --article         analyze a file containing a single article (debug
+                                option)
+          -v, --version         print program version
 
 
 Saving templates to a file will speed up performing extraction the next time,
