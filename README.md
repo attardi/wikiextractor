@@ -143,7 +143,7 @@ For further information, visit [the documentation](http://attardi.github.io/wiki
         cd /var/lib/mediawiki/images
         find 0 1 2 3 4 5 6 7 8 9 a b c d e f -type f -exec cp -f {} /tmp/offline/images/ \;
 
-5. View offline content of yout wikimedia (without skins, images, templates, ...):
+5. View offline content ONLY (without skins, templates, scripts, ...) of your wikimedia:
 
         links file:///tmp/offline/index.html
 
