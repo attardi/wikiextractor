@@ -2753,7 +2753,7 @@ def pages_from(input):
         elif tag == 'ns':
             ns = m.group(3)
         elif tag == 'redirect':
-            redirect = False if options.redirect_insert else True
+            redirect = not options.redirect_insert
         elif tag == 'text':
             if m.lastindex == 3 and line[m.start(3)-2] == '/': # self closing
                 # <text xml:space="preserve" />
