@@ -2,7 +2,7 @@
 # -*- coding: utf-8 -*-
 
 # =============================================================================
-#  Version: 2.71 (Feb 25, 2017)
+#  Version: 2.72 (Feb 27, 2017)
 #  Author: Giuseppe Attardi (attardi@di.unipi.it), University of Pisa
 #
 #  Contributors:
@@ -16,6 +16,7 @@
 #   Radics Geza (radicsge@gmail.com)
 #   orangain (orangain@gmail.com)
 #   Seth Cleveland (scleveland@turnitin.com)
+#   Bren Barn
 #
 # =============================================================================
 #  Copyright (c) 2011-2016. Giuseppe Attardi (attardi@di.unipi.it).
@@ -79,11 +80,11 @@ if PY2:
     from urllib import quote
     from htmlentitydefs import name2codepoint
     from itertools import izip as zip, izip_longest as zip_longest
-    range = xrange  # Overwrite by Python 3 name
-    chr = unichr    # Overwrite by Python 3 name
+    range = xrange  # Use Python 3 equivalent
+    chr = unichr    # Use Python 3 equivalent
     text_type = unicode
     
-    class SimpleNamespace (object):
+    class SimpleNamespace(object):
         def __init__ (self, **kwargs):
             self.__dict__.update(kwargs)
         def __repr__ (self):
@@ -103,7 +104,7 @@ else:
 # ===========================================================================
 
 # Program version
-version = '2.70'
+version = '2.72'
 
 ## PARAMS ####################################################################
 
@@ -2945,6 +2946,7 @@ report_period = 10000           # progress report period
 def reduce_process(opts, output_queue, spool_length,
                    out_file=None, file_size=0, file_compress=True):
     """Pull finished article text, write series of files (or stdout)
+    :param opts: global parameters.
     :param output_queue: text to be output.
     :param spool_length: spool length.
     :param out_file: filename where to print.
