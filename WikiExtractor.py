@@ -2,7 +2,7 @@
 # -*- coding: utf-8 -*-
 
 # =============================================================================
-#  Version: 2.72 (Feb 27, 2017)
+#  Version: 2.73 (March 3, 2017)
 #  Author: Giuseppe Attardi (attardi@di.unipi.it), University of Pisa
 #
 #  Contributors:
@@ -104,7 +104,7 @@ else:
 # ===========================================================================
 
 # Program version
-version = '2.72'
+version = '2.73'
 
 ## PARAMS ####################################################################
 
@@ -715,7 +715,6 @@ class Extractor(object):
         """
 
         # Collect spans
-
         spans = []
         # Drop HTML comments
         for m in comment.finditer(text):
@@ -1899,6 +1898,9 @@ def define_template(title, page):
     @see https://en.wikipedia.org/wiki/Help:Template#Noinclude.2C_includeonly.2C_and_onlyinclude
     """
     # title = normalizeTitle(title)
+
+    # sanity check (empty template, e.g. Template:Crude Oil Prices))
+    if not page: return
 
     # check for redirects
     m = re.match('#REDIRECT.*?\[\[([^\]]*)]]', page[0], re.IGNORECASE)
