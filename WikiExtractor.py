@@ -2,7 +2,7 @@
 # -*- coding: utf-8 -*-
 
 # =============================================================================
-#  Version: 2.73 (March 3, 2017)
+#  Version: 2.74 (March 3, 2017)
 #  Author: Giuseppe Attardi (attardi@di.unipi.it), University of Pisa
 #
 #  Contributors:
@@ -104,7 +104,7 @@ else:
 # ===========================================================================
 
 # Program version
-version = '2.73'
+version = '2.74'
 
 ## PARAMS ####################################################################
 
@@ -1799,33 +1799,33 @@ parserFunctions = {
 
     '#ifexpr': lambda *args: '',  # not supported
 
-    '#ifexist': lambda *args: '',  # not supported
+    '#ifexist': lambda extr, title, ifex, ifnex: extr.expand(ifnex), # assuming title is not present
 
     '#rel2abs': lambda *args: '',  # not supported
 
     '#switch': sharp_switch,
 
-    '#language': lambda *args: '',  # not supported
+    '#language': lambda *args: '', # not supported
 
-    '#time': lambda *args: '',  # not supported
+    '#time': lambda *args: '',     # not supported
 
-    '#timel': lambda *args: '',  # not supported
+    '#timel': lambda *args: '',    # not supported
 
-    '#titleparts': lambda *args: '',  # not supported
+    '#titleparts': lambda *args: '', # not supported
 
     # This function is used in some pages to construct links
     # http://meta.wikimedia.org/wiki/Help:URL
-    'urlencode': lambda string, *rest: quote(string.encode('utf-8')),
+    'urlencode': lambda extr, string, *rest: quote(string.encode('utf-8')),
 
-    'lc': lambda string, *rest: string.lower() if string else '',
+    'lc': lambda extr, string, *rest: string.lower() if string else '',
 
-    'lcfirst': lambda string, *rest: lcfirst(string),
+    'lcfirst': lambda extr, string, *rest: lcfirst(string),
 
-    'uc': lambda string, *rest: string.upper() if string else '',
+    'uc': lambda extr, string, *rest: string.upper() if string else '',
 
-    'ucfirst': lambda string, *rest: ucfirst(string),
+    'ucfirst': lambda extr, string, *rest: ucfirst(string),
 
-    'int': lambda string, *rest: str(int(string)),
+    'int': lambda extr, string, *rest: str(int(string)),
 
 }
 
