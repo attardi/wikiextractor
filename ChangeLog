@@ -1,3 +1,22 @@
+2017-01-03  Michal Svamberg  <svamberg@civ.zcu.cz>
+
+	* makehtmlfiles.pl: add new script for building web browsed content
+	This script build simple pages from output of WikiExtractor.
+
+	For more information read example section in README.md
+
+	* WikiExtractor.py (keepPage): check for -xns option (or default = 0)
+	* WikiExtractor.py (replaceInternalLinks): 
+	  - Fix URL links to other pages
+	  - Add support for Image links (make html tag <img src="%s" alt="%s">)
+	* WikiExtractor.py (compact): add lines beginned by space into <tt> tag
+	* WikiExtractor.py (pages_from): insert redirect pages if option
+	--redirect_insert is enabled
+	* WikiExtractor.py (main): add new options used in above changes
+	  --all_links print links to all namespaces (independent of -xns or -ns)
+	  --xml_namespaces add numeric namespaces for search pages
+	  --redirect_insert create pages where used #REDIRECT wiki command
+
 2017-01-15  Giuseppe Attardi  <attardi@di.unipi.it>
 
 	* WikiExtractor.py (process_dump): use text_type to decide whether
