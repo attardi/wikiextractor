@@ -2,7 +2,7 @@
 # -*- coding: utf-8 -*-
 
 # =============================================================================
-#  Version: 2.74 (March 3, 2017)
+#  Version: 2.75 (March 4, 2017)
 #  Author: Giuseppe Attardi (attardi@di.unipi.it), University of Pisa
 #
 #  Contributors:
@@ -19,7 +19,7 @@
 #   Bren Barn
 #
 # =============================================================================
-#  Copyright (c) 2011-2016. Giuseppe Attardi (attardi@di.unipi.it).
+#  Copyright (c) 2011-2017. Giuseppe Attardi (attardi@di.unipi.it).
 # =============================================================================
 #  This file is part of Tanl.
 #
@@ -30,10 +30,8 @@
 #  Tanl is distributed in the hope that it will be useful,
 #  but WITHOUT ANY WARRANTY; without even the implied warranty of
 #  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-#  GNU General Public License for more details.
+#  GNU General Public License at <http://www.gnu.org/licenses/> for more details.
 #
-#  You should have received a copy of the GNU General Public License
-#  along with this program.  If not, see <http://www.gnu.org/licenses/>.
 # =============================================================================
 
 """Wikipedia Extractor:
@@ -104,7 +102,7 @@ else:
 # ===========================================================================
 
 # Program version
-version = '2.74'
+version = '2.75'
 
 ## PARAMS ####################################################################
 
@@ -113,18 +111,18 @@ options = SimpleNamespace(
     ##
     # Defined in <siteinfo>
     # We include as default Template, when loading external template file.
-    knownNamespaces=set(['Template']),
+    knownNamespaces = {'Template': 10},
 
     ##
     # The namespace used for template definitions
     # It is the name associated with namespace key=10 in the siteinfo header.
-    templateNamespace='',
-    templatePrefix='',
+    templateNamespace = '',
+    templatePrefix = '',
 
     ##
     # The namespace used for module definitions
     # It is the name associated with namespace key=828 in the siteinfo header.
-    moduleNamespace='',
+    moduleNamespace = '',
 
     ##
     # Recognize only these namespaces in links
@@ -132,61 +130,61 @@ options = SimpleNamespace(
     # wiktionary: Wiki dictionary
     # wikt: shortcut for Wiktionary
     #
-    acceptedNamespaces=['w', 'wiktionary', 'wikt'],
+    acceptedNamespaces = ['w', 'wiktionary', 'wikt'],
 
     # This is obtained from <siteinfo>
-    urlbase='',
+    urlbase = '',
 
     ##
     # Filter disambiguation pages
-    filter_disambig_pages=False,
+    filter_disambig_pages = False,
     
     ##
     # Drop tables from the article
-    keep_tables=False,
+    keep_tables = False,
     
     ##
     # Whether to preserve links in output
-    keepLinks=False,
+    keepLinks = False,
 
     ##
     # Whether to preserve section titles
-    keepSections=True,
+    keepSections = True,
 
     ##
     # Whether to preserve lists
-    keepLists=False,
+    keepLists = False,
 
     ##
     # Whether to output HTML instead of text
-    toHTML=False,
+    toHTML = False,
 
     ##
     # Whether to write json instead of the xml-like default output format
-    write_json=False,
+    write_json = False,
     
     ##
     # Whether to expand templates
-    expand_templates=True,
+    expand_templates = True,
 
     ##
     ## Whether to escape doc content
-    escape_doc=False,
+    escape_doc = False,
 
     ##
     # Print the wikipedia article revision
-    print_revision=False,
+    print_revision = False,
 
     ##
     # Minimum expanded text length required to print document
-    min_text_length=0,
+    min_text_length = 0,
     
     # Shared objects holding templates, redirects and cache
-    templates={},
-    redirects={},
+    templates = {},
+    redirects = {},
     # cache of parser templates
     # FIXME: sharing this with a Manager slows down.
-    templateCache={},
+    templateCache = {},
     
     # Elements to ignore/discard
     
@@ -591,8 +589,29 @@ class Extractor(object):
         else:
             title_str = self.title + '\n'
         # https://www.mediawiki.org/wiki/Help:Magic_words
-        self.magicWords['PAGENAME'] = self.title
+        colon = self.title.find(':')
+        if colon != -1:
+            ns = self.title[:colon]
+            pagename = self.title[colon+1:]
+        else:
+            ns = '' # Main
+            pagename = self.title
+        self.magicWords['NAMESPACE'] = ns
+        self.magicWords['NAMESPACENUMBER'] = options.knownNamespaces.get(ns, '0')
+        self.magicWords['PAGENAME'] = pagename
         self.magicWords['FULLPAGENAME'] = self.title
+        slash = pagename.rfind('/')
+        if slash != -1:
+            self.magicWords['BASEPAGENAME'] = pagename[:slash]
+            self.magicWords['SUBPAGENAME'] = pagename[slash+1:]
+        else:
+            self.magicWords['BASEPAGENAME'] = pagename
+            self.magicWords['SUBPAGENAME'] = ''
+        slash = pagename.find('/')
+        if slash != -1:
+            self.magicWords['ROOTPAGENAME'] = pagename[:slash]
+        else:
+            self.magicWords['ROOTPAGENAME'] = pagename
         self.magicWords['CURRENTYEAR'] = time.strftime('%Y')
         self.magicWords['CURRENTMONTH'] = time.strftime('%m')
         self.magicWords['CURRENTDAY'] = time.strftime('%d')
@@ -1139,7 +1158,7 @@ def splitParts(paramsList):
         else:
             parameters = par
 
-    # logging.debug('splitParts %s %s\nparams: %s', sep, paramsList, str(parameters))
+    # logging.debug('splitParts %s %s\nparams: %s', sep, paramsList, text_type(parameters))
     return parameters
 
 
@@ -1346,7 +1365,7 @@ def if_empty(*rest):
 
 # ----------------------------------------------------------------------
 # String module emulation
-# https://it.wikipedia.org/wiki/Modulo:String
+# https://en.wikipedia.org/wiki/Module:String
 
 def functionParams(args, vars):
     """
@@ -1359,7 +1378,7 @@ def functionParams(args, vars):
     for var in vars:
         value = args.get(var)
         if value is None:
-            value = args.get(str(index))
+            value = args.get(str(index)) # positional argument
             if value is None:
                 value = ''
             else:
@@ -1377,6 +1396,14 @@ def string_sub(args):
     if j < 0: j += 1
     if j == 0: j = len(s)
     return s[i:j]
+
+
+def string_sublength(args):
+    params = functionParams(args, ('s', 'i', 'len'))
+    s = params.get('s', '')
+    i = int(params.get('i', 1) or 1) - 1 # lua is 1-based
+    len = int(params.get('len', 1) or 1)
+    return s[i:i+len]
 
 
 def string_len(args):
@@ -1397,6 +1424,39 @@ def string_find(args):
         return source.find(pattern, start) + 1 # lua is 1-based
     else:
         return (re.compile(pattern).search(source, start) or -1) + 1
+
+
+def string_pos(args):
+    params = functionParams(args, ('target', 'pos'))
+    target = params.get('target', '')
+    pos = int(params.get('pos', 1) or 1)
+    if pos > 0:
+        pos -= 1 # The first character has an index value of 1
+    return target[pos]
+
+
+def string_replace(args):
+    params = functionParams(args, ('source', 'pattern', 'replace', 'count', 'plain'))
+    source = params.get('source', '')
+    pattern = params.get('pattern', '')
+    replace = params.get('replace', '')
+    count = int(params.get('count', 0) or 0)
+    plain = int(params.get('plain', 1) or 1)
+    if plain:
+        if count:
+            return source.replace(pattern, replace, count)
+        else:
+            return source.replace(pattern, replace)
+    else:
+        return re.compile(pattern).sub(replace, source, count)
+
+
+def string_rep(args):
+    params = functionParams(args, ('s'))
+    source = params.get('source', '')
+    count = int(params.get('count', '1'))
+    return source * count
+
 
 # ----------------------------------------------------------------------
 # Module:Roman
@@ -1442,9 +1502,13 @@ modules = {
     },
 
     'String': {
-        'sub': string_sub,
         'len': string_len,
-        'find': string_find
+        'sub': string_sub,
+        'sublength': string_sublength,
+        'pos': string_pos,
+        'find': string_find,
+        'replace': string_replace,
+        'rep': string_rep,
     },
 
     'Roman': {
@@ -1783,7 +1847,7 @@ def sharp_invoke(module, function, args):
     if functions:
         funct = functions.get(function)
         if funct:
-            return str(funct(args))
+            return text_type(funct(args))
     return ''
 
 
@@ -1825,7 +1889,7 @@ parserFunctions = {
 
     'ucfirst': lambda extr, string, *rest: ucfirst(string),
 
-    'int': lambda extr, string, *rest: str(int(string)),
+    'int': lambda extr, string, *rest: text_type(int(string)),
 
 }
 
@@ -2648,9 +2712,9 @@ class OutputSplitter(object):
 # ----------------------------------------------------------------------
 # READER
 
-tagRE = re.compile(r'(.*?)<(/?\w+)[^>]*>(?:([^<]*)(<.*?>)?)?')
+tagRE = re.compile(r'(.*?)<(/?\w+)[^>]*?>(?:([^<]*)(<.*?>)?)?')
 #                    1     2               3      4
-
+keyRE = re.compile(r'key="(\d*)"')
 
 def load_templates(file, output_file=None):
     """
@@ -2791,7 +2855,12 @@ def process_dump(input_file, template_file, out_file, file_size, file_compress,
             base = m.group(3)
             options.urlbase = base[:base.rfind("/")]
         elif tag == 'namespace':
-            options.knownNamespaces.add(m.group(3))
+            mk = keyRE.search(line)
+            if mk:
+                nsid = mk.group(1)
+            else:
+                nsid = ''
+            options.knownNamespaces[m.group(3)] = nsid
             if re.search('key="10"', line):
                 options.templateNamespace = m.group(3)
                 options.templatePrefix = options.templateNamespace + ':'
@@ -2806,10 +2875,10 @@ def process_dump(input_file, template_file, out_file, file_size, file_compress,
         template_load_start = default_timer()
         if template_file:
             if os.path.exists(template_file):
-                logging.info("Preprocessing '%s' to collect template definitions: this may take some time.", template_file)
-                # can't use with here:'
+                logging.info("Loading template definitions from: %s", template_file)
+                # can't use with here:
                 file = fileinput.FileInput(template_file,
-                                         openhook=fileinput.hook_compressed)
+                                           openhook=fileinput.hook_compressed)
                 load_templates(file)
                 file.close()
             else:
