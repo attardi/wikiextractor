@@ -2527,6 +2527,7 @@ def compact(text):
                         page.append(listClose[c])
                 listLevel = []
                 listCount = []
+                emptySection = False
             elif page and page[-1]:
                 page.append('')
             continue
@@ -2591,10 +2592,11 @@ def compact(text):
             line = line[i:].strip()
             if line:  # FIXME: n is '"'
                 if options.keepLists:
-                    # emit open sections
-                    items = sorted(headers.items())
-                    for _, v in items:
-                        page.append(v)
+                    if options.keepSections:
+                        # emit open sections
+                        items = sorted(headers.items())
+                        for _, v in items:
+                            page.append(v)
                     headers.clear()
                     # use item count for #-lines
                     listCount[i - 1] += 1
