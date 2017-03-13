@@ -2839,7 +2839,7 @@ def process_dump(input_file, template_file, out_file, file_size, file_compress,
     """
 
     if input_file == '-':
-        input = sys.stdin
+        input = sys.stdin.buffer
     else:
         input = fileinput.FileInput(input_file, openhook=fileinput.hook_compressed)
 
