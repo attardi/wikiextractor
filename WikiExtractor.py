@@ -3246,20 +3246,21 @@ def main():
         with open(filter_category) as f:
             for line in f.readlines():
                 try:
-                    line = line.strip().encode('utf-8')
+                    line = str(line.strip())
                     if line.startswith('#') or len(line) == 0:
                         continue;
                     elif line.startswith('^'):
                         options.filter_category_exclude.add(line.lstrip('^'))
                     else:
                         options.filter_category_include.add(line)
-                except:
+                except Exception as e:
+                    print(e)
                     print(u"Category not in utf8, ignored:\t")
                     print(line)
             print("Excluding categories:",)
             print(str(options.filter_category_exclude))
             print("Including categories:")
-            print(str(options.filter_category_include))
+            print(str(len(options.filter_category_include)))
 
     process_dump(input_file, args.templates, output_path, file_size,
                  args.compress, args.processes)
