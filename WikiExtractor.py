@@ -192,6 +192,8 @@ options = SimpleNamespace(
     filter_category_include = set(),
     filter_category_exclude = set(),
 
+    log_file = None,
+
     discardElements = [
         'gallery', 'timeline', 'noinclude', 'pre',
         'table', 'tr', 'td', 'th', 'caption', 'div',
@@ -211,11 +213,17 @@ templateKeys = set(['10', '828'])
 filter_disambig_page_pattern = re.compile("{{disambig(uation)?(\|[^}]*)?}}")
 
 ##
+g_page_total = 0
+g_page_articl_total=0
+g_page_articl_used_total=0
 # page filtering logic -- remove templates, undesired xml namespaces, and disambiguation pages
 def keepPage(ns, catSet, page):
+    global g_page_articl_total,g_page_total,g_page_articl_used_total
+    g_page_total += 1
     if ns != '0':               # Aritcle
         return False
     # remove disambig pages if desired
+    g_page_articl_total += 1
     if options.filter_disambig_pages:
         for line in page:
             if filter_disambig_page_pattern.match(line):
@@ -226,6 +234,7 @@ def keepPage(ns, catSet, page):
     if len(options.filter_category_exclude) > 0 and len(options.filter_category_exclude & catSet)>0:
         logging.debug("***Exclude  " + str(catSet))
         return False
+    g_page_articl_used_total += 1
     return True
 
 
@@ -2987,6 +2996,7 @@ def process_dump(input_file, template_file, out_file, file_size, file_compress,
     extract_rate = page_num / extract_duration
     logging.info("Finished %d-process extraction of %d articles in %.1fs (%.1f art/s)",
                  process_count, page_num, extract_duration, extract_rate)
+    logging.info("total of page: %d, total of articl page: %d; total of used articl page: %d" % (g_page_total, g_page_articl_total,g_page_articl_used_total))
 
 
 # ----------------------------------------------------------------------
@@ -3003,7 +3013,7 @@ def extract_process(opts, i, jobs_queue, output_queue):
     global options
     options = opts
 
-    createLogger(options.quiet, options.debug)
+    createLogger(options.quiet, options.debug, options.log_file)
 
     out = StringIO()                 # memory buffer
     
@@ -3045,7 +3055,7 @@ def reduce_process(opts, output_queue, spool_length,
     global options
     options = opts
     
-    createLogger(options.quiet, options.debug)
+    createLogger(options.quiet, options.debug, options.log_file)
     
     if out_file:
         nextFile = NextFile(out_file)
@@ -3151,6 +3161,8 @@ def main():
                         help="print debug info")
     groupS.add_argument("-a", "--article", action="store_true",
                         help="analyze a file containing a single article (debug option)")
+    groupS.add_argument("--log_file",
+                        help="path to save the log info")
     groupS.add_argument("-v", "--version", action="version",
                         version='%(prog)s ' + version,
                         help="print program version")
@@ -3208,8 +3220,8 @@ def main():
 
     options.quiet = args.quiet
     options.debug = args.debug
-    
-    createLogger(options.quiet, options.debug)
+    options.log_file = args.log_file
+    createLogger(options.quiet, options.debug, options.log_file)
 
     input_file = args.input
 
@@ -3265,12 +3277,15 @@ def main():
     process_dump(input_file, args.templates, output_path, file_size,
                  args.compress, args.processes)
 
-def createLogger(quiet, debug):
+def createLogger(quiet, debug, log_file):
     logger = logging.getLogger()
     if not quiet:
         logger.setLevel(logging.INFO)
     if debug:
         logger.setLevel(logging.DEBUG)
+    if log_file:
+        fileHandler = logging.FileHandler(log_file)
+        logger.addHandler(fileHandler)
 
 if __name__ == '__main__':
     main()

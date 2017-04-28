@@ -41,6 +41,7 @@ Each file will contains several documents in this [document format](http://media
                             [--filter_disambig_pages] [-it abbr,b,big]
                             [-de gallery,timeline,noinclude] [--keep_tables]
                             [--processes PROCESSES] [-q] [--debug] [-a] [-v]
+                            [--log_file]
                             input
 
     Wikipedia Extractor:
@@ -122,6 +123,7 @@ Each file will contains several documents in this [document format](http://media
       -a, --article         analyze a file containing a single article (debug
                             option)
       -v, --version         print program version
+      --log_file            specify a file to save the log information.
 
 
 Saving templates to a file will speed up performing extraction the next time,
