@@ -3246,7 +3246,7 @@ def main():
         with open(filter_category) as f:
             for line in f.readlines():
                 try:
-                    line = line.strip().encode('utf8')
+                    line = line.strip().encode('utf-8')
                     if line.startswith('#') or len(line) == 0:
                         continue;
                     elif line.startswith('^'):
@@ -3259,7 +3259,7 @@ def main():
             print("Excluding categories:",)
             print(str(options.filter_category_exclude))
             print("Including categories:")
-            #print(str(options.filter_category_include))
+            print(str(options.filter_category_include))
 
     process_dump(input_file, args.templates, output_path, file_size,
                  args.compress, args.processes)
