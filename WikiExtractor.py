@@ -3284,7 +3284,7 @@ def createLogger(quiet, debug, log_file):
         logger.setLevel(logging.INFO)
     if debug:
         logger.setLevel(logging.DEBUG)
-    print (log_file)
+    #print (log_file)
     if log_file:
         fileHandler = logging.FileHandler(log_file)
         logger.addHandler(fileHandler)
