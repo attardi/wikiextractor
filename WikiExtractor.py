@@ -3270,10 +3270,10 @@ def main():
                     error_cnt += 1
                     print(u"Category not in utf8, ignored. error cnt %d:\t%s" % (error_cnt,e))
                     print(line)
-            print("Excluding categories:",)
-            print(str(options.filter_category_exclude))
-            print("Including categories:")
-            print(str(len(options.filter_category_include)))
+            logging.info("Excluding categories:",)
+            logging.info(str(options.filter_category_exclude))
+            logging.info("Including categories:")
+            logging.info(str(len(options.filter_category_include)))
 
     process_dump(input_file, args.templates, output_path, file_size,
                  args.compress, args.processes)
