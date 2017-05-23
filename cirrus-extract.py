@@ -169,7 +169,7 @@ def process_dump(input_file, out_file, file_size, file_compress):
         content = json.loads(input.readline())
         type = index['index']['_type']
         id = index['index']['_id']
-        if type == 'page' and content['namespace'] == 0:
+        if type == 'page' and content.get('namespace') == 0:
             title = content['title']
             text = content['text']
             # drop references:
