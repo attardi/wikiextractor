@@ -16,6 +16,7 @@
 #   Radics Geza (radicsge@gmail.com)
 #   orangain (orangain@gmail.com)
 #   Seth Cleveland (scleveland@turnitin.com)
+#   Necmettin Carkaci (necmettin.carkaci@gmail.com)
 #   Bren Barn
 #
 # =============================================================================
@@ -70,7 +71,11 @@ import json
 from io import StringIO
 from multiprocessing import Queue, Process, Value, cpu_count
 from timeit import default_timer
+import os
 
+# Unicode encoding problem fix
+reload(sys)
+sys.setdefaultencoding('utf-8')
 
 PY2 = sys.version_info[0] == 2
 # Python 2.7 compatibiity
@@ -81,7 +86,7 @@ if PY2:
     range = xrange  # Use Python 3 equivalent
     chr = unichr    # Use Python 3 equivalent
     text_type = unicode
-    
+
     class SimpleNamespace(object):
         def __init__ (self, **kwargs):
             self.__dict__.update(kwargs)
@@ -138,11 +143,11 @@ options = SimpleNamespace(
     ##
     # Filter disambiguation pages
     filter_disambig_pages = False,
-    
+
     ##
     # Drop tables from the article
     keep_tables = False,
-    
+
     ##
     # Whether to preserve links in output
     keepLinks = False,
@@ -160,9 +165,19 @@ options = SimpleNamespace(
     toHTML = False,
 
     ##
+    # Whether to write file instead of the xml-like default output format
+    write_file=True,
+
+
+    ##
     # Whether to write json instead of the xml-like default output format
     write_json = False,
-    
+
+    #
+    # Output directory
+    outputDir = 'output',
+
+
     ##
     # Whether to expand templates
     expand_templates = True,
@@ -178,18 +193,18 @@ options = SimpleNamespace(
     ##
     # Minimum expanded text length required to print document
     min_text_length = 0,
-    
+
     # Shared objects holding templates, redirects and cache
     templates = {},
     redirects = {},
     # cache of parser templates
     # FIXME: sharing this with a Manager slows down.
     templateCache = {},
-    
+
     # Elements to ignore/discard
-    
+
     ignored_tag_patterns = [],
-    
+
     discardElements = [
         'gallery', 'timeline', 'noinclude', 'pre',
         'table', 'tr', 'td', 'th', 'caption', 'div',
@@ -545,6 +560,34 @@ class Extractor(object):
         :param text: the text of the page
         """
         url = get_url(self.id)
+
+        if options.write_file:
+
+            title = self.title
+
+            # Remove punctuation from title
+            title = title.replace('.', '')
+            title = title.replace('\\', '')
+            title = title.replace('/', '')
+
+            # Set first letter for directory name which include file
+            parent_dir = title[0].upper()
+
+            output_filename = os.getcwd()+os.sep+options.outputDir+os.sep+parent_dir+os.sep+title+'.txt'
+
+            if (os.path.exists(output_filename)): # if file exist add id front of the filename
+                output_filename = os.getcwd() + os.sep + options.outputDir + os.sep + parent_dir + os.sep +self.id+'_'+title + '.txt'
+
+            if (not os.path.exists(os.path.dirname(output_filename))):
+                os.makedirs(os.path.dirname(output_filename))
+
+            with open(output_filename,'w+') as output_file:
+
+                for line in text:
+                    line = line.encode('utf-8')
+                    output_file.write(line)
+                    output_file.write('\n')
+
         if options.write_json:
             json_data = {
                 'id': self.id,
@@ -561,7 +604,8 @@ class Extractor(object):
                 out_str = out_str.encode('utf-8')
             out.write(out_str)
             out.write('\n')
-        else:
+
+        if(not (options.write_file or options.write_json)):
             if options.print_revision:
                 header = '<doc id="%s" revid="%s" url="%s" title="%s">\n' % (self.id, self.revid, url, self.title)
             else:
@@ -582,7 +626,7 @@ class Extractor(object):
         :param out: a memory file.
         """
         logging.info('%s\t%s', self.id, self.title)
-        
+
         # Separate header from text with a newline.
         if options.toHTML:
             title_str = '<h1>' + self.title + '</h1>'
@@ -629,13 +673,16 @@ class Extractor(object):
         text = self.transform(text)
         text = self.wiki2text(text)
         text = compact(self.clean(text))
-        text = [title_str] + text
-        
+
+        if not options.write_file:
+            text = [title_str] + text
+
         if sum(len(line) for line in text) < options.min_text_length:
             return
-        
+
+
         self.write_output(out, text)
-        
+
         errs = (self.template_title_errs,
                 self.recursion_exceeded_1_errs,
                 self.recursion_exceeded_2_errs,
@@ -2991,8 +3038,8 @@ def extract_process(opts, i, jobs_queue, output_queue):
     createLogger(options.quiet, options.debug)
 
     out = StringIO()                 # memory buffer
-    
-    
+
+
     while True:
         job = jobs_queue.get()  # job is (id, title, page, page_num)
         if job:
@@ -3029,10 +3076,10 @@ def reduce_process(opts, output_queue, spool_length,
 
     global options
     options = opts
-    
+
     createLogger(options.quiet, options.debug)
-    
-    if out_file:
+
+    if (out_file and (not options.write_file)):
         nextFile = NextFile(out_file)
         output = OutputSplitter(nextFile, file_size, file_compress)
     else:
@@ -3096,7 +3143,8 @@ def main():
                         help="compress output files using bzip")
     groupO.add_argument("--json", action="store_true",
                         help="write output in json format instead of the default one")
-
+    groupO.add_argument("--file", action="store_true",
+                        help="write each text into per file instead of the default one")
 
     groupP = parser.add_argument_group('Processing')
     groupP.add_argument("--html", action="store_true",
@@ -3147,6 +3195,8 @@ def main():
     options.keepLists = args.lists
     options.toHTML = args.html
     options.write_json = args.json
+    options.write_file = args.file
+    options.outputDir = args.output
     options.print_revision = args.revision
     options.min_text_length = args.min_text_length
     if args.html:

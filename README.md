@@ -76,6 +76,7 @@ Each file will contains several documents in this [document format](http://media
                             maximum bytes per output file (default 1M)
       -c, --compress        compress output files using bzip
       --json                write output in json format instead of the default one
+      --file                write each text into per file instead of the default one
 
     Processing:
       --html                produce HTML output, subsumes --links
@@ -110,6 +111,11 @@ Each file will contains several documents in this [document format](http://media
                             option)
       -v, --version         print program version
 
+
+## Example Usage
+    python WikiExtractor.py trwiki-20170901-pages-meta-current.xml -b 500K -o output_text
+    python WikiExtractor.py trwiki-20170901-pages-meta-current.xml --file -o output_text
+    python WikiExtractor.py trwiki-20170901-pages-meta-current.xml --json -b 500K -o output_text
 
 Saving templates to a file will speed up performing extraction the next time,
 assuming template definitions have not changed.
