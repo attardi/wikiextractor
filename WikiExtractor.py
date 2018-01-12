@@ -547,10 +547,12 @@ class Extractor(object):
         url = get_url(self.id)
         if options.write_json:
             json_data = {
-                'id': self.id,
-                'url': url,
-                'title': self.title,
-                'text': "\n".join(text)
+                #'id': self.id,
+                #'url': url,
+                #'title': self.title,
+                #'text': "\n".join(text)
+		'id':self.title,
+		'text':"\n".join(text)
             }
             if options.print_revision:
                 json_data['revid'] = self.revid
@@ -2672,7 +2674,7 @@ class NextFile(object):
         return os.path.join(self.path_name, '%c%c' % (ord('A') + char2, ord('A') + char1))
 
     def _filepath(self):
-        return '%s/wiki_%02d' % (self._dirname(), self.file_index)
+        return '%s/wiki_%02d.txt' % (self._dirname(), self.file_index)
 
 
 class OutputSplitter(object):
@@ -3080,6 +3082,7 @@ def reduce_process(opts, output_queue, spool_length,
 minFileSize = 200 * 1024
 
 def main():
+    ''' python WikiExtractor.py -o[output-path] --json[data-file-path] '''
 
     parser = argparse.ArgumentParser(prog=os.path.basename(sys.argv[0]),
                                      formatter_class=argparse.RawDescriptionHelpFormatter,
