@@ -206,7 +206,7 @@ templateKeys = set(['10', '828'])
 
 ##
 # Regex for identifying disambig pages
-filter_disambig_page_pattern = re.compile("{{disambig(uation)?(\|[^}]*)?}}")
+filter_disambig_page_pattern = re.compile("(\(disambiguation\))|({{disambig(uation)?(\|[^}]*)?}})")
 
 ##
 # page filtering logic -- remove templates, undesired xml namespaces, and disambiguation pages
@@ -216,7 +216,7 @@ def keepPage(ns, page):
     # remove disambig pages if desired
     if options.filter_disambig_pages:
         for line in page:
-            if filter_disambig_page_pattern.match(line):
+            if filter_disambig_page_pattern.search(line):
                 return False
     return True
 
