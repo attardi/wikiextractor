@@ -209,7 +209,6 @@ templateKeys = set(['10', '828'])
 filter_disambig_page_pattern = re.compile(
     "(\(disambiguation\))|([Dd]isambig(uation)?(\|[^}]*)?}})")
 
-
 ##
 # page filtering logic -- remove templates, undesired xml namespaces, and disambiguation pages
 def keepPage(ns, page):
