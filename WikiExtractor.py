@@ -206,7 +206,7 @@ templateKeys = set(['10', '828'])
 
 ##
 # Regex for identifying disambig pages
-filter_disambig_page_pattern = re.compile("{{disambig(uation)?(\|[^}]*)?}}")
+filter_disambig_page_pattern = re.compile("{{disambig(uation)?(\|[^}]*)?}}|__DISAMBIG__")
 
 ##
 # page filtering logic -- remove templates, undesired xml namespaces, and disambiguation pages
@@ -2716,7 +2716,7 @@ class OutputSplitter(object):
 
 tagRE = re.compile(r'(.*?)<(/?\w+)[^>]*?>(?:([^<]*)(<.*?>)?)?')
 #                    1     2               3      4
-keyRE = re.compile(r'key="(\d*)"')
+keyRE = re.compile(r'key="([+-]?)(\d*)"')
 
 def load_templates(file, output_file=None):
     """
@@ -2859,7 +2859,7 @@ def process_dump(input_file, template_file, out_file, file_size, file_compress,
         elif tag == 'namespace':
             mk = keyRE.search(line)
             if mk:
-                nsid = mk.group(1)
+                nsid = ''.join(mk.groups())
             else:
                 nsid = ''
             options.knownNamespaces[m.group(3)] = nsid
