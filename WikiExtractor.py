@@ -2595,11 +2595,11 @@ def compact(text):
                         # emit open sections
                         items = sorted(headers.items())
                         for _, v in items:
-                            page.append(v)
+                            page.append("Section::::" + v)
                     headers.clear()
                     # use item count for #-lines
                     listCount[i - 1] += 1
-                    bullet = '%d. ' % listCount[i - 1] if n == '#' else '- '
+                    bullet = 'BULLET::::%d. ' % listCount[i - 1] if n == '#' else 'BULLET::::- '
                     page.append('{0:{1}s}'.format(bullet, len(listLevel)) + line)
                 elif options.toHTML:
                     page.append(listItem[n] % line)
@@ -2621,7 +2621,7 @@ def compact(text):
             if options.keepSections:
                 items = sorted(headers.items())
                 for i, v in items:
-                    page.append(v)
+                    page.append("Section::::" + v)
             headers.clear()
             page.append(line)  # first line
             emptySection = False
