@@ -85,3 +85,6 @@ ENV/
 
 # Spyder project settings
 .spyderproject
+
+# Editor files
+*.idea
