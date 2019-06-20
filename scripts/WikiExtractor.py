@@ -54,7 +54,7 @@ import logging
 import os.path
 import re  # TODO use regex when it will be standard
 import sys
-from cStringIO import StringIO
+from io import StringIO
 from multiprocessing import Queue, Process, cpu_count
 from timeit import default_timer
 

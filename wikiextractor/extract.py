@@ -2,9 +2,9 @@
 
 import re
 import cgi
-from itertools import izip, izip_longest
+from itertools import zip, zip_longest
 import urllib
-from htmlentitydefs import name2codepoint
+from html.entities import name2codepoint
 import logging
 import time
 
@@ -214,7 +214,7 @@ def compact(text, mark_headers=False):
         elif line[0] in '*#;:':
             if Extractor.toHTML:
                 i = 0
-                for c, n in izip_longest(listLevel, line, fillvalue=''):
+                for c, n in zip_longest(listLevel, line, fillvalue=''):
                     if not n or n not in '*#;:':
                         if c:
                             page.append(listClose[c])
@@ -1327,7 +1327,7 @@ def findBalanced(text, openDelim, closeDelim):
     """
     openPat = '|'.join([re.escape(x) for x in openDelim])
     # patter for delimiters expected after each opening delimiter
-    afterPat = {o: re.compile(openPat + '|' + c, re.DOTALL) for o, c in izip(openDelim, closeDelim)}
+    afterPat = {o: re.compile(openPat + '|' + c, re.DOTALL) for o, c in zip(openDelim, closeDelim)}
     stack = []
     start = 0
     cur = 0
