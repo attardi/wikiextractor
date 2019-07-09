@@ -27,9 +27,19 @@ In order to speed up processing:
 The script may be invoked directly, however it can be installed by doing:
 
     (sudo) python setup.py install
+    
+furthermore, PyPi version available just do 
+
+~~~
+pip install pip install wikiextractor
+~~~
 
 ## Usage
 The script is invoked with a Wikipedia dump file as an argument.
+to invoke the script do:
+~~~
+python -m wikiextractor.WikiExtractor args
+~~~
 The output is stored in several files of similar size in a given directory.
 Each file will contains several documents in this [document format](http://medialab.di.unipi.it/wiki/Document_Format).
 
