@@ -1,8 +1,8 @@
 from distutils.core import setup
 
 setup(
-    name='WIKIextractor',
-    packages=['WIKIextractor'],
+    name='wikiextractor',
+    packages=['wikiextractor'],
     version='0.1',
     license='MIT',
     description='scripts for parsing the wikimedia xml dumps files',
@@ -15,7 +15,6 @@ setup(
     classifiers=[
         'Development Status :: 5 - Production/Stable',
         'Intended Audience :: Developers',
-        'Topic :: DataScience :: WikiMedia',
         'License :: OSI Approved :: MIT License',
         'Programming Language :: Python :: 2.7'
     ],
