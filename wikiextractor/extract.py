@@ -2,7 +2,7 @@
 
 import re
 import cgi
-from itertools import zip, zip_longest
+from itertools import zip_longest
 import urllib
 from html.entities import name2codepoint
 import logging
