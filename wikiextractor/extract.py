@@ -3,7 +3,7 @@
 import re
 import cgi
 from itertools import zip_longest
-import urllib
+import urllib.request, urllib.parse, urllib.error
 from html.entities import name2codepoint
 import logging
 import time
@@ -194,7 +194,7 @@ def compact(text, mark_headers=False):
 
             headers[lev] = title
             # drop previous headers
-            for i in headers.keys():
+            for i in list(headers.keys()):
                 if i > lev:
                     del headers[i]
             emptySection = True
@@ -250,7 +250,7 @@ def compact(text, mark_headers=False):
             continue
         elif len(headers):
             if Extractor.keepSections:
-                items = headers.items()
+                items = list(headers.items())
                 items.sort()
                 for (i, v) in items:
                     page.append(v)
@@ -271,7 +271,7 @@ def handle_unicode(entity):
     numeric_code = int(entity[2:-1])
     if numeric_code >= 0x10000:
         return ''
-    return unichr(numeric_code)
+    return chr(numeric_code)
 
 
 # ----------------------------------------------------------------------
@@ -409,7 +409,7 @@ def replaceExternalLinks(text):
 def makeExternalLink(url, anchor):
     """Function applied to wikiLinks"""
     if Extractor.keepLinks:
-        return '<a href="%s">%s</a>' % (urllib.quote(url.encode('utf-8')), anchor)
+        return '<a href="%s">%s</a>' % (urllib.parse.quote(url.encode('utf-8')), anchor)
     else:
         return anchor
 
@@ -479,7 +479,7 @@ def makeInternalLink(title, label):
         if colon2 > 1 and title[colon + 1:colon2] not in acceptedNamespaces:
             return ''
     if Extractor.keepLinks:
-        return '<a href="%s">%s</a>' % (urllib.quote(title.encode('utf-8')), label)
+        return '<a href="%s">%s</a>' % (urllib.parse.quote(title.encode('utf-8')), label)
     else:
         return label
 
@@ -711,11 +711,11 @@ def unescape(text):
         try:
             if text[1] == "#":  # character reference
                 if text[2] == "x":
-                    return unichr(int(code[1:], 16))
+                    return chr(int(code[1:], 16))
                 else:
-                    return unichr(int(code))
+                    return chr(int(code))
             else:  # named entity
-                return unichr(name2codepoint[code])
+                return chr(name2codepoint[code])
         except:
             return text  # leave as is
 
@@ -752,7 +752,7 @@ selfClosing_tag_patterns = [
 # Match HTML placeholder tags
 placeholder_tag_patterns = [
     (re.compile(r'<\s*%s(\s*| [^>]+?)>.*?<\s*/\s*%s\s*>' % (tag, tag), re.DOTALL | re.IGNORECASE),
-     repl) for tag, repl in placeholder_tags.items()
+     repl) for tag, repl in list(placeholder_tags.items())
 ]
 
 # Match preformatted lines
@@ -973,7 +973,7 @@ class Extractor(object):
                 if ']]' not in param:  # if the value does not contain a link, trim whitespace
                     param = param.strip()
                 templateParams[str(unnamedParameterCounter)] = param
-        logging.debug('   templateParams> %s', '|'.join(templateParams.values()))
+        logging.debug('   templateParams> %s', '|'.join(list(templateParams.values())))
         return templateParams
 
     def expandTemplate(self, body):
@@ -1429,7 +1429,7 @@ def normalizeNamespace(ns):
 # https://github.com/Wikia/app/blob/dev/extensions/ParserFunctions/ParserFunctions_body.php
 
 
-class Infix:
+class Infix(object):
 
     """Infix operators.
     The calling sequence for the infix is:
@@ -1464,7 +1464,7 @@ def sharp_expr(expr):
         expr = re.sub('mod', '%', expr)
         expr = re.sub('\bdiv\b', '/', expr)
         expr = re.sub('\bround\b', '|ROUND|', expr)
-        return unicode(eval(expr))
+        return str(eval(expr))
     except:
         return '<span class="error"></span>'
 
@@ -1604,7 +1604,7 @@ parserFunctions = {
 
     # This function is used in some pages to construct links
     # http://meta.wikimedia.org/wiki/Help:URL
-    'urlencode': lambda string, *rest: urllib.quote(string.encode('utf-8')),
+    'urlencode': lambda string, *rest: urllib.parse.quote(string.encode('utf-8')),
 
     'lc': lambda string, *rest: string.lower() if string else '',
 
