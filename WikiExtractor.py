@@ -146,6 +146,7 @@ options = SimpleNamespace(
     ##
     # Extract and save page categories
     extract_categories = False,
+    category_surface = 'Category',
 
     ##
     # Whether to preserve links in output
@@ -658,7 +659,8 @@ class Extractor(object):
         categories = []
         if options.extract_categories:
             # Extract categories but not sortkeys
-            categories = re.findall(r'\[\[Category:([^|\]]+)(?:|[^\]]+)?\]\]', text)
+            rgx_category = r'\[\[%s:([^|\]]+)(?:|[^\]]+)?\]\]' % options.category_surface
+            categories = re.findall(rgx_category, text)
         text = self.wiki2text(text)
         text = compact(self.clean(text))
         # from zwChan
@@ -3169,7 +3171,9 @@ def main():
     groupP.add_argument("--keep_tables", action="store_true", default=options.keep_tables,
                         help="Preserve tables in the output article text (default=%(default)s)")
     groupP.add_argument("--extract_categories", action="store_true", default=options.extract_categories,
-                        help="Extract and save page categories (default=%(default)s)")
+                        help="Whether to extract page categories, when used, --category_surface is also required (default=%(default)s)")
+    groupP.add_argument("--category_surface", type=str, default=options.category_surface,
+                        help="How `Category` is written in the wiki namespace. E.g. for English: `Category`, for French: `Catégorie`")
     default_process_count = max(1, cpu_count() - 1)
     parser.add_argument("--processes", type=int, default=default_process_count,
                         help="Number of processes to use (default %(default)s)")
@@ -3205,6 +3209,7 @@ def main():
     options.filter_disambig_pages = args.filter_disambig_pages
     options.keep_tables = args.keep_tables
     options.extract_categories = args.extract_categories
+    options.category_surface = args.category_surface
 
     try:
         power = 'kmg'.find(args.bytes[-1].lower()) + 1
