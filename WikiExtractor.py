@@ -556,7 +556,7 @@ class Extractor(object):
         self.recursion_exceeded_3_errs = 0  # parameter recursion
         self.template_title_errs = 0
 
-    def write_output(self, out, text):
+    def write_output(self, out, text, categories):
         """
         :param out: a memory file
         :param text: the text of the page
@@ -567,7 +567,8 @@ class Extractor(object):
                 'id': self.id,
                 'url': url,
                 'title': self.title,
-                'text': "\n".join(text)
+                'text': "\n".join(text),
+                'categories': categories
             }
             if options.print_revision:
                 json_data['revid'] = self.revid
@@ -579,10 +580,11 @@ class Extractor(object):
             out.write(out_str)
             out.write('\n')
         else:
+            categories_line = ', '.join(categories)
             if options.print_revision:
-                header = '<doc id="%s" revid="%s" url="%s" title="%s">\n' % (self.id, self.revid, url, self.title)
+                header = '<doc id="%s" revid="%s" url="%s" title="%s" categories="%s">\n' % (self.id, self.revid, url, self.title, categories_line)
             else:
-                header = '<doc id="%s" url="%s" title="%s">\n' % (self.id, url, self.title)
+                header = '<doc id="%s" url="%s" title="%s" categories="%s">\n' % (self.id, url, self.title, categories_line)
             footer = "\n</doc>\n"
             if out == sys.stdout:   # option -a or -o -
                 header = header.encode('utf-8')
@@ -644,7 +646,7 @@ class Extractor(object):
         # $text = $frame->expand( $dom );
         #
         text = self.transform(text)
-        text = self.wiki2text(text)
+        text, categories = self.wiki2text(text)
         text = compact(self.clean(text))
         # from zwChan
         text = [title_str] + text
@@ -652,7 +654,7 @@ class Extractor(object):
         if sum(len(line) for line in text) < options.min_text_length:
             return
 
-        self.write_output(out, text)
+        self.write_output(out, text, categories)
 
         errs = (self.template_title_errs,
                 self.recursion_exceeded_1_errs,
@@ -725,6 +727,9 @@ class Extractor(object):
         # residuals of unbalanced quotes
         text = text.replace("'''", '').replace("''", '"')
 
+        # extract page categories
+        categories = re.findall(r'\[\[Category:(.+?)\]\]', text)
+
         # replace internal links
         text = replaceInternalLinks(text)
 
@@ -743,7 +748,7 @@ class Extractor(object):
             res += unescape(text[cur:m.start()]) + m.group(1)
             cur = m.end()
         text = res + unescape(text[cur:])
-        return text
+        return text, categories
 
 
     def clean(self, text):
