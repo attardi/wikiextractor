@@ -144,6 +144,10 @@ options = SimpleNamespace(
     keep_tables = False,
 
     ##
+    # Extract and save page categories
+    extract_categories = False,
+
+    ##
     # Whether to preserve links in output
     keepLinks = False,
 
@@ -556,7 +560,7 @@ class Extractor(object):
         self.recursion_exceeded_3_errs = 0  # parameter recursion
         self.template_title_errs = 0
 
-    def write_output(self, out, text, categories):
+    def write_output(self, out, text, categories=[]):
         """
         :param out: a memory file
         :param text: the text of the page
@@ -567,9 +571,11 @@ class Extractor(object):
                 'id': self.id,
                 'url': url,
                 'title': self.title,
-                'text': "\n".join(text),
-                'categories': categories
+                'text': "\n".join(text)
             }
+            if options.extract_categories:
+                json_data['categories'] = categories
+
             if options.print_revision:
                 json_data['revid'] = self.revid
             # We don't use json.dump(data, out) because we want to be
@@ -580,11 +586,14 @@ class Extractor(object):
             out.write(out_str)
             out.write('\n')
         else:
-            categories_line = ', '.join(categories)
             if options.print_revision:
-                header = '<doc id="%s" revid="%s" url="%s" title="%s" categories="%s">\n' % (self.id, self.revid, url, self.title, categories_line)
+                header = '<doc id="%s" revid="%s" url="%s" title="%s">\n' % (self.id, self.revid, url, self.title)
             else:
-                header = '<doc id="%s" url="%s" title="%s" categories="%s">\n' % (self.id, url, self.title, categories_line)
+                header = '<doc id="%s" url="%s" title="%s">\n' % (self.id, url, self.title)
+            if options.extract_categories:
+                categories_line = ', '.join(categories)
+                header = header[:-2] + ' categories="%s">\n' % (categories_line)
+
             footer = "\n</doc>\n"
             if out == sys.stdout:   # option -a or -o -
                 header = header.encode('utf-8')
@@ -646,7 +655,11 @@ class Extractor(object):
         # $text = $frame->expand( $dom );
         #
         text = self.transform(text)
-        text, categories = self.wiki2text(text)
+        categories = []
+        if options.extract_categories:
+            # Extract categories but not sortkeys
+            categories = re.findall(r'\[\[Category:([^|\]]+)(?:|[^\]]+)?\]\]', text)
+        text = self.wiki2text(text)
         text = compact(self.clean(text))
         # from zwChan
         text = [title_str] + text
@@ -727,9 +740,6 @@ class Extractor(object):
         # residuals of unbalanced quotes
         text = text.replace("'''", '').replace("''", '"')
 
-        # extract page categories
-        categories = re.findall(r'\[\[Category:(.+?)\]\]', text)
-
         # replace internal links
         text = replaceInternalLinks(text)
 
@@ -748,7 +758,7 @@ class Extractor(object):
             res += unescape(text[cur:m.start()]) + m.group(1)
             cur = m.end()
         text = res + unescape(text[cur:])
-        return text, categories
+        return text
 
 
     def clean(self, text):
@@ -3158,6 +3168,8 @@ def main():
                         help="comma separated list of elements that will be removed from the article text")
     groupP.add_argument("--keep_tables", action="store_true", default=options.keep_tables,
                         help="Preserve tables in the output article text (default=%(default)s)")
+    groupP.add_argument("--extract_categories", action="store_true", default=options.extract_categories,
+                        help="Extract and save page categories (default=%(default)s)")
     default_process_count = max(1, cpu_count() - 1)
     parser.add_argument("--processes", type=int, default=default_process_count,
                         help="Number of processes to use (default %(default)s)")
@@ -3192,6 +3204,7 @@ def main():
     options.expand_templates = args.no_templates
     options.filter_disambig_pages = args.filter_disambig_pages
     options.keep_tables = args.keep_tables
+    options.extract_categories = args.extract_categories
 
     try:
         power = 'kmg'.find(args.bytes[-1].lower()) + 1
