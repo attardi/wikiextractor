@@ -83,6 +83,8 @@ Each file will contains several documents in this [document format](http://media
       --html                produce HTML output, subsumes --links
       -l, --links           preserve links
       -s, --sections        preserve sections
+      -sh, --section_hierarchy
+                            preserve section hierarchy
       --lists               preserve lists
       -ns ns1,ns2, --namespaces ns1,ns2
                             accepted namespaces in links

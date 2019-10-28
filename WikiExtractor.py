@@ -152,6 +152,10 @@ options = SimpleNamespace(
     keepSections = True,
 
     ##
+    # Whether to keep section hierarchy
+    keepSectionHierarchy = True,
+
+    ##
     # Whether to preserve lists
     keepLists = False,
 
@@ -2535,6 +2539,9 @@ def compact(text):
     emptySection = False  # empty sections are discarded
     listLevel = []        # nesting of lists
     listCount = []        # count of each list (it should be always in the same length of listLevel)
+    nestedSectionTitles = []  # section title hierarchy
+    previousLevel = -1
+
     for line in text.split('\n'):
         if not line:            # collapse empty lines
             # if there is an opening list, close it if we see an empty line
@@ -2559,6 +2566,22 @@ def compact(text):
             if title and title[-1] not in '!?':
                 title += '.'    # terminate sentence.
             headers[lev] = title
+
+            # Handle section title hierarchy
+            if options.keepSections and options.keepSectionHierarchy:
+                if lev == 2:
+                    nestedSectionTitles = [title]
+                else:
+                    level_to_align = previousLevel
+                    while level_to_align >= lev and len(nestedSectionTitles) > 1:
+                        nestedSectionTitles.pop()
+                        level_to_align -= 1
+
+                    nestedSectionTitles.append(title)
+
+                headers[lev] = ':'.join(nestedSectionTitles)
+                previousLevel = lev
+
             # drop previous headers
             for i in list(headers.keys()):
                 if i > lev:
@@ -3133,6 +3156,8 @@ def main():
                         help="preserve links")
     groupP.add_argument("-s", "--sections", action="store_true",
                         help="preserve sections")
+    groupP.add_argument("-sh", "--section_hierarchy", action="store_true",
+                        help="preserve section hierarchy")
     groupP.add_argument("--lists", action="store_true",
                         help="preserve lists")
     groupP.add_argument("-ns", "--namespaces", default="", metavar="ns1,ns2",
@@ -3176,6 +3201,7 @@ def main():
 
     options.keepLinks = args.links
     options.keepSections = args.sections
+    options.keepSectionHierarchy = args.section_hierarchy
     options.keepLists = args.lists
     options.toHTML = args.html
     options.write_json = args.json
