@@ -46,7 +46,15 @@ usage:  WikiExtractor.py
                             [--filter_category FILTER_CATEGORY]
                             input
 
-Example: python3 WikiExtractor.py -o wiki/test --headersfooters --titlefree --spacefree wiki/wiki-20191101-pages-articles.xml
+Examples (tested for "correct" output):
+
+python3 WikiExtractor.py -o wiki/test --headersfooters --titlefree --spacefree wiki/wiki-20191101-pages-articles.xml
+
+python3 WikiExtractor.py -o wiki/test --titlefree --spacefree wiki/wiki-20191101-pages-articles.xml
+
+python3 WikiExtractor.py -o wiki/test --noLineAfterHeader --spacefree wiki/wiki-20191101-pages-articles.xml
+
+
 
     Wikipedia Extractor:
     Extracts and cleans text from a Wikipedia database dump and stores output in a
