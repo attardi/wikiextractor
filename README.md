@@ -33,16 +33,20 @@ The script is invoked with a Wikipedia dump file as an argument.
 The output is stored in several files of similar size in a given directory.
 Each file will contains several documents in this [document format](http://medialab.di.unipi.it/wiki/Document_Format).
 
-    usage: WikiExtractor.py [-h] [-o OUTPUT] [-b n[KMG]] [-c] [--json] [--html]
-                            [-l] [-s] [--lists] [-ns ns1,ns2]
-                            [--templates TEMPLATES] [--no-templates] [-r]
+usage:  WikiExtractor.py 
+                            [-h] [-o OUTPUT] [-b n[KMG]] [-c] [--json] [--html]
+                            [-l] [-s] [--headersfooters] [--noLineAfterHeader]
+                            [--titlefree] [--spacefree] [--lists] [-ns ns1,ns2]
+                            [--templates TEMPLATES] [--no_templates] [-r]
                             [--min_text_length MIN_TEXT_LENGTH]
-                            [--filter_category path_of_categories_file]
                             [--filter_disambig_pages] [-it abbr,b,big]
                             [-de gallery,timeline,noinclude] [--keep_tables]
-                            [--processes PROCESSES] [-q] [--debug] [-a] [-v]
-                            [--log_file]
+                            [--processes PROCESSES] [-q] [--debug] [-a]
+                            [--log_file LOG_FILE] [-v]
+                            [--filter_category FILTER_CATEGORY]
                             input
+
+Example: python3 WikiExtractor.py -o wiki/test --headersfooters --titlefree --spacefree wiki/wiki-20191101-pages-articles.xml
 
     Wikipedia Extractor:
     Extracts and cleans text from a Wikipedia database dump and stores output in a
@@ -115,6 +119,14 @@ Each file will contains several documents in this [document format](http://media
                             comma separated list of elements that will be removed
                             from the article text
       --keep_tables         Preserve tables in the output article text
+                            (default=False)
+      --headersfooters      Adds header and footer to each article
+                            (default=False)
+      --noLineAfterHeader   Does not add line below title. Title is directly on article.
+                            (default=False)
+      --titlefree           No titles on articles
+                            (default=False)
+      --spacefree           Minimize empty lines, that is, only empty lines are before/after title.
                             (default=False)
 
     Special:
