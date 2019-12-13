@@ -161,7 +161,15 @@ options = SimpleNamespace(
     
     ##
     # Whether to add aHeader and Footer
-    addHeaderFooterHeader = False,
+    headersfooters = False,
+    
+    ##
+    # Whether to add aHeader and Footer
+    spacefree = False,
+    
+    ##
+    # Whether to add aHeader and Footer
+    titlefree = False,
     
     ##
     # Whether to output HTML instead of text
@@ -586,29 +594,39 @@ class Extractor(object):
                 out_str = out_str.encode('utf-8')
             out.write(out_str)
             out.write('\n')
-        elif addHeaderFooter:
+        elif headersfooters:
             if options.print_revision:
                 header = '<doc id="%s" revid="%s" url="%s" title="%s">\n' % (self.id, self.revid, url, self.title)
             else:
                 header = '<doc id="%s" url="%s" title="%s">\n' % (self.id, url, self.title)
             footer = "\n</doc>\n"
-            if out == sys.stdout:   # option -a or -o -
-                header = header.encode('utf-8')
-            out.write(header)
             for line in text:
                 if out == sys.stdout:   # option -a or -o -
                     line = line.encode('utf-8')
-                out.write(line)
-                out.write('\n')
+                if options.spacefree:
+                    if line != "":
+                        out.write(line)
+                        out.write('\n')
+                else:
+                    out.write(line)
+                    out.write('\n')                        
             out.write(footer)
+            if options.spacefree:
+                out.write('\n')             
          else:
             for line in text:
                 if out == sys.stdout:   # option -a or -o -
                     line = line.encode('utf-8')
-                if line!="":
+                if options.spacefree:
+                    if line != "":
+                        out.write(line)
+                        out.write('\n')
+                else:
                     out.write(line)
-                    out.write('\n')
-
+                    out.write('\n') 
+            if options.spacefree:
+                out.write('\n')           
+  
     def extract(self, out):
         """
         :param out: a memory file.
@@ -665,8 +683,8 @@ class Extractor(object):
         text = self.wiki2text(text)
         text = compact(self.clean(text))
         # from zwChan
-        text = [title_str] + text
-
+        if not options.titlefree:
+            text = [title_str] + text
         if sum(len(line) for line in text) < options.min_text_length:
             return
 
@@ -3151,10 +3169,16 @@ def main():
                         help="preserve links")
     groupP.add_argument("-s", "--sections", action="store_true",
                         help="preserve sections")
-    groupP.add_argument("--addHeaderFooter", action="store_true",
+    
+    groupP.add_argument("--headersfooters", action="store_true",
                         help="adds header and footer to each article")
     groupP.add_argument("--noLineAfterHeader", action="store_true",
                         help="does not add line below heading")
+    groupP.add_argument("--titlefree", action="store_true",
+                        help="no titles on articles")
+    groupP.add_argument("--spacefree", action="store_true",
+                        help="minimize empty lines")
+
     groupP.add_argument("--lists", action="store_true",
                         help="preserve lists")
     groupP.add_argument("-ns", "--namespaces", default="", metavar="ns1,ns2",
@@ -3205,7 +3229,12 @@ def main():
     options.min_text_length = args.min_text_length
     if args.html:
         options.keepLinks = True
-
+        
+    options.noLineAfterHeader = args.noLineAfterHeader
+    options.headersfooters = args.headersfooters
+    options.titlefree = args.titlefree
+    options.spacefree = args.spacefree
+        
     options.expand_templates = args.no_templates
     options.filter_disambig_pages = args.filter_disambig_pages
     options.keep_tables = args.keep_tables
