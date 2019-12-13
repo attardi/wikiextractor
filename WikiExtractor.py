@@ -3141,7 +3141,7 @@ def main():
                         help="preserve links")
     groupP.add_argument("-s", "--sections", action="store_true",
                         help="preserve sections")
-    groupP.add_argument("-s", "--noLineAfterHeader", action="store_true",
+    groupP.add_argument("--noLineAfterHeader", action="store_true",
                         help="does not add line below heading")
     groupP.add_argument("--lists", action="store_true",
                         help="preserve lists")
