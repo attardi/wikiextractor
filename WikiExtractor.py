@@ -594,12 +594,15 @@ class Extractor(object):
                 out_str = out_str.encode('utf-8')
             out.write(out_str)
             out.write('\n')
-        elif headersfooters:
+        elif options.headersfooters:
             if options.print_revision:
                 header = '<doc id="%s" revid="%s" url="%s" title="%s">\n' % (self.id, self.revid, url, self.title)
             else:
                 header = '<doc id="%s" url="%s" title="%s">\n' % (self.id, url, self.title)
             footer = "\n</doc>\n"
+            out.write(header)
+            if options.titlefree and not options.noLineAfterHeader:
+                out.write('\n')
             for line in text:
                 if out == sys.stdout:   # option -a or -o -
                     line = line.encode('utf-8')
@@ -613,7 +616,7 @@ class Extractor(object):
             out.write(footer)
             if options.spacefree:
                 out.write('\n')             
-         else:
+        else:
             for line in text:
                 if out == sys.stdout:   # option -a or -o -
                     line = line.encode('utf-8')
