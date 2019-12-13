@@ -149,7 +149,7 @@ options = SimpleNamespace(
 
     ##
     # Whether to preserve section titles
-    keepSections = True,
+    keepSections = False,
 
     ##
     # Whether to preserve lists
@@ -607,11 +607,10 @@ class Extractor(object):
         # Separate header from text with a newline.
         if options.toHTML:
             title_str = '<h1>' + self.title + '</h1>'
+        elif options.noLineAfterHeader:
+            title_str = self.title        
         else:
-            if options.noLineAfterHeader:
-                title_str = self.title        
-            else:
-                title_str = self.title + '\n'
+            title_str = self.title + '\n'
         #Above added by HjalmarrSv
         # https://www.mediawiki.org/wiki/Help:Magic_words
         colon = self.title.find(':')
