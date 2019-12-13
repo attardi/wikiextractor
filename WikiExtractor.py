@@ -158,7 +158,11 @@ options = SimpleNamespace(
     ##
     # Whether to add an empty line after header
     noLineAfterHeader = False,
-
+    
+    ##
+    # Whether to add aHeader and Footer
+    addHeaderFooterHeader = False,
+    
     ##
     # Whether to output HTML instead of text
     toHTML = False,
@@ -582,7 +586,7 @@ class Extractor(object):
                 out_str = out_str.encode('utf-8')
             out.write(out_str)
             out.write('\n')
-        else:
+        elif addHeaderFooter:
             if options.print_revision:
                 header = '<doc id="%s" revid="%s" url="%s" title="%s">\n' % (self.id, self.revid, url, self.title)
             else:
@@ -597,6 +601,13 @@ class Extractor(object):
                 out.write(line)
                 out.write('\n')
             out.write(footer)
+         else:
+            for line in text:
+                if out == sys.stdout:   # option -a or -o -
+                    line = line.encode('utf-8')
+                if line!="":
+                    out.write(line)
+                    out.write('\n')
 
     def extract(self, out):
         """
@@ -3140,6 +3151,8 @@ def main():
                         help="preserve links")
     groupP.add_argument("-s", "--sections", action="store_true",
                         help="preserve sections")
+    groupP.add_argument("--addHeaderFooter", action="store_true",
+                        help="adds header and footer to each article")
     groupP.add_argument("--noLineAfterHeader", action="store_true",
                         help="does not add line below heading")
     groupP.add_argument("--lists", action="store_true",
