@@ -17,7 +17,7 @@
 #   orangain (orangain@gmail.com)
 #   Seth Cleveland (scleveland@turnitin.com)
 #   Bren Barn
-#
+#   HjalmarrSv
 # =============================================================================
 #  Copyright (c) 2011-2017. Giuseppe Attardi (attardi@di.unipi.it).
 # =============================================================================
@@ -154,6 +154,10 @@ options = SimpleNamespace(
     ##
     # Whether to preserve lists
     keepLists = False,
+    
+    ##
+    # Whether to add an empty line after header
+    noLineAfterHeader = False,
 
     ##
     # Whether to output HTML instead of text
@@ -604,7 +608,11 @@ class Extractor(object):
         if options.toHTML:
             title_str = '<h1>' + self.title + '</h1>'
         else:
-            title_str = self.title + '\n'
+            if options.noLineAfterHeader:
+                title_str = self.title        
+            else:
+                title_str = self.title + '\n'
+        #Above added by HjalmarrSv
         # https://www.mediawiki.org/wiki/Help:Magic_words
         colon = self.title.find(':')
         if colon != -1:
@@ -3133,6 +3141,8 @@ def main():
                         help="preserve links")
     groupP.add_argument("-s", "--sections", action="store_true",
                         help="preserve sections")
+    groupP.add_argument("-s", "--noLineAfterHeader", action="store_true",
+                        help="does not add line below heading")
     groupP.add_argument("--lists", action="store_true",
                         help="preserve lists")
     groupP.add_argument("-ns", "--namespaces", default="", metavar="ns1,ns2",
