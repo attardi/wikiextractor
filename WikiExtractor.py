@@ -607,21 +607,21 @@ class Extractor(object):
                 if out == sys.stdout:   # option -a or -o -
                     line = line.encode('utf-8')
                 if options.spacefree:
-                    if line != "":
-                        out.write(line)
-                        out.write('\n')
+                    if line != "" and line != " ": #Remove empty lines and lines with one space that occur frequently.
+                        out.write(line)           #Maybe they should not be produced to begin with.
+                        out.write('\n')           #One space lines may come from both empty articles and empty titles.
                 else:
                     out.write(line)
                     out.write('\n')                        
             out.write(footer)
-            if options.spacefree:
+            if options.spacefree:   #For separating articles when all empty lines removed with --spacefree.
                 out.write('\n')             
         else:
             for line in text:
                 if out == sys.stdout:   # option -a or -o -
                     line = line.encode('utf-8')
                 if options.spacefree:
-                    if line != "":
+                    if line != "" and line != " ":
                         out.write(line)
                         out.write('\n')
                 else:
