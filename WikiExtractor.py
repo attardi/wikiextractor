@@ -164,8 +164,8 @@ options = SimpleNamespace(
     headersfooters = False,
     
     ##
-    # Whether to add aHeader and Footer
-    spacefree = False,
+    # Suppress repeated empty output lines
+    squeeze_blank = False,
     
     ##
     # Whether to add aHeader and Footer
@@ -606,7 +606,7 @@ class Extractor(object):
             for line in text:
                 if out == sys.stdout:   # option -a or -o -
                     line = line.encode('utf-8')
-                if options.spacefree:
+                if options.squeeze_blank:
                     if line != "" and line != " ": #Remove empty lines and lines with one space that occur frequently.
                         out.write(line)           #Maybe they should not be produced to begin with.
                         out.write('\n')           #One space lines may come from both empty articles and empty titles.
@@ -614,20 +614,20 @@ class Extractor(object):
                     out.write(line)
                     out.write('\n')                        
             out.write(footer)
-            if options.spacefree:   #For separating articles when all empty lines removed with --spacefree.
+            if options.squeeze_blank:   #For separating articles when all empty lines removed with --squeeze-blank.
                 out.write('\n')             
         else:
             for line in text:
                 if out == sys.stdout:   # option -a or -o -
                     line = line.encode('utf-8')
-                if options.spacefree:
+                if options.squeeze_blank:
                     if line != "" and line != " ":
                         out.write(line)
                         out.write('\n')
                 else:
                     out.write(line)
                     out.write('\n') 
-            if options.spacefree:
+            if options.squeeze_blank:
                 out.write('\n')           
   
     def extract(self, out):
@@ -1586,6 +1586,7 @@ class MagicWords(object):
     One copy in each Extractor.
 
     @see https://doc.wikimedia.org/mediawiki-core/master/php/MagicWord_8php_source.html
+    https://doc.wikimedia.org/mediawiki-core/master/php/MagicWordFactory_8php_source.html #added 191220
     """
     names = [
         '!',
@@ -1663,6 +1664,7 @@ class MagicWords(object):
         'localtimestamp',
         'directionmark',
         'contentlanguage',
+        'pagelanguage',   #added 191220
         'numberofadmins',
         'cascadingsources',
     ]
@@ -3179,8 +3181,8 @@ def main():
                         help="does not add line below heading")
     groupP.add_argument("--titlefree", action="store_true",
                         help="no titles on articles")
-    groupP.add_argument("--spacefree", action="store_true",
-                        help="minimize empty lines")
+    groupP.add_argument("--squeeze_blank", "--squeeze-blank", action="store_true",
+                        help="suppress repeated empty output lines")
 
     groupP.add_argument("--lists", action="store_true",
                         help="preserve lists")
@@ -3236,7 +3238,7 @@ def main():
     options.noLineAfterHeader = args.noLineAfterHeader
     options.headersfooters = args.headersfooters
     options.titlefree = args.titlefree
-    options.spacefree = args.spacefree
+    options.squeeze_blank = args.squeeze-blank
         
     options.expand_templates = args.no_templates
     options.filter_disambig_pages = args.filter_disambig_pages
