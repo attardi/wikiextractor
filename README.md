@@ -134,7 +134,7 @@ python3 WikiExtractor.py -o wiki/test --noLineAfterHeader --squeeze-blank wiki/w
                             (default=False)
       --titlefree           No titles on articles
                             (default=False)
-      --spacefree           Minimize empty lines, that is, only empty lines are before/after title.
+      --squeeze-blank       Minimize empty lines, that is, only empty lines are before/after title.
                             (default=False)
 
     Special:
