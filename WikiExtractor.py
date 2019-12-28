@@ -3179,7 +3179,7 @@ def main():
                         help="adds header and footer to each article")
     groupP.add_argument("--noLineAfterHeader", action="store_true",
                         help="does not add line below heading")
-    groupP.add_argument("--titlefree", action="store_true",
+    groupP.add_argument("--no-title", "--titlefree", action="store_true",
                         help="no titles on articles")
     groupP.add_argument("--squeeze_blank", "--squeeze-blank", action="store_true",
                         help="suppress repeated empty output lines")
