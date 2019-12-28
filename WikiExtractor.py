@@ -168,7 +168,7 @@ options = SimpleNamespace(
     squeeze_blank = False,
     
     ##
-    # Whether to add aHeader and Footer
+    # Whether to have a title on articles
     titlefree = False,
     
     ##
@@ -3179,7 +3179,7 @@ def main():
                         help="adds header and footer to each article")
     groupP.add_argument("--noLineAfterHeader", action="store_true",
                         help="does not add line below heading")
-    groupP.add_argument("--no-title", "--titlefree", action="store_true",
+    groupP.add_argument("-no-title", "--titlefree", action="store_true",
                         help="no titles on articles")
     groupP.add_argument("--squeeze_blank", "--squeeze-blank", action="store_true",
                         help="suppress repeated empty output lines")
@@ -3238,7 +3238,7 @@ def main():
     options.noLineAfterHeader = args.noLineAfterHeader
     options.headersfooters = args.headersfooters
     options.titlefree = args.titlefree
-    options.squeeze_blank = args.squeeze-blank
+    options.squeeze_blank = args.squeeze_blank
         
     options.expand_templates = args.no_templates
     options.filter_disambig_pages = args.filter_disambig_pages
