@@ -36,7 +36,7 @@ Each file will contains several documents in this [document format](http://media
 usage:  WikiExtractor.py 
                             [-h] [-o OUTPUT] [-b n[KMG]] [-c] [--json] [--html]
                             [-l] [-s] [--headersfooters] [--noLineAfterHeader]
-                            [--titlefree] [--squeeze-blank] [--lists] [-ns ns1,ns2]
+                            [--titlefree | --no-title] [--squeeze-blank] [--lists] [-ns ns1,ns2]
                             [--templates TEMPLATES] [--no_templates] [-r]
                             [--min_text_length MIN_TEXT_LENGTH]
                             [--filter_disambig_pages] [-it abbr,b,big]
