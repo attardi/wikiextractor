@@ -1682,11 +1682,12 @@ class MagicWords(object):
         '__NOTOC__',
         '__FORCETOC__',
         '__TOC__',
-        '__TOC__',
+        '__NOEDITSECTION__', #added 191229
         '__NEWSECTIONLINK__',
         '__NONEWSECTIONLINK__',
         '__NOGALLERY__',
         '__HIDDENCAT__',
+        '__EXPECTUNUSEDCATEGORY__', #added 191229        
         '__NOCONTENTCONVERT__',
         '__NOCC__',
         '__NOTITLECONVERT__',
