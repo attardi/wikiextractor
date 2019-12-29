@@ -54,7 +54,7 @@ python3 WikiExtractor.py -o wiki/test --titlefree --squeeze-blank wiki/wiki-2019
 
 python3 WikiExtractor.py -o wiki/test --noLineAfterHeader --squeeze-blank wiki/wiki-20191101-pages-articles.xml
 
-After running the extractor there may be a need for cleaning the output. In linux you may use any of the following examples. Please copy all the files to a safe place first. ANY ERROR IN THE CODE WILL DESTROY YOUR TEXT. You can be sure your text will be destroyed many times before you find the right cleaning scripts.
+After running the extractor there may be a need for cleaning the output. In linux you may use any of the following examples. Please copy all the files to a safe place first. ANY ERROR IN THE CODE WILL DESTROY YOUR TEXT. You can be sure your text will be destroyed many times before you find the right cleaning scripts.<br>
 left trim on one file: sed -i 's/^[ ]*//g' YOURTEXT
 right trim on one file: sed -i 's/[ ]*$//g' YOURTEXT
 If you want to work many files at a time use (do NOT have any othe files in the folder or subfolders):
