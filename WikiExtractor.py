@@ -1585,8 +1585,9 @@ class MagicWords(object):
     """
     One copy in each Extractor.
 
-    @see https://doc.wikimedia.org/mediawiki-core/master/php/MagicWord_8php_source.html
-    https://doc.wikimedia.org/mediawiki-core/master/php/MagicWordFactory_8php_source.html #added 191220
+    @see https://doc.wikimedia.org/mediawiki-core/master/php/MagicWord_8php_source.html - invalid old link
+    https://doc.wikimedia.org/mediawiki-core/master/php/MagicWordFactory_8php_source.html
+    https://www.mediawiki.org/wiki/Manual:Magic_words
     """
     names = [
         '!',
@@ -1677,7 +1678,7 @@ class MagicWords(object):
 
     def __setitem__(self, name, value):
         self.values[name] = value
-
+    # https://www.mediawiki.org/wiki/Help:Magic_words#Behavior_switches
     switches = (
         '__NOTOC__',
         '__FORCETOC__',
