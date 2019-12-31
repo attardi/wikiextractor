@@ -3041,7 +3041,7 @@ def process_dump(input_file, template_file, out_file, file_size, file_compress,
     extract_rate = page_num / extract_duration
     logging.info("Finished %d-process extraction of %d articles in %.1fs (%.1f art/s)",
                  process_count, page_num, extract_duration, extract_rate)
-    logging.info("total of page: %d, total of articl page: %d; total of used articl page: %d" % (g_page_total, g_page_articl_total,g_page_articl_used_total))
+    logging.info("total of pages: %d, total of article pages: %d; total of used article pages: %d" % (g_page_total, g_page_articl_total,g_page_articl_used_total))
 
 
 # ----------------------------------------------------------------------
