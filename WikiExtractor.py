@@ -3293,7 +3293,7 @@ def main():
         options.headersfooters = False
         options.titlefree = True
         options.point_separated = True
-        # not needed as true for text: options.blank_line_between_docs = True
+        options.squeeze_blank = True  #Here it actually adds an empty line between articles. Otherwise it is not needed.
         options.remove_html_tags = True
         options.remove_special_tokens = True
     
