@@ -54,15 +54,17 @@ python3 WikiExtractor.py -o wiki/test --titlefree --squeeze-blank wiki/wiki-2019
 
 python3 WikiExtractor.py -o wiki/test --noLineAfterHeader --squeeze-blank wiki/wiki-20191101-pages-articles.xml
 
+python3 WikiExtractor.py -o wiki/test --for-bert wiki/wiki-20191101-pages-articles.xml
+
 After running the extractor there may be a need for cleaning the output. In linux you may use any of the following examples. Please copy all the files to a safe place first. ANY ERROR IN THE CODE WILL DESTROY YOUR TEXT. You can be sure your text will be destroyed many times before you find the right cleaning scripts.<br>
 left trim on one file: sed -i 's/^[ ]*//g' YOURTEXT<br>
 right trim on one file: sed -i 's/[ ]*$//g' YOURTEXT<br>
 If you want to work many files at a time use (do NOT have any othe files in the folder or subfolders):<br>
 left trim on all files in folder or subfolder: find wiki/* -type f -exec sed -i 's/^[ ]*//g' {} \;<br>
-right trim on all files in folder or subfolderfind wiki/* -type f -exec sed -i 's/[ ]*$//g' {} \;<br>
+right trim on all files in folder or subfolder: find wiki/* -type f -exec sed -i 's/[ ]*$//g' {} \;<br>
 remove a line that starts with < and ends with > on all files in folder or subfolderfind wiki/* -type f -exec sed -E -i '/^<[^<]*>$/d' {} \;<br>
 remove a line that starts with ( and ends with ) on all files in folder or subfolderfind wiki/* -type f -exec sed -E -i '/^[(][^(]*[)]$/d' {} \;<br>
-Search Internet for variations and how to use with other operating systems.
+Search Internet for variations and how to use with other operating systems. One variation would be to remove option "-i" and write changes to new files, instead of -i[nline] - although not very useful if you do more than one cleaning operation.
 
 
     Wikipedia Extractor:
