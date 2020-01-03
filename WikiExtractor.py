@@ -17,7 +17,7 @@
 #   orangain (orangain@gmail.com)
 #   Seth Cleveland (scleveland@turnitin.com)
 #   Bren Barn
-#   HjalmarrSv
+#   HjalmarrSv [Thanks to: josecannete for wikiextractorforBERT]
 # =============================================================================
 #  Copyright (c) 2011-2017. Giuseppe Attardi (attardi@di.unipi.it).
 # =============================================================================
@@ -172,6 +172,14 @@ options = SimpleNamespace(
     titlefree = False,
     
     ##
+    ## Point separated
+    point_separated = False,
+    
+    ##
+    ## Remove tags like '<*>'
+    remove_html_tags = False,
+    
+    ##
     # Whether to output HTML instead of text
     toHTML = False,
 
@@ -298,6 +306,15 @@ selfClosingTags = ('br', 'hr', 'nobr', 'ref', 'references', 'nowiki')
 
 placeholder_tags = {'math': 'formula', 'code': 'codice'}
 
+tag_re = re.compile(r'<[^>]+>')
+
+special_token_re = re.compile(r'__\S+__')
+
+def remove_tags(text):
+    return tag_re.sub('', text)
+
+def remove_special_tokens(text):
+    return special_token_re.sub('', text)
 
 def normalizeTitle(title):
     """Normalize title"""
@@ -688,6 +705,21 @@ class Extractor(object):
         # from zwChan
         if not options.titlefree:
             text = [title_str] + text
+                
+        if options.remove_html_tags:
+            text = [remove_tags(line) for line in text]
+
+        if options.remove_special_tokens:
+            text = [remove_special_tokens(line) for line in text]
+
+        if options.point_separated:
+            text = list(map(lambda t: t.replace('\n', '').replace('. ', '.\n').strip(), text))
+            text = list(filter(lambda t: t is not '', text))
+            text = list(filter(lambda t: t is not '\n', text))
+
+        if len(text) == 0:
+            return
+            
         if sum(len(line) for line in text) < options.min_text_length:
             return
 
@@ -3185,7 +3217,15 @@ def main():
                         help="no titles on articles")
     groupP.add_argument("--squeeze_blank", "--squeeze-blank", action="store_true",
                         help="suppress repeated empty output lines")
-
+    groupP.add_argument("--for-bert", action="store_true",
+                        help="ready for bert pre-training")
+    groupP.add_argument("--remove-special-tokens", action="store_true",
+                        help="to remove every special token ie: between '__*__'")
+    groupP.add_argument("--remove-html-tags", action="store_true",
+                        help="to remove every html tag ie: between '<*/>'")
+    groupP.add_argument("--point-separated", action="store_true",
+                        help="every line is separated")
+    
     groupP.add_argument("--lists", action="store_true",
                         help="preserve lists")
     groupP.add_argument("-ns", "--namespaces", default="", metavar="ns1,ns2",
@@ -3241,11 +3281,22 @@ def main():
     options.headersfooters = args.headersfooters
     options.titlefree = args.titlefree
     options.squeeze_blank = args.squeeze_blank
-        
+    options.point_separated = args.point_separated
+    options.remove_html_tags = args.remove_html_tags
+    options.remove_special_tokens = args.remove_special_tokens
+
     options.expand_templates = args.no_templates
     options.filter_disambig_pages = args.filter_disambig_pages
     options.keep_tables = args.keep_tables
 
+    if args.for_bert:
+        options.headersfooters = False
+        options.titlefree = True
+        options.point_separated = True
+        # not needed as true for text: options.blank_line_between_docs = True
+        options.remove_html_tags = True
+        options.remove_special_tokens = True
+    
     try:
         power = 'kmg'.find(args.bytes[-1].lower()) + 1
         file_size = int(args.bytes[:-1]) * 1024 ** power
