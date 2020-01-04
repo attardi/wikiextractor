@@ -2830,7 +2830,8 @@ class OutputSplitter(object):
 
 tagRE = re.compile(r'(.*?)<(/?\w+)[^>]*?>(?:([^<]*)(<.*?>)?)?')
 #                    1     2               3      4
-keyRE = re.compile(r'key="(\d*)"')
+#keyRE = re.compile(r'key="(\d*)"')
+keyRE = re.compile(r'key="([+-]?)(\d*)"') # karlstratos committed on Mar 17, 2018, Augmented key regex to catch plus/minus signs.
 catRE = re.compile(r'\[\[Category:([^\|]+).*\]\].*')  # capture the category name [[Category:Category name|Sortkey]]"
 
 def load_templates(file, output_file=None):
