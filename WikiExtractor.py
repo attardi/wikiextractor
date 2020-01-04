@@ -2218,8 +2218,25 @@ def replaceInternalLinks(text):
             label = inner[pipe + 1:].strip()
         res += text[cur:s] + makeInternalLink(title, label) + trail
         cur = end
-    return res + text[cur:]
-
+    #return res + text[cur:]
+    # BUGFIX:(teffland) - 2/14/19
+    # If we've run out of balanced [[ ]] but there is still
+    # a [[ in the text, then there was an imbalanced link
+    # (typically due to a typo in the ]]) and we remove everything in the
+    # that link by removing everything between it and two ']'s away
+    # then restart the process
+    # Empirically this fixes a lot of broken pages.
+    text = res + text[cur:]
+    broken_link = text.find('[[')
+    if broken_link > -1:
+        right = text[broken_link+2:].find(']')
+        if right > -1:
+            right += text[broken_link+right+2:].find(']')
+            if right > -1:
+                text = text[:broken_link] + text[broken_link+right+2:]
+                return replaceInternalLinks(text)
+    else:
+        return text
 
 # the official version is a method in class Parser, similar to this:
 # def replaceInternalLinks2(text):
