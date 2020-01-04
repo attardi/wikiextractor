@@ -73,7 +73,7 @@ remove a line that starts with < and ends with > on all files in folder or subfo
 remove a line that starts with ( and ends with ) on all files in folder or subfolderfind wiki/* -type f -exec sed -E -i '/^[(][^(]*[)]$/d' {} \;<br>
 Search Internet for variations and how to use with other operating systems. One variation would be to remove option "-i" and write changes to new files, instead of -i[nline] - although not very useful if you do more than one cleaning operation.
 
-For those use cases where only on large file is needed, in linux use: cat --squeeze-blank wiki/*/* > wiki/wiki.txt
+For those use cases where only on large file is needed, in linux use: cat --squeeze-blank wiki/\*/\* > wiki/wiki.txt
 
 
     Wikipedia Extractor:
