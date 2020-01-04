@@ -702,7 +702,7 @@ class Extractor(object):
         text = self.transform(text)
         text = self.wiki2text(text)
         text = compact(self.clean(text))
-        # from zwChan
+        # from zwChan ed. by HjalmarrSv
         if not options.titlefree:
             text = [title_str] + text
                 
@@ -1338,6 +1338,7 @@ def findMatchingBraces(text, ldelim=0):
                 elif len(stack) == 1 and 0 < stack[0] < ldelim:
                     # ambiguous {{{{{ }}} }}
                     #yield m1.start() + stack[0], end
+                    yield m1.start() + stack[0], end # Modified by Chao to solve Template expansion works well in an old version #197
                     cur = end
                     break
             elif brac == '[':  # [[
@@ -1940,7 +1941,8 @@ def sharp_invoke(module, function, args):
     if functions:
         funct = functions.get(function)
         if funct:
-            return text_type(funct(args))
+            return funct(*[args.get(str(i + 1)) for i in range(len(args))]) # Modified by Chao for fixing Template expansion works well in an old version #197
+            #return text_type(funct(args))
     return ''
 
 
