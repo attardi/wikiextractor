@@ -17,7 +17,9 @@
 #   orangain (orangain@gmail.com)
 #   Seth Cleveland (scleveland@turnitin.com)
 #   Bren Barn
-#   HjalmarrSv [Thanks to: josecannete for wikiextractorforBERT]
+#   HjalmarrSv [Thanks to: josecannete for wikiextractorforBERT,
+#               drgriffis for options.restrict_pages_to,
+#
 # =============================================================================
 #  Copyright (c) 2011-2017. Giuseppe Attardi (attardi@di.unipi.it).
 # =============================================================================
@@ -172,8 +174,12 @@ options = SimpleNamespace(
     titlefree = False,
     
     ##
-    ## Point separated
+    # Point separated
     point_separated = False,
+    
+    ##
+    # List of page IDs to restrict to
+    restrict_pages_to = None,
     
     ##
     ## Remove tags like '<*>'
@@ -241,10 +247,10 @@ g_page_total = 0
 g_page_articl_total=0
 g_page_articl_used_total=0
 # page filtering logic -- remove templates, undesired xml namespaces, and disambiguation pages
-def keepPage(ns, catSet, page):
+def keepPage(ns, catSet, page, title):
     global g_page_articl_total,g_page_total,g_page_articl_used_total
     g_page_total += 1
-    if ns != '0':               # Aritcle
+    if ns != '0':               # Article
         return False
     # remove disambig pages if desired
     g_page_articl_total += 1
@@ -252,6 +258,9 @@ def keepPage(ns, catSet, page):
         for line in page:
             if filter_disambig_page_pattern.match(line):
                 return False
+    # check if filtering to specific list of pages
+    if options.restrict_pages_to and (not title in options.restrict_pages_to):
+        return False
     if len(options.filter_category_include) > 0 and len(options.filter_category_include & catSet)==0:
         logging.debug("***No include  " + str(catSet))
         return False
@@ -260,6 +269,16 @@ def keepPage(ns, catSet, page):
         return False
     g_page_articl_used_total += 1
     return True
+
+
+def readRestrictedPageIDSet(f):
+    id_set = set()
+    with codecs.open(f, 'r', 'utf-8') as stream:
+        for line in stream:
+            id_set.add(line.strip().replace('_', ' '))
+    return id_set
+
+
 
 
 def get_url(uid):
@@ -3078,7 +3097,7 @@ def process_dump(input_file, template_file, out_file, file_size, file_compress,
     page_num = 0
     for page_data in pages_from(input):
         id, revid, title, ns, catSet, page = page_data
-        if keepPage(ns, catSet, page):
+        if keepPage(ns, catSet, page, title):
             # slow down
             delay = 0
             if spool_length.value > max_spool_length:
@@ -3262,6 +3281,8 @@ def main():
                         help="to remove every html tag ie: between '<*/>'")
     groupP.add_argument("--point-separated", action="store_true",
                         help="every line is separated")
+    groupP.add_argument("--restrict_pages_to", default=None,
+                        help="List of page IDs to restrict to (one per line, case-sensitive)")
     
     groupP.add_argument("--lists", action="store_true",
                         help="preserve lists")
@@ -3326,6 +3347,11 @@ def main():
     options.filter_disambig_pages = args.filter_disambig_pages
     options.keep_tables = args.keep_tables
 
+    if args.restrict_pages_to:
+        options.restrict_pages_to = readRestrictedPageIDSet(args.restrict_pages_to)
+    else:                                  #Not strictly needed since None already declared twice,
+        options.restrict_pages_to = None   #part of imported code that may be changed.
+       
     if args.for_bert:
         options.headersfooters = False
         options.titlefree = True
