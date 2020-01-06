@@ -19,6 +19,7 @@
 #   Bren Barn
 #   HjalmarrSv [Thanks to: josecannete for wikiextractorforBERT,
 #               drgriffis for options.restrict_pages_to,
+#               tutcsis for --max_articles,
 #
 # =============================================================================
 #  Copyright (c) 2011-2017. Giuseppe Attardi (attardi@di.unipi.it).
@@ -185,6 +186,10 @@ options = SimpleNamespace(
     ## Remove tags like '<*>'
     remove_html_tags = False,
     
+    ##
+    # Maximum count of articles (default 0 means unlimited)
+    max_articles = 0,
+   
     ##
     # Whether to output HTML instead of text
     toHTML = False,
@@ -3110,6 +3115,8 @@ def process_dump(input_file, template_file, out_file, file_size, file_compress,
             job = (id, revid, title, page, page_num)
             jobs_queue.put(job) # goes to any available extract_process
             page_num += 1
+            if options.max_articles and page_num >= options.max_articles: #
+                break                                                     # any need to cleanup before break?
         page = None             # free memory
 
     input.close()
@@ -3283,6 +3290,8 @@ def main():
                         help="every line is separated")
     groupP.add_argument("--restrict_pages_to", default=None,
                         help="List of page IDs to restrict to (one per line, case-sensitive)")
+    groupO.add_argument("--max_articles", type=int, default=0,
+                        help="maximum count of articles (default 0 means unlimited)")
     
     groupP.add_argument("--lists", action="store_true",
                         help="preserve lists")
@@ -3342,6 +3351,7 @@ def main():
     options.point_separated = args.point_separated
     options.remove_html_tags = args.remove_html_tags
     options.remove_special_tokens = args.remove_special_tokens
+    options.max_articles = args.max_articles
 
     options.expand_templates = args.no_templates
     options.filter_disambig_pages = args.filter_disambig_pages
