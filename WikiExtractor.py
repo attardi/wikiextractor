@@ -235,7 +235,7 @@ options = SimpleNamespace(
         'form', 'input', 'select', 'option', 'textarea',
         'ul', 'li', 'ol', 'dl', 'dt', 'dd', 'menu', 'dir',
         'ref', 'references', 'img', 'imagemap', 'source', 'small',
-        'sub', 'sup', 'indicator', ',mapframe', 'maplink'
+        'sub', 'sup', 'indicator', ',mapframe', 'maplink', 'score'
     ],
 )
 
