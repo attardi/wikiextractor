@@ -728,14 +728,16 @@ class Extractor(object):
         text = compact(self.clean(text))
         # from zwChan ed. by HjalmarrSv
         if not options.titlefree:
-            text = [title_str] + text
-                
+            text = [title_str] + text    #does add title in the text of html and json, even 
+                                         #though title in title also. use titlefree if not wanted.
         if options.remove_html_tags:
             text = [remove_tags(line) for line in text]
+            text = [line.replace('  ', ' ') for line in text] # squeezeblank only catches single space, above produces double (or moore?)
 
         if options.remove_special_tokens:
             text = [remove_special_tokens(line) for line in text]
-
+            text = [line.replace('  ', ' ') for line in text] # squeezeblank only catches single space, above produces double (or moore?)
+        
         if options.point_separated:
             text = list(map(lambda t: t.replace('\n', '').replace('. ', '.\n').strip(), text))
             text = list(filter(lambda t: t is not '', text))
@@ -2573,10 +2575,10 @@ ExtLinkBracketedRegex = re.compile(
 
 EXT_IMAGE_REGEX = re.compile(
     r"""^(http://|https://)([^][<>"\x00-\x20\x7F\s]+)
-    #/([A-Za-z0-9_.,~%\-+&;#*?!=()@\x80-\xFF]+)\.((?i)gif|png|jpg|jpeg)$""",
-    #re.X | re.S | re.U)
     /([A-Za-z0-9_.,~%\-+&;#*?!=()@\x80-\xFF]+)\.(gif|png|jpg|jpeg)$""",
     re.I | re.X | re.S | re.U)
+    #/([A-Za-z0-9_.,~%\-+&;#*?!=()@\x80-\xFF]+)\.((?i)gif|png|jpg|jpeg)$""",
+    #re.X | re.S | re.U)
 
 
 def replaceExternalLinks(text):
