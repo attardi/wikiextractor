@@ -38,7 +38,9 @@ usage: WikiExtractor.py <br>
                         [-l] [-s] [--headersfooters] [--noLineAfterHeader]<br>
                         [-no-title] [--squeeze_blank] [--for-bert]<br>
                         [--remove-special-tokens] [--remove-html-tags]<br>
-                        [--point-separated] [--lists] [-ns ns1,ns2]<br>
+                        [--point-separated]<br>
+                        [--restrict_pages_to RESTRICT_PAGES_TO]<br>
+                        [--max_articles MAX_ARTICLES] [--lists] [-ns ns1,ns2]<br>
                         [--templates TEMPLATES] [--no-templates] [-r]<br>
                         [--min_text_length MIN_TEXT_LENGTH]<br>
                         [--filter_disambig_pages] [-it abbr,b,big]<br>
@@ -62,6 +64,8 @@ python3 WikiExtractor.py -o wiki/test --filter_disambig_pages --no_templates --f
 
 python3 WikiExtractor.py -o wiki/test --filter_disambig_pages --templates templat.txt --titlefree --json --for-bert --min_text_length 100 wiki/wiki-20191101-pages-articles.xml
 
+python3 WikiExtractor.py -o wiki/test --filter_disambig_pages --templates templat.txt --squeeze-blank --titlefree --max_articles 10 --remove-html-tags --min_text_length 100 wiki/wiki-20191101-pages-articles.xml
+
 
 After running the extractor there may be a need for cleaning the output. In linux you may use any of the following examples. Please copy all the files to a safe place first. ANY ERROR IN THE CODE WILL DESTROY YOUR TEXT. You can be sure your text will be destroyed many times before you find the right cleaning scripts.<br>
 left trim on one file: sed -i 's/^[ ]*//g' YOURTEXT<br>
@@ -69,8 +73,8 @@ right trim on one file: sed -i 's/[ ]*$//g' YOURTEXT<br>
 If you want to work many files at a time use (do NOT have any othe files in the folder or subfolders):<br>
 left trim on all files in folder or subfolder: find wiki/* -type f -exec sed -i 's/^[ ]*//g' {} \;<br>
 right trim on all files in folder or subfolder: find wiki/* -type f -exec sed -i 's/[ ]*$//g' {} \;<br>
-remove a line that starts with < and ends with > on all files in folder or subfolderfind wiki/* -type f -exec sed -E -i '/^<[^<]*>$/d' {} \;<br>
-remove a line that starts with ( and ends with ) on all files in folder or subfolderfind wiki/* -type f -exec sed -E -i '/^[(][^(]*[)]$/d' {} \;<br>
+remove a line that starts with < and ends with > on all files in folder or subfolder: find wiki/* -type f -exec sed -E -i '/^<[^<]*>$/d' {} \;<br>
+remove a line that starts with ( and ends with ) on all files in folder or subfolder: find wiki/* -type f -exec sed -E -i '/^[(][^(]*[)]$/d' {} \;<br>
 Search Internet for variations and how to use with other operating systems. One variation would be to remove option "-i" and write changes to new files, instead of -i[nline] - although not very useful if you do more than one cleaning operation.
 
 For those use cases where only on large file is needed, in linux use: cat --squeeze-blank wiki/\*/\* > wiki/wiki.txt
