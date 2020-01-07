@@ -3216,7 +3216,7 @@ def extract_process(opts, i, jobs_queue, output_queue, broken_pipe_event):
 
 report_period = 10000           # progress report period
 def reduce_process(opts, output_queue, spool_length,
-                   out_file, file_size, file_compress, broken_pipe_event)):
+                   out_file, file_size, file_compress, broken_pipe_event):
     """Pull finished article text, write series of files (or stdout)
     :param opts: global parameters.
     :param output_queue: text to be output.
