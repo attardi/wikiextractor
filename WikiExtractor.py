@@ -20,6 +20,7 @@
 #   HjalmarrSv [Thanks to: josecannete for wikiextractorforBERT,
 #               drgriffis for options.restrict_pages_to,
 #               tutcsis for --max_articles,
+#               michaelsilver for html.escape,
 #
 # =============================================================================
 #  Copyright (c) 2011-2017. Giuseppe Attardi (attardi@di.unipi.it).
@@ -63,7 +64,11 @@ import sys
 import argparse
 import bz2
 import codecs
-import cgi
+import sys
+if sys.version_info < (3, 2):
+    from cgi import escape as html_escape
+else:
+    from html import escape as html_escape
 import fileinput
 import logging
 import os.path
@@ -905,7 +910,7 @@ class Extractor(object):
             text = text.replace('|-', '')
             text = text.replace('|', '')
         if options.toHTML:
-            text = cgi.escape(text)
+            text = html_escape(text, quote=False)
         return text
 
 
