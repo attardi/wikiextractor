@@ -3146,7 +3146,13 @@ def process_dump(input_file, template_file, out_file, file_size, file_compress,
     except KeyboardInterrupt:
         logging.warn("Exiting due interrupt")
 
-    # wait for workers to terminate
+    # signal termination, either catch the pipe error on ctrl C or recode
+    for _ in workers:
+        jobs_queue.put(None)        
+        
+    # wait for workers to terminate, this alone leaves all processes as zombies, above is needed
+    # it may still leave a couple of zombie processes even with tha above code - fix this
+    # https://docs.python.org/3/library/multiprocessing.html
     for w in workers:
         w.join()
 
