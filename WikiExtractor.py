@@ -195,6 +195,10 @@ options = SimpleNamespace(
     ##
     # Maximum count of articles (default 0 means unlimited)
     max_articles = 0,
+    
+    ##
+    # More information from program
+    verbose = False,
    
     ##
     # Whether to output HTML instead of text
@@ -332,7 +336,7 @@ def get_url(uid):
 
 # ------------------------------------------------------------------------------
 
-selfClosingTags = ('br', 'hr', 'nobr', 'ref', 'references', 'nowiki')
+selfClosingTags = ('BR', ''br', 'hr', 'nobr', 'ref', 'references', 'nowiki') # BR may not be needed
 
 placeholder_tags = {'math': 'formula', 'code': 'codice'}
 
@@ -3342,6 +3346,8 @@ def main():
                         help="List of page IDs to restrict to (one per line, case-sensitive)")
     groupO.add_argument("--max_articles", type=int, default=0,
                         help="maximum count of articles (default 0 means unlimited)")
+    groupO.add_argument("--verbose", action="store_true",
+                        help="display extended information")   
     
     groupP.add_argument("--lists", action="store_true",
                         help="preserve lists")
@@ -3402,6 +3408,7 @@ def main():
     options.remove_html_tags = args.remove_html_tags
     options.remove_special_tokens = args.remove_special_tokens
     options.max_articles = args.max_articles
+    options.verbose = args.verbose
 
     options.expand_templates = args.no_templates
     options.filter_disambig_pages = args.filter_disambig_pages
@@ -3442,6 +3449,8 @@ def main():
             'p', 'plaintext', 's', 'span', 'strike', 'strong',
             'tt', 'u', 'var'
         ]
+    if args.verbose:
+        print("ignored tags = ", ignoredTags)
 
     # 'a' tag is handled separately
     for tag in ignoredTags:
@@ -3449,6 +3458,9 @@ def main():
 
     if args.discard_elements:
         options.discardElements = set(args.discard_elements.split(','))
+    
+    if args.verbose:
+        print("discard elements = ", options.discardElements)
 
     FORMAT = '%(levelname)s: %(message)s'
     logging.basicConfig(format=FORMAT)
