@@ -40,9 +40,9 @@ usage: WikiExtractor.py <br>
                         [--remove-special-tokens] [--remove-html-tags]<br>
                         [--point-separated]<br>
                         [--restrict_pages_to RESTRICT_PAGES_TO]<br>
-                        [--max_articles MAX_ARTICLES] [--lists] [-ns ns1,ns2]<br>
-                        [--templates TEMPLATES] [--no-templates] [-r]<br>
-                        [--min_text_length MIN_TEXT_LENGTH]<br>
+                        [--max_articles MAX_ARTICLES] [--verbose] [--lists]<br>
+                        [-ns ns1,ns2] [--templates TEMPLATES] [--no-templates]<br>
+                        [-r] [--min_text_length MIN_TEXT_LENGTH]<br>
                         [--filter_disambig_pages] [-it abbr,b,big]<br>
                         [-de gallery,timeline,noinclude] [--keep_tables]<br>
                         [--processes PROCESSES] [-q] [--debug] [-a]<br>
@@ -50,23 +50,28 @@ usage: WikiExtractor.py <br>
                         [--filter_category FILTER_CATEGORY]<br>
                         input
 
-Examples (tested for "correct" output):
+## Examples (tested for "correct" output)
 
-python3 WikiExtractor.py -o wiki/test --headersfooters --titlefree --squeeze-blank wiki/wiki-20191101-pages-articles.xml
+## Debug and testing (short and fast):
+python3 WikiExtractor.py -o wiki/test --templates templat.txt --max_articles 10 --verbose wiki/wiki-20191101-pages-articles.xml
 
-python3 WikiExtractor.py -o wiki/test --titlefree --squeeze-blank wiki/wiki-20191101-pages-articles.xml
-
-python3 WikiExtractor.py -o wiki/test --noLineAfterHeader --squeeze-blank wiki/wiki-20191101-pages-articles.xml
-
-python3 WikiExtractor.py -o wiki/test --for-bert wiki/wiki-20191101-pages-articles.xml
-
-python3 WikiExtractor.py -o wiki/test --filter_disambig_pages --no_templates --for-bert --min_text_length 100 wiki/wiki-20191101-pages-articles.xml
-
+## JSON (most extracted information):
+python3 WikiExtractor.py -o wiki/test --filter_disambig_pages --templates templat.txt --titlefree --json --min_text_length 100 wiki/wiki-20191101-pages-articles.xml
 python3 WikiExtractor.py -o wiki/test --filter_disambig_pages --templates templat.txt --titlefree --json --for-bert --min_text_length 100 wiki/wiki-20191101-pages-articles.xml
 
+## Text only with "extra cleaning" (change --min_text_length to suit your use cases):
+python3 WikiExtractor.py -o wiki/test --filter_disambig_pages --no_templates --for-bert --min_text_length 100 wiki/wiki-20191101-pages-articles.xml
+
+## Other combinations:
+python3 WikiExtractor.py -o wiki/test --headersfooters --titlefree --squeeze-blank wiki/wiki-20191101-pages-articles.xml
+python3 WikiExtractor.py -o wiki/test --titlefree --squeeze-blank wiki/wiki-20191101-pages-articles.xml
+python3 WikiExtractor.py -o wiki/test --noLineAfterHeader --squeeze-blank wiki/wiki-20191101-pages-articles.xml
+python3 WikiExtractor.py -o wiki/test --for-bert wiki/wiki-20191101-pages-articles.xml
+python3 WikiExtractor.py -o wiki/test --filter_disambig_pages --no_templates --for-bert --min_text_length 100 wiki/wiki-20191101-pages-articles.xml
+python3 WikiExtractor.py -o wiki/test --filter_disambig_pages --templates templat.txt --titlefree --json --for-bert --min_text_length 100 wiki/wiki-20191101-pages-articles.xml
 python3 WikiExtractor.py -o wiki/test --filter_disambig_pages --templates templat.txt --squeeze-blank --titlefree --max_articles 10 --remove-html-tags --min_text_length 100 wiki/wiki-20191101-pages-articles.xml
 
-
+## Postprocessing
 After running the extractor there may be a need for cleaning the output. In linux you may use any of the following examples. Please copy all the files to a safe place first. ANY ERROR IN THE CODE WILL DESTROY YOUR TEXT. You can be sure your text will be destroyed many times before you find the right cleaning scripts.<br>
 left trim on one file: sed -i 's/^[ ]*//g' YOURTEXT<br>
 right trim on one file: sed -i 's/[ ]*$//g' YOURTEXT<br>
@@ -78,6 +83,7 @@ remove a line that starts with ( and ends with ) on all files in folder or subfo
 Search Internet for variations and how to use with other operating systems. One variation would be to remove option "-i" and write changes to new files, instead of -i[nline] - although not very useful if you do more than one cleaning operation.
 
 For those use cases where only on large file is needed, in linux use: cat --squeeze-blank wiki/\*/\* > wiki/wiki.txt
+
 
 
     Wikipedia Extractor:
