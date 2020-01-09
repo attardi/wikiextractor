@@ -50,13 +50,13 @@ usage: WikiExtractor.py <br>
                         [--filter_category FILTER_CATEGORY]<br>
                         input
 
-# Examples (tested for "correct" output)
+## Examples (tested for "correct" output)
 ## Debug and testing (short and fast):
 python3 WikiExtractor.py -o wiki/test --templates templat.txt --max_articles 10 --verbose wiki/wiki-20191101-pages-articles.xml
 
 ## JSON (most extracted information):
 python3 WikiExtractor.py -o wiki/test --filter_disambig_pages --templates templat.txt --titlefree --json --min_text_length 100 wiki/wiki-20191101-pages-articles.xml<br>
-python3 WikiExtractor.py -o wiki/test --filter_disambig_pages --templates templat.txt --titlefree --json --for-bert --min_text_length 100 wiki/wiki-20191101-pages-articles.xml
+python3 WikiExtractor.py -o wiki/test --filter_disambig_pages --templates templat.txt --json --for-bert --min_text_length 100 wiki/wiki-20191101-pages-articles.xml
 
 ## Text only with "extra cleaning" (change --min_text_length to suit your use cases):
 python3 WikiExtractor.py -o wiki/test --filter_disambig_pages --no_templates --remove-html-tags --remove-special-tokens --min_text_length 100 wiki/wiki-20191101-pages-articles.xml
