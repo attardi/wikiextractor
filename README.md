@@ -24,9 +24,9 @@ In order to speed up processing:
 
 ## Installation
 
-The script may be invoked directly, however it can be installed by doing:
+Currently no installation. The script may be invoked directly. <i>However it can be installed by doing:
 
-    (sudo) python setup.py install
+    (sudo) python setup.py install</i>
 
 ## Usage
 The script is invoked with a Wikipedia dump file as an argument.
@@ -51,17 +51,17 @@ usage: WikiExtractor.py <br>
                         input
 
 ## Examples (tested for "correct" output)
-## Debug and testing (short and fast):
+<b>Debug and testing (short and fast):</b>
 python3 WikiExtractor.py -o wiki/test --templates templat.txt --max_articles 10 --verbose wiki/wiki-20191101-pages-articles.xml
 
-## JSON (most extracted information):
+<b>JSON (most extracted information):</b>
 python3 WikiExtractor.py -o wiki/test --filter_disambig_pages --templates templat.txt --titlefree --json --min_text_length 100 wiki/wiki-20191101-pages-articles.xml<br>
 python3 WikiExtractor.py -o wiki/test --filter_disambig_pages --templates templat.txt --json --for-bert --min_text_length 100 wiki/wiki-20191101-pages-articles.xml
 
-## Text only with "extra cleaning" (change --min_text_length to suit your use cases):
+<b>Text only with "extra cleaning" (change --min_text_length to suit your use cases):</b>
 python3 WikiExtractor.py -o wiki/test --filter_disambig_pages --no_templates --remove-html-tags --remove-special-tokens --min_text_length 100 wiki/wiki-20191101-pages-articles.xml
 
-## Other combinations:
+<b>Other combinations:</b>
 python3 WikiExtractor.py -o wiki/test --headersfooters --titlefree --squeeze-blank wiki/wiki-20191101-pages-articles.xml<br>
 python3 WikiExtractor.py -o wiki/test --titlefree --squeeze-blank wiki/wiki-20191101-pages-articles.xml<br>
 python3 WikiExtractor.py -o wiki/test --noLineAfterHeader --squeeze-blank wiki/wiki-20191101-pages-articles.xml<br>
@@ -70,7 +70,7 @@ python3 WikiExtractor.py -o wiki/test --filter_disambig_pages --no_templates --f
 python3 WikiExtractor.py -o wiki/test --filter_disambig_pages --templates templat.txt --titlefree --json --for-bert --min_text_length 100 wiki/wiki-20191101-pages-articles.xml<br>
 python3 WikiExtractor.py -o wiki/test --filter_disambig_pages --templates templat.txt --squeeze-blank --titlefree --max_articles 10 --remove-html-tags --min_text_length 100 wiki/wiki-20191101-pages-articles.xml<br>
 
-## Postprocessing
+<b>Postprocessing</b>
 After running the extractor there may be a need for cleaning the output. In linux you may use any of the following examples. Please copy all the files to a safe place first. ANY ERROR IN THE CODE WILL DESTROY YOUR TEXT. You can be sure your text will be destroyed many times before you find the right cleaning scripts.<br>
 left trim on one file: sed -i 's/^[ ]*//g' YOURTEXT<br>
 right trim on one file: sed -i 's/[ ]*$//g' YOURTEXT<br>
