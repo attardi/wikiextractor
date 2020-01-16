@@ -77,6 +77,7 @@ import os.path
 import re  # TODO use regex when it will be standard
 import time
 import json
+from collections import defaultdict
 import queue
 from io import StringIO
 from multiprocessing import Event, Queue, Process, Value, cpu_count
@@ -209,6 +210,10 @@ options = SimpleNamespace(
     ##
     # Whether only parse out templates and no extraction
     templates_only = False,    
+    
+    ##
+    # 
+    raw = False,
    
     ##
     # Whether to output HTML instead of text
@@ -3392,9 +3397,9 @@ def main():
                         help="display extended information")   
     groupP.add_argument("--templates_only", action="store_true",
                         help="only generates or loads templates file, no extraction.")
-    groupS.add_argument("--raw", action="store_true", default=False,
+    groupP.add_argument("--raw", action="store_true",
                         help="parse raw media wiki for debug")
-    groupS.add_argument("--abstract_only", action="store_true", default=False,
+    groupP.add_argument("--abstract_only", action="store_true",
                         help="output text only abstract content")
     
     groupP.add_argument("--lists", action="store_true",
@@ -3459,6 +3464,7 @@ def main():
     options.verbose = args.verbose
     options.templates_only = args.templates_only
     options.abstract_only = args.abstract_only
+    options.raw = args.raw
 
     options.expand_templates = args.no_templates
     options.filter_disambig_pages = args.filter_disambig_pages
@@ -3525,7 +3531,7 @@ def main():
     if not options.keepLinks:
         ignoreTag('a')
         
-    if args.raw:
+    if options.raw:
         file = fileinput.FileInput(input_file, openhook=fileinput.hook_compressed)
         Extractor(0, 0, "raw", file).extract(open("raw.json", "w"))
         return
