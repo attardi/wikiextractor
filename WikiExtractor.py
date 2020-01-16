@@ -22,6 +22,7 @@
 #               tutcsis for --max_articles,
 #               michaelsilver for html.escape,
 #               Xiao Ling for templates_only and dropNested ref tags
+#               shimabukuro for --raw and --abstract_only
 #
 # =============================================================================
 #  Copyright (c) 2011-2017. Giuseppe Attardi (attardi@di.unipi.it).
@@ -200,6 +201,10 @@ options = SimpleNamespace(
     ##
     # More information from program
     verbose = False,
+    
+    ##
+    # Output only abstract 
+    abstract_only = False,
     
     ##
     # Whether only parse out templates and no extraction
@@ -742,6 +747,8 @@ class Extractor(object):
         # $dom = $this->preprocessToDom( $text, $flag );
         # $text = $frame->expand( $dom );
         #
+        if options.abstract_only:
+            text = text.split('==')[0]
         text = self.transform(text)
         text = self.wiki2text(text)
         text = compact(self.clean(text))
@@ -3385,6 +3392,10 @@ def main():
                         help="display extended information")   
     groupP.add_argument("--templates_only", action="store_true",
                         help="only generates or loads templates file, no extraction.")
+    groupS.add_argument("--raw", action="store_true", default=False,
+                        help="parse raw media wiki for debug")
+    groupS.add_argument("--abstract_only", action="store_true", default=False,
+                        help="output text only abstract content")
     
     groupP.add_argument("--lists", action="store_true",
                         help="preserve lists")
@@ -3447,6 +3458,7 @@ def main():
     options.max_articles = args.max_articles
     options.verbose = args.verbose
     options.templates_only = args.templates_only
+    options.abstract_only = args.abstract_only
 
     options.expand_templates = args.no_templates
     options.filter_disambig_pages = args.filter_disambig_pages
@@ -3512,6 +3524,12 @@ def main():
 
     if not options.keepLinks:
         ignoreTag('a')
+        
+    if args.raw:
+        file = fileinput.FileInput(input_file, openhook=fileinput.hook_compressed)
+        Extractor(0, 0, "raw", file).extract(open("raw.json", "w"))
+        return
+
 
     # sharing cache of parser templates is too slow:
     # manager = Manager()
