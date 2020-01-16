@@ -24,9 +24,7 @@ In order to speed up processing:
 
 ## Installation
 
-Currently no installation. The script may be invoked directly. <i>However it can be installed by doing:
-
-    (sudo) python setup.py install</i>
+Currently no installation. The script may be invoked directly.
 
 ## Usage
 The script is invoked with a Wikipedia dump file as an argument.
