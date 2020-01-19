@@ -10,6 +10,8 @@ For further information, see the [project Home Page](http://medialab.di.unipi.it
 `cirrus-extractor.py` is a version of the script that performs extraction from a Wikipedia Cirrus dump.
 Cirrus dumps contain text with already expanded templates.
 
+<b>Example:</b> python3 cirrus-extract.py -o wiki/test  wiki/wiki-20191104-cirrussearch-content.json.gz
+
 Cirrus dumps are available at:
 [cirrussearch](http://dumps.wikimedia.org/other/cirrussearch/).
 
