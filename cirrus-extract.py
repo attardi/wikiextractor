@@ -72,7 +72,7 @@ class NextFile(object):
 
     def _dirname(self):
         char1 = self.dir_index % 26
-        char2 = self.dir_index / 26 % 26
+        char2 = self.dir_index // 26 % 26
         return os.path.join(self.path_name, '%c%c' % (ord('A') + char2, ord('A') + char1))
 
     def _filepath(self):
@@ -85,7 +85,7 @@ class OutputSplitter(object):
 
     def __init__(self, nextFile, max_file_size=0, compress=True):
         """
-        :param nextfile: a NextFile object from which to obtain filenames
+        :param nextFile: a NextFile object from which to obtain filenames
             to use.
         :param max_file_size: the maximum size of each file.
         :para compress: whether to write data with bzip compression.
@@ -111,7 +111,7 @@ class OutputSplitter(object):
         if self.compress:
             return bz2.BZ2File(filename + '.bz2', 'w')
         else:
-            return open(filename, 'w')
+            return open(filename, 'wb')
 
 # ----------------------------------------------------------------------
 
