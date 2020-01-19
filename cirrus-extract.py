@@ -47,6 +47,7 @@ version = '1.00'
 
 urlbase = 'http://it.wikipedia.org/'
 
+
 # ----------------------------------------------------------------------
 
 class NextFile(object):
@@ -136,7 +137,7 @@ class Extractor(object):
             out.write('\n')
         out.write(footer)
 
-def process_dump(input_file, out_file, file_size, file_compress):
+def process_dump(input_file, out_file, file_size, file_compress, text_only):
     """
     :param input_file: name of the wikipedia dump file; '-' to read from stdin
     :param out_file: directory where to store extracted data, or '-' for stdout
@@ -179,8 +180,12 @@ def process_dump(input_file, out_file, file_size, file_compress):
             text = re.sub(r'  \^ .*', '', text)
             url = urlbase + 'wiki?curid=' + id
             header = '<doc id="%s" url="%s" title="%s" language="%s" revision="%s">\n' % (id, url, title, language, revision)
-            page = header + title + '\n\n' + text + '\n</doc>\n'
+            if not text_only:
+                page = header + title + '\n\n' + text + '\n</doc>\n'
+            else:
+                page = text + '\n\n'
             output.write(page.encode('utf-8'))
+            
 
 # ----------------------------------------------------------------------
 
@@ -201,6 +206,8 @@ def main():
                         metavar="n[KMG]")
     groupO.add_argument("-c", "--compress", action="store_true",
                         help="compress output files using bzip")
+    groupO.add_argument("-t", "--text", action="store_true",
+                        help="text only")
 
     groupP = parser.add_argument_group('Processing')
     groupP.add_argument("-ns", "--namespaces", default="", metavar="ns1,ns2",
@@ -214,6 +221,7 @@ def main():
                         help="print program version")
 
     args = parser.parse_args()
+
 
     try:
         power = 'kmg'.find(args.bytes[-1].lower()) + 1
@@ -241,7 +249,8 @@ def main():
             logging.error('Could not create: %s', output_path)
             return
 
-    process_dump(input_file, output_path, file_size, args.compress)
+
+    process_dump(input_file, output_path, file_size, args.compress, args.text)
 
 
 if __name__ == '__main__':
