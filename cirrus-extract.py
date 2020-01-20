@@ -177,7 +177,7 @@ def process_dump(input_file, out_file, file_size, file_compress, text_only):
             text = content['text']
             # drop references:
             # ^ The Penguin Dictionary
-            text = re.sub(r'  \^ .*', '', text)
+            text = re.sub(r' \^ .*', '', text) # only one space before caret to catch malformed tags
             url = urlbase + 'wiki?curid=' + id
             header = '<doc id="%s" url="%s" title="%s" language="%s" revision="%s">\n' % (id, url, title, language, revision)
             if not text_only:
