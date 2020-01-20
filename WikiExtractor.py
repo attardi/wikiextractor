@@ -3081,6 +3081,8 @@ def process_dump(input_file, template_file, out_file, file_size, file_compress,
             # /mediawiki/siteinfo/base
             base = m.group(3)
             options.urlbase = base[:base.rfind("/")]
+            if args.verbose:
+                print("urlbase = ", options.urlbase)
         elif tag == 'namespace':
             mk = keyRE.search(line)
             if mk:
