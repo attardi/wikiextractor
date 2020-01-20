@@ -65,6 +65,7 @@ from __future__ import unicode_literals, division
 import sys
 import argparse
 import bz2
+import gzip
 import codecs
 import sys
 if sys.version_info < (3, 2):
@@ -3052,10 +3053,10 @@ def process_dump(input_file, template_file, out_file, file_size, file_compress,
         def hook(filename, mode):
             ext = os.path.splitext(filename)[1]
             if ext == '.gz':
-                import gzip
+                #import gzip #line to be removed, do not make gzip or bz2 local and conditional
                 return gzip.open(filename, mode, encoding=encoding)
             elif ext == '.bz2':
-                import bz2
+                #import bz2 #line to be removed, do not make gzip or bz2 local and conditional
                 return bz2.open(filename, mode, encoding=encoding)
             else:
                 return open(filename, mode, encoding=encoding)
