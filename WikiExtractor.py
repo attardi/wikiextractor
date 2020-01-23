@@ -216,6 +216,7 @@ filter_disambig_page_pattern = re.compile("{{disambig(uation)?(\|[^}]*)?}}|__DIS
 g_page_total = 0
 g_page_articl_total=0
 g_page_articl_used_total=0
+g_args = None
 # page filtering logic -- remove templates, undesired xml namespaces, and disambiguation pages
 def keepPage(ns, catSet, page):
     global g_page_articl_total,g_page_total,g_page_articl_used_total
@@ -2667,22 +2668,35 @@ class NextFile(object):
     """
     Synchronous generation of next available file name.
     """
-
     filesPerDir = 100
 
     def __init__(self, path_name):
+        global g_args
+        self.forcedDirCount = g_args.dir_count
         self.path_name = path_name
         self.dir_index = -1
         self.file_index = -1
+        self.file_indexes = [-1]*self.forcedDirCount
 
     def __next__(self):
-        self.file_index = (self.file_index + 1) % NextFile.filesPerDir
-        if self.file_index == 0:
-            self.dir_index += 1
+        if self.forcedDirCount > 0:
+            self.forced_next_helper()
+        else:  
+            self.file_index = (self.file_index + 1) % NextFile.filesPerDir
+            if self.file_index == 0:
+                self.dir_index += 1
         dirname = self._dirname()
         if not os.path.isdir(dirname):
             os.makedirs(dirname)
         return self._filepath()
+
+    def forced_next_helper(self):
+        '''
+            returns path in the next dir in the forced directory list to accomodate the dir_count
+        '''
+        self.dir_index = (self.dir_index + 1) % self.forcedDirCount
+        self.file_indexes[self.dir_index] += 1
+        self.file_index = (self.file_indexes[self.dir_index])
 
     next = __next__
 
@@ -3108,7 +3122,7 @@ def reduce_process(opts, output_queue, spool_length,
 minFileSize = 200 * 1024
 
 def main():
-
+    global g_args
     parser = argparse.ArgumentParser(prog=os.path.basename(sys.argv[0]),
                                      formatter_class=argparse.RawDescriptionHelpFormatter,
                                      description=__doc__)
@@ -3156,6 +3170,8 @@ def main():
     default_process_count = max(1, cpu_count() - 1)
     parser.add_argument("--processes", type=int, default=default_process_count,
                         help="Number of processes to use (default %(default)s)")
+    parser.add_argument("--dir_count", type=int, default=-1,
+                        help="Force number of directories to distribute the files amongst (default is as many directories as needed with 100 files per directory)")
 
     groupS = parser.add_argument_group('Special')
     groupS.add_argument("-q", "--quiet", action="store_true",
@@ -3172,7 +3188,7 @@ def main():
     groupP.add_argument("--filter_category",
                         help="specify the file that listing the Categories you want to include or exclude. One line for"
                              " one category. starting with: 1) '#' comment, ignored; 2) '^' exclude; Note: excluding has higher priority than including")
-    args = parser.parse_args()
+    g_args = args = parser.parse_args()
 
     options.keepLinks = args.links
     options.keepSections = args.sections
