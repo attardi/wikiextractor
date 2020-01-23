@@ -137,7 +137,7 @@ class Extractor(object):
             out.write('\n')
         out.write(footer)
 
-def process_dump(input_file, out_file, file_size, file_compress, text_only):
+def process_dump(input_file, out_file, file_size, file_compress, text_only, sentences_only, raw_only):
     """
     :param input_file: name of the wikipedia dump file; '-' to read from stdin
     :param out_file: directory where to store extracted data, or '-' for stdout
@@ -175,11 +175,13 @@ def process_dump(input_file, out_file, file_size, file_compress, text_only):
         if type == 'page' and content['namespace'] == 0:
             title = content['title']
             text = content['text']
-            # drop references:
-            # ^ The Penguin Dictionary
-            text = re.sub(r' \^ .*', '', text) # only one space before caret to catch malformed tags
-            text = re.sub(r'\. [^.]*$', '.', text) # remove incomplete last sentence
-            text = re.sub(r'^[^.]*$', '', text) # remove incomplete sentence, even if only sentence in article
+	    if not raw_only:
+		# drop references:
+                # ^ The Penguin Dictionary
+                text = re.sub(r' \^ .*', '', text) # only one space before caret to catch malformed tags
+            if sentences_only:
+                text = re.sub(r'\. [^.]*$', '.', text) # remove incomplete last sentence
+                text = re.sub(r'^[^.]*$', '', text) # remove incomplete sentence, even if only sentence in article
             if text != "" and text != " ": # do not create empty articles
                 url = urlbase + 'wiki?curid=' + id
                 header = '<doc id="%s" url="%s" title="%s" language="%s" revision="%s">\n' % (id, url, title, language, revision)
@@ -212,7 +214,11 @@ def main():
                         help="compress output files using bzip")
     groupO.add_argument("-t", "--text", action="store_true",
                         help="text only")
-
+    groupO.add_argument("-s", "--sentences", action="store_true",
+                        help="Only complete point separated sentences.")
+    groupO.add_argument("-r", "--raw", action="store_true",
+                        help="No filtering.")	
+	
     groupP = parser.add_argument_group('Processing')
     groupP.add_argument("-ns", "--namespaces", default="", metavar="ns1,ns2",
                         help="accepted namespaces")
@@ -254,7 +260,7 @@ def main():
             return
 
 
-    process_dump(input_file, output_path, file_size, args.compress, args.text)
+    process_dump(input_file, output_path, file_size, args.compress, args.text, args.sentences, args.raw)
 
 
 if __name__ == '__main__':
