@@ -179,9 +179,12 @@ def process_dump(input_file, out_file, file_size, file_compress, text_only, sent
 		# drop references:
                 # ^ The Penguin Dictionary
                 text = re.sub(r' \^ .*', '', text) # only one space before caret to catch malformed tags
+            text = re.sub(r'\s*$', '', text) # remove all trailing white space
             if sentences_only:
-                text = re.sub(r'\. [^.]*$', '.', text) # remove incomplete last sentence
+                text = re.sub(r'\. [^.]*$', '.', text) # remove incomplete last sentence (replaced by below?)
+		text = re.sub(r'\.\s(.(?!\.\s))*[^.]$', '.', text) # remove incomplete last sentence, no dot and space found as separator and no ending dot
                 text = re.sub(r'^[^.]*$', '', text) # remove incomplete sentence, even if only sentence in article
+		text = re.sub(r'^(.(?!\.\s))*$', '', text) # remove if only one sentence in article, no dot and space found as separator
             if text != "" and text != " ": # do not create empty articles
                 url = urlbase + 'wiki?curid=' + id
                 header = '<doc id="%s" url="%s" title="%s" language="%s" revision="%s">\n' % (id, url, title, language, revision)
@@ -215,7 +218,7 @@ def main():
     groupO.add_argument("-t", "--text", action="store_true",
                         help="text only")
     groupO.add_argument("-s", "--sentences", action="store_true",
-                        help="Only complete point separated sentences.")
+                        help="Only at least two complete point separated sentences.")
     groupO.add_argument("-r", "--raw", action="store_true",
                         help="No filtering.")	
 	
