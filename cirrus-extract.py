@@ -175,7 +175,7 @@ def process_dump(input_file, out_file, file_size, file_compress, text_only, sent
         if type == 'page' and content['namespace'] == 0:
             title = content['title']
             text = content['text']
-	    if not raw_only:
+            if not raw_only:
 		# drop references:
                 # ^ The Penguin Dictionary
                 text = re.sub(r' \^ .*', '', text) # only one space before caret to catch malformed tags
