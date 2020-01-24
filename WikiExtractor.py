@@ -3081,7 +3081,7 @@ def process_dump(input_file, template_file, out_file, file_size, file_compress,
             # /mediawiki/siteinfo/base
             base = m.group(3)
             options.urlbase = base[:base.rfind("/")]
-            if args.verbose:
+            if options.verbose:
                 print("urlbase = ", options.urlbase)
         elif tag == 'namespace':
             mk = keyRE.search(line)
@@ -3123,7 +3123,7 @@ def process_dump(input_file, template_file, out_file, file_size, file_compress,
 
     if options.templates_only:
         logging.info('Templates generation only. Exiting ...')
-        if args.verbose:
+        if options.verbose:
             print("Templates generation only. Exiting ...")        
         return
     
@@ -3508,7 +3508,7 @@ def main():
             'p', 'plaintext', 's', 'span', 'strike', 'strong',
             'tt', 'u', 'var'
         ]
-    if args.verbose:
+    if options.verbose:
         print("ignored tags = ", ignoredTags)
 
     # 'a' tag is handled separately
@@ -3518,7 +3518,7 @@ def main():
     if args.discard_elements:
         options.discardElements = set(args.discard_elements.split(','))
     
-    if args.verbose:
+    if options.verbose:
         print("discard elements = ", options.discardElements)
 
     FORMAT = '%(levelname)s: %(message)s'
