@@ -8,13 +8,17 @@ For further information, see the [project Home Page](http://medialab.di.unipi.it
 # Wikipedia Cirrus Extractor
 
 `cirrus-extractor.py` is a version of the script that performs extraction from a Wikipedia Cirrus dump.
-Cirrus dumps contain text with already expanded templates. The Cirrus extractor does not suffer fron inadequate template expansion. Until WikiExtractors template expansion has been fixed this may be used instead.
+Cirrus dumps contain text with already expanded templates. The Cirrus extractor does not suffer fron somewhat inadequate template expansion. Until WikiExtractors template expansion has been fixed this may be used instead.
 
 <b>Examples:</b><br>
 json output: python3 cirrus-extract.py -o wiki/test wiki/wiki-20191104-cirrussearch-content.json.gz<br>
 text output: python3 cirrus-extract.py -o wiki/test -t wiki/wiki-20191104-cirrussearch-content.json.gz
 
-Text output is without titles, etc. It contains only the article texts sepated with empty lines.
+Text output is without titles, etc. It contains only the article texts separated with empty lines.
+
+<b>Some additional switches are:</b><br>
+--raw       : basically no cleaning.<br>
+--sentences : basic sentence based cleaning, based on dot and space, producing at least two sentences ending with a dot - but can be tricked by dots in names, etc.
 
 Cirrus dumps are available at:
 [cirrussearch](http://dumps.wikimedia.org/other/cirrussearch/).
