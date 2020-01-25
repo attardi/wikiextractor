@@ -1769,7 +1769,9 @@ class MagicWords(object):
 
     def __setitem__(self, name, value):
         self.values[name] = value
+
     # https://www.mediawiki.org/wiki/Help:Magic_words#Behavior_switches
+    # 
     switches = (
         '__NOTOC__',
         '__FORCETOC__',
@@ -1789,7 +1791,8 @@ class MagicWords(object):
         '__INDEX__',
         '__NOINDEX__',
         '__STATICREDIRECT__',
-        '__DISAMBIG__'
+        '__DISAMBIG__',
+        '__NOGLOBAL__' #added 200126
     )
 
 
@@ -2065,7 +2068,7 @@ parserFunctions = {
     'plural': lambda *args: '', # not supported #HjalmarrSv
 }
 
-
+#functionName<-title[:colon], args<-parts , extractor<-self
 def callParserFunction(functionName, args, extractor):
     """
     Parser functions have similar syntax as templates, except that
