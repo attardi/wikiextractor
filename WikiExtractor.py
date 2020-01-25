@@ -2030,6 +2030,12 @@ parserFunctions = {
 
     '#titleparts': lambda *args: '', # not supported
 
+    '#dateformat': lambda *args: '', # not supported #HjalmarrSv
+
+    '#formatdate': lambda *args: '', # not supported #HjalmarrSv
+
+    '#tag': lambda *args: '', # not supported #HjalmarrSv
+
     # This function is used in some pages to construct links
     # http://meta.wikimedia.org/wiki/Help:URL
     'urlencode': lambda extr, string, *rest: quote(string.encode('utf-8')),
@@ -2044,6 +2050,19 @@ parserFunctions = {
 
     'int': lambda extr, string, *rest: text_type(int(string)),
 
+    'formatnum': lambda *args: '', # not supported #HjalmarrSv
+
+    'gender': lambda *args: '', # not supported #HjalmarrSv
+
+    'plural': lambda *args: '', # not supported #HjalmarrSv
+
+    'padleft': lambda *args: '', # not supported #HjalmarrSv
+
+    'padright': lambda *args: '', # not supported #HjalmarrSv
+
+    'as of': lambda *args: '', # not supported #HjalmarrSv #this may be the wrong place in code for this function
+
+    'plural': lambda *args: '', # not supported #HjalmarrSv
 }
 
 
