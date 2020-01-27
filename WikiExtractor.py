@@ -2055,8 +2055,9 @@ parserFunctions = {
 
     'formatnum': lambda *args: '', # not supported #HjalmarrSv
 
-    'gender': lambda *args: '', # not supported #HjalmarrSv
-
+    'gender': lambda *args: '', # not supported #HjalmarrSv: not relevant here, because "such as in "inform the user on his/her talk page", which is better made "inform the user on {{GENDER:$1|his|her|their}} talk page"
+                                # https://www.mediawiki.org/wiki/Localisation#%E2%80%A6on_use_context_inside_sentences_via_GRAMMAR
+    
     'plural': lambda *args: '', # not supported #HjalmarrSv
 
     'padleft': lambda *args: '', # not supported #HjalmarrSv
@@ -2066,6 +2067,8 @@ parserFunctions = {
     'as of': lambda *args: '', # not supported #HjalmarrSv #this may be the wrong place in code for this function
 
     'plural': lambda *args: '', # not supported #HjalmarrSv
+    
+    'grammar': lambda *args: '', # not supported #HjalmarrSv
 }
 
 #functionName<-title[:colon], args<-parts , extractor<-self
