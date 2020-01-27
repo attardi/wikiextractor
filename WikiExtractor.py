@@ -210,7 +210,7 @@ options = SimpleNamespace(
     
     ##
     # Whether only parse out templates and no extraction
-    templates_only = False,    
+    only_templates = False,    
     
     ##
     # 
