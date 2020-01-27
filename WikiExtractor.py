@@ -257,14 +257,15 @@ options = SimpleNamespace(
 
     # xiaoling: The original authors have "small" in this discard list
     # We keep small because sometimes they are used for tenure in band membership lists
-    # e.g., maroon 5   
+    # e.g., maroon 5. 
+    # Edit by HjalmarrSv: we do not keep small bacause it introduces to much unwanted items (that could be cleaned another way)
     
     discardElements = [
         'gallery', 'timeline', 'noinclude', 'pre',
         'table', 'tr', 'td', 'th', 'caption', 'div',
         'form', 'input', 'select', 'option', 'textarea',
         'ul', 'li', 'ol', 'dl', 'dt', 'dd', 'menu', 'dir',
-        'ref', 'references', 'img', 'imagemap', 'source',             # 'small',
+        'ref', 'references', 'img', 'imagemap', 'source', 'small',
         'sub', 'sup', 'indicator', ',mapframe', 'maplink', 'score'
     ],
 )
