@@ -3423,7 +3423,7 @@ def main():
                         help="maximum count of articles (default 0 means unlimited)")
     groupO.add_argument("--verbose", action="store_true",
                         help="display extended information")   
-    groupP.add_argument("--templates_only", action="store_true",
+    groupP.add_argument("--only_templates", action="store_true",
                         help="only generates or loads templates file, no extraction.")
     groupP.add_argument("--raw", action="store_true",
                         help="parse raw media wiki for debug")
@@ -3490,7 +3490,7 @@ def main():
     options.remove_special_tokens = args.remove_special_tokens
     options.max_articles = args.max_articles
     options.verbose = args.verbose
-    options.templates_only = args.templates_only
+    options.templates_only = args.only_templates
     options.abstract_only = args.abstract_only
     options.raw = args.raw
 
