@@ -60,7 +60,8 @@ usage: WikiExtractor.py <br>
 
 ## Examples (tested for "correct" output)
 <b>Debug and testing (short and fast):</b>
-python3 WikiExtractor.py -o wiki/test --templates templat.txt --max_articles 10 --verbose wiki/wiki-20191101-pages-articles.xml
+python3 WikiExtractor.py -o wiki/test --templates templat.txt --max_articles 10 --verbose wiki/wiki-20191101-pages-articles.xml<br>
+<b>Debug and testing (more info on screen and a log):</b> python3 WikiExtractor.py -o wiki/test --templates templat.txt --max_articles 10 --verbose --debug --log_file log.txt wiki/wiki-20191101-pages-articles.xml
 
 <b>JSON (most extracted information):</b>
 python3 WikiExtractor.py -o wiki/test --filter_disambig_pages --templates templat.txt --titlefree --json --min_text_length 100 wiki/wiki-20191101-pages-articles.xml<br>
