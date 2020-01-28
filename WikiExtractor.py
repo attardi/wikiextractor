@@ -1677,7 +1677,7 @@ class MagicWords(object):
     """
     One copy in each Extractor.
 
-    @see https://doc.wikimedia.org/mediawiki-core/master/php/MagicWord_8php_source.html - invalid old link
+    
     https://doc.wikimedia.org/mediawiki-core/master/php/MagicWordFactory_8php_source.html
     https://www.mediawiki.org/wiki/Manual:Magic_words
     """
@@ -1757,7 +1757,7 @@ class MagicWords(object):
         'localtimestamp',
         'directionmark',
         'contentlanguage',
-        'pagelanguage',   #added 191220
+        'pagelanguage', 
         'numberofadmins',
         'cascadingsources',
     ]
@@ -1777,18 +1777,18 @@ class MagicWords(object):
         '__NOTOC__',
         '__FORCETOC__',
         '__TOC__',
-        '__NOEDITSECTION__', #added 191229
+        '__NOEDITSECTION__',
         '__NEWSECTIONLINK__',
         '__NONEWSECTIONLINK__',
         '__NOGALLERY__',
         '__HIDDENCAT__',
-        '__EXPECTUNUSEDCATEGORY__', #added 191229        
+        '__EXPECTUNUSEDCATEGORY__',        
         '__NOCONTENTCONVERT__',
         '__NOCC__',
         '__NOTITLECONVERT__',
         '__NOTC__',
-        '__START__',
-        '__END__',
+        '__START__', # keep for now, but removed in r1695 and completely removed in r24784
+        '__END__', # keep for now, but removed in 19213. 
         '__INDEX__',
         '__NOINDEX__',
         '__STATICREDIRECT__',
