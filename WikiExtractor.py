@@ -1038,7 +1038,7 @@ class Extractor(object):
             # The '=' might occurr within an HTML attribute:
             #   "&lt;ref name=value"
             # but we stop at first.
-            m = re.match(' *([^=]*?) *?=(.*)', param, re.DOTALL)
+            m = re.match(r'\s*([^=]*)=(.*)', param, re.DOTALL) #m = re.match(' *([^=]*?) *?=(.*)', param, re.DOTALL)
             if m:
                 # This is a named parameter.  This case also handles parameter
                 # assignments like "2=xxx", where the number of an unnamed
@@ -2054,7 +2054,7 @@ parserFunctions = {
 
     'int': lambda extr, string, *rest: text_type(int(string)),
 
-    'formatnum': lambda *args: '', # not supported #HjalmarrSv
+    'formatnum': lambda extr, string, *rest: string, #HjalmarrSv: dot is decimal separator!
 
     'gender': lambda *args: '', # not supported #HjalmarrSv: not relevant here, because "such as in "inform the user on his/her talk page", which is better made "inform the user on {{GENDER:$1|his|her|their}} talk page"
                                 # https://www.mediawiki.org/wiki/Localisation#%E2%80%A6on_use_context_inside_sentences_via_GRAMMAR
