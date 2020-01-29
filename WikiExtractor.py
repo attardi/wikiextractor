@@ -2,7 +2,7 @@
 # -*- coding: utf-8 -*-
 
 # =============================================================================
-#  Version: 2.75 (March 4, 2017)
+#  Version: 3.0 (2020-01-29)
 #  Author: Giuseppe Attardi (attardi@di.unipi.it), University of Pisa
 #
 #  Contributors:
@@ -115,7 +115,7 @@ else:
 # ===========================================================================
 
 # Program version
-version = '2.75'
+version = '3.0'
 
 ## PARAMS ####################################################################
 
@@ -362,7 +362,7 @@ def get_url(uid):
 
 # ------------------------------------------------------------------------------
 
-selfClosingTags = ('BR', 'br', 'hr', 'nobr', 'ref', 'references', 'nowiki') # BR may not be needed
+selfClosingTags = ('BR', 'br', 'hr', 'nobr', 'ref', 'references', 'nowiki') # BR is kept, but may not be needed
 
 placeholder_tags = {'math': 'formula', 'code': 'codice'}
 
