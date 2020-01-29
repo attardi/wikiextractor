@@ -1835,9 +1835,9 @@ def formatnum(string): #function for parsing 'formatnum:xxx.yyy|zzz' where zzz c
         newstring = re.sub(r'^(?P<integer>[^\.]*).(?P<fraction>\d*).*','\g<integer>,\g<fraction>', string) #a point is found, replace witk comma and clear rest after fraction
         # fixme: for the special case that comma is a thousands separator that needs to be removed
     elif not options.decimalcomma:
-        newstring = re.sub(r'^(?P<integer>[^\.]*).(?P<fraction>\d*).*','\g<integer>.\g<fraction>') # a point is found, clear rest after fraction      
+        newstring = re.sub(r'^(?P<integer>[^\.]*).(?P<fraction>\d*).*','\g<integer>.\g<fraction>', string) # a point is found, clear rest after fraction      
     else:
-        newstring = re.sub(r'^(?P<integer>[^|]*).*','\g<integer>') # look for arguments (after pipe (|)), remove them
+        newstring = re.sub(r'^(?P<integer>[^|]*).*','\g<integer>', string) # look for arguments (after pipe (|)), remove them
     return newstring # if no dot or no pipe then following should be true: newstring == string
 
 
