@@ -213,8 +213,13 @@ options = SimpleNamespace(
     only_templates = False,    
     
     ##
-    # 
+    # As unprocessed as possible 
     raw = False,
+
+    ##
+    # In formatnum, dot is standard, e.g. 1.5. If decimalkomma is set, use comma as decimal separator instead, e.g. 1,5.
+    # Does not have effect outside parsing. Text and parsed text may differ if care is not taken.
+    decimalcomma = False,
    
     ##
     # Whether to output HTML instead of text
@@ -1823,6 +1828,17 @@ def lcfirst(string):
             return string.lower()
     else:
         return ''
+    
+   
+def formatnum(string): #function for parsing 'formatnum:xxx.yyy|zzz' where zzz can be '|R', '|NOSEP': https://www.mediawiki.org/wiki/Help:Magic_words
+    if options.decimalcomma:
+        newstring = re.sub(r'^(?P<integer>[^\.]*).(?P<fraction>\d*).*','\g<integer>,\g<fraction>', string) #a point is found, replace witk comma and clear rest after fraction
+        # fixme: for the special case that comma is a thousands separator that needs to be removed
+    elif not options.decimalcomma:
+        newstring = re.sub(r'^(?P<integer>[^\.]*).(?P<fraction>\d*).*','\g<integer>.\g<fraction>') # a point is found, clear rest after fraction      
+    else:
+        newstring = re.sub(r'^(?P<integer>[^|]*).*','\g<integer>') # look for arguments (after pipe (|)), remove them
+    return newstring # if no dot or no pipe then following should be true: newstring == string
 
 
 def fullyQualifiedTemplateTitle(templateTitle):
@@ -1895,9 +1911,9 @@ class Infix:
 
 ROUND = Infix(lambda x, y: round(x, y))
 
-
 from math import floor, ceil, pi, e, trunc, exp, log as ln, sin, cos, tan, asin, acos, atan
 
+    
 
 def sharp_expr(extr, expr):
     """Tries converting a lua expr into a Python expr."""
@@ -2054,7 +2070,7 @@ parserFunctions = {
 
     'int': lambda extr, string, *rest: text_type(int(string)),
 
-    'formatnum': lambda extr, string, *rest: string, #HjalmarrSv: dot is decimal separator!
+    'formatnum': lambda extr, string, *rest: formatnum(string), # was: 'formatnum': lambda extr, string, *rest: string, #HjalmarrSv: dot is decimal separator!
 
     'gender': lambda *args: '', # not supported #HjalmarrSv: not relevant here, because "such as in "inform the user on his/her talk page", which is better made "inform the user on {{GENDER:$1|his|her|their}} talk page"
                                 # https://www.mediawiki.org/wiki/Localisation#%E2%80%A6on_use_context_inside_sentences_via_GRAMMAR
@@ -3430,6 +3446,8 @@ def main():
                         help="parse raw media wiki for debug")
     groupP.add_argument("--abstract_only", action="store_true",
                         help="output text only abstract content")
+    groupP.add_argument("--decimalcomma", action="store_true",
+                        help="use comma, instead of dot, as decimal separator")   
     
     groupP.add_argument("--lists", action="store_true",
                         help="preserve lists")
@@ -3494,6 +3512,7 @@ def main():
     options.templates_only = args.only_templates
     options.abstract_only = args.abstract_only
     options.raw = args.raw
+    options.decimalcomma = args.decimalcomma
 
     options.expand_templates = args.no_templates
     options.filter_disambig_pages = args.filter_disambig_pages
