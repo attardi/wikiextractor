@@ -1831,14 +1831,16 @@ def lcfirst(string):
     
    
 def formatnum(string): #function for parsing 'formatnum:xxx.yyy|zzz' where zzz can be '|R', '|NOSEP': https://www.mediawiki.org/wiki/Help:Magic_words
+    string = string.strip()
+    newstring = string
     if options.decimalcomma:
-        newstring = re.sub(r'^(?P<integer>[^\.]*).(?P<fraction>\d*).*','\g<integer>,\g<fraction>', string) #a point is found, replace witk comma and clear rest after fraction
+        newstring = re.sub(r'^(?P<integer>\d*)\.(?P<fraction>\d*).*$','\g<integer>,\g<fraction>', string) 
         # fixme: for the special case that comma is a thousands separator that needs to be removed
-    elif not options.decimalcomma:
-        newstring = re.sub(r'^(?P<integer>[^\.]*).(?P<fraction>\d*).*','\g<integer>.\g<fraction>', string) # a point is found, clear rest after fraction      
-    else:
-        newstring = re.sub(r'^(?P<integer>[^|]*).*','\g<integer>', string) # look for arguments (after pipe (|)), remove them
-    return newstring # if no dot or no pipe then following should be true: newstring == string
+    if not options.decimalcomma:
+        newstring = re.sub(r'^(?P<integer>\d*)\.(?P<fraction>\d*).*$','\g<integer>.\g<fraction>', string)   
+    if newstring==string: #maybe not needed, but just in case something irregular comes in, at least arguments are removed
+        newstring = re.sub(r'^(?P<number>[^|]*)\|.*','\g<number>', string) # look for pipe (|), remove all from pipe and after
+    return newstring.strip() # if no dot or no pipe then following should be true: newstring == string
 
 
 def fullyQualifiedTemplateTitle(templateTitle):
