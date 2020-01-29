@@ -934,6 +934,7 @@ class Extractor(object):
         text = re.sub('(\[\(«) ', r'\1', text)
         text = re.sub(r'\n\W+?\n', '\n', text, flags=re.U)  # lines with only punctuations
         text = text.replace(',,', ',').replace(',.', '.')
+        text = re.sub(r'<templatestyles[^>]*>', '', text)
         if options.keep_tables:
             # the following regular expressions are used to remove the wikiml chartacters around table strucutures
             # yet keep the content. The order here is imporant so we remove certain markup like {| and then
