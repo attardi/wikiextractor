@@ -940,7 +940,8 @@ class Extractor(object):
             text = re.sub(r'[(][^)(]*[)]', '', text) # second level. If nested three levels, the third level, outmost, will appear in text, unless cleaned, as below. This would better be a loop.
             text = re.sub(r'[(]', '', text) # removes unbalanced '(' or if deeply nested
             text = re.sub(r'[)]', '', text) # removes unbalanced ')' or if deeply nested
-            text = spaces.sub(' ', text)
+            text = spaces.sub(' ', text) # when removing in sentence '  ' is created, remove.
+            text = re.sub(r'\s\.', '.', text) # when removing at end of sentence ' .' is created, remove.
         if options.keep_tables:
             # the following regular expressions are used to remove the wikiml chartacters around table strucutures
             # yet keep the content. The order here is imporant so we remove certain markup like {| and then
