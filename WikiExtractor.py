@@ -935,6 +935,12 @@ class Extractor(object):
         text = re.sub(r'\n\W+?\n', '\n', text, flags=re.U)  # lines with only punctuations
         text = text.replace(',,', ',').replace(',.', '.')
         text = re.sub(r'<templatestyles[^>]*>', '', text)
+        if options.cleaned:
+            text = re.sub(r'[(][^)(]*[)]', '', text) # removes all '( ... )', whether empty or full of text; first level from within
+            text = re.sub(r'[(][^)(]*[)]', '', text) # second level. If nested three levels, the third level, outmost, will appear in text, unless cleaned, as below. This would better be a loop.
+            text = re.sub(r'[(]', '', text) # removes unbalanced '(' or if deeply nested
+            text = re.sub(r'[)]', '', text) # removes unbalanced ')' or if deeply nested
+            text = spaces.sub(' ', text)
         if options.keep_tables:
             # the following regular expressions are used to remove the wikiml chartacters around table strucutures
             # yet keep the content. The order here is imporant so we remove certain markup like {| and then
@@ -3519,6 +3525,7 @@ def main():
     options.abstract_only = args.abstract_only
     options.raw = args.raw
     options.decimalcomma = args.decimalcomma
+    options.cleaned = False
 
     options.expand_templates = args.no_templates
     options.filter_disambig_pages = args.filter_disambig_pages
