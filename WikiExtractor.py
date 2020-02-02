@@ -945,6 +945,7 @@ class Extractor(object):
             text = text.replace('|', '')
         if options.toHTML:
             text = html_escape(text, quote=False)
+        text = re.sub(r'^!\s.*$', '', text) #remove all '! data-sort-type=number | Area(km²)'
         return text
 
 
