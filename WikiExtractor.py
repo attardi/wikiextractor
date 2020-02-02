@@ -943,9 +943,10 @@ class Extractor(object):
             text = re.sub(r'!(?:\s)?style="[a-z]+:(?:\d+)%;[a-z]+:(?:#)?(?:[0-9a-z]+)?"', r'', text)
             text = text.replace('|-', '')
             text = text.replace('|', '')
+        text = re.sub(r'\n!\s.*\n', '', text, re.DOTALL) #remove all '! data-sort-type=number | Area(km²)'
         if options.toHTML:
             text = html_escape(text, quote=False)
-        text = re.sub(r'^!\s.*$', '', text) #remove all '! data-sort-type=number | Area(km²)'
+        
         return text
 
 
