@@ -2053,7 +2053,8 @@ parserFunctions = {
 
     '#titleparts': lambda *args: '', # not supported
 
-    '#dateformat': lambda *args: '', # not supported #HjalmarrSv
+    '#dateformat': lambda *args: '', # not supported #HjalmarrSv {{#dateformat:25 dec 2009|ymd}} {{#formatdate:dec 25,2009|dmy}} 
+    #{{#dateformat:2009-12-25|mdy}} {{#formatdate:2009 dec 25|ISO 8601}} {{#dateformat:25 decEmber|mdy}}
 
     '#formatdate': lambda *args: '', # not supported #HjalmarrSv
 
@@ -2083,8 +2084,8 @@ parserFunctions = {
     'padleft': lambda *args: '', # not supported #HjalmarrSv
 
     'padright': lambda *args: '', # not supported #HjalmarrSv
-
-    'as of': lambda *args: '', # not supported #HjalmarrSv #this may be the wrong place in code for this function
+                               # {{As of|2020|post=,}} {{update after|2030}} {{As of|since=y|2020|02|post=,}} {{As of|alt=Beginning in early 2020|2020|01|post=,}}
+    'as of': lambda *args: '', # not supported #HjalmarrSv #this may be the wrong place in code for this https://en.wikipedia.org/wiki/Wikipedia:As_of
 
     'plural': lambda *args: '', # not supported #HjalmarrSv
     
