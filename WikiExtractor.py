@@ -953,6 +953,7 @@ class Extractor(object):
             text = text.replace('|-', '')
             text = text.replace('|', '')
         text = re.sub(r'\n!\s.*\n', '', text, re.DOTALL) #remove all '! data-sort-type=number | Area(km²)'
+        text = re.sub(r'\n\s*\n', '\n', text) #remove empty lines, mostly affects .json, because .txt cleaned after this function
         if options.toHTML:
             text = html_escape(text, quote=False)
         
