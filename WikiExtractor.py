@@ -940,8 +940,8 @@ class Extractor(object):
             text = re.sub(r'[(][^)(]*[)]', '', text) # second level. If nested three levels, the third level, outmost, will appear in text, unless cleaned, as below. This would better be a loop.
             text = re.sub(r'[(]', '', text) # removes unbalanced '(' or if deeply nested
             text = re.sub(r'[)]', '', text) # removes unbalanced ')' or if deeply nested
-            text = re.sub(' ([,:\.\]»])', r'\1', text)
-            text = re.sub('([\[«]) ', r'\1', text)            
+            text = re.sub(r'\s([\s,:\.\]»])', r'\1', text)
+            text = re.sub(r'([\[«])\s', r'\1', text)            
             # remove this: text = spaces.sub(' ', text) # when removing in sentence '  ' is created, remove.
             # remove this: text = re.sub(r'\s\.', '.', text) # when removing at end of sentence ' .' is created, remove.
         if options.keep_tables:
@@ -1854,6 +1854,11 @@ def formatnum(string): #function for parsing 'formatnum:xxx.yyy|zzz' where zzz c
         newstring = re.sub(r'^(?P<number>[^|]*)\|.*','\g<number>', string) # look for pipe (|), remove all from pipe and after
     return newstring.strip() # if no dot or no pipe then following should be true: newstring == string
 
+# function for parsing '#dateformat', '#formatdate'; #dateformat:2009-12-25; #formatdate:2009 dec 25
+def formatdate(string): # |dmy, |mdy, |ISO 8601
+    string = re.sub(r'^(?P<date>[^|])\|(?P<rest>.*)','\g<date>', string) # leave date "as is" for now, strip rest
+    return string
+
 
 def fullyQualifiedTemplateTitle(templateTitle):
     """
@@ -2064,12 +2069,11 @@ parserFunctions = {
 
     '#titleparts': lambda *args: '', # not supported
 
-    '#dateformat': lambda *args: '', # not supported #HjalmarrSv {{#dateformat:25 dec 2009|ymd}} {{#formatdate:dec 25,2009|dmy}} 
-    #{{#dateformat:2009-12-25|mdy}} {{#formatdate:2009 dec 25|ISO 8601}} {{#dateformat:25 decEmber|mdy}}
+    '#dateformat': lambda extr, string, *rest: formatdate(string), #HjalmarrSv {{#dateformat:25 dec 2009|ymd}} {{#formatdate:dec 25,2009|dmy}} 
 
-    '#formatdate': lambda *args: '', # not supported #HjalmarrSv
+    '#formatdate': lambda extr, string, *rest: formatdate(string), #HjalmarrSv {{#dateformat:2009-12-25|mdy}} {{#formatdate:2009 dec 25|ISO 8601}} {{#dateformat:25 decEmber|mdy}}
 
-    '#tag': lambda *args: '', # not supported #HjalmarrSv
+    '#tag': lambda *args: '', # not supported HjalmarrSv {{#tag:tagname|content|attribute1=value1|attribute2=value2}}
 
     # This function is used in some pages to construct links
     # http://meta.wikimedia.org/wiki/Help:URL
