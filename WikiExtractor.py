@@ -927,6 +927,11 @@ class Extractor(object):
         #############################################
 
         # Cleanup text
+        # This code exists because of errors in wikipedia, errors in templates, errors in template expansion,
+        # or because of lazy or difficult transclusion. Some cleaning is needed because of the difference between input format
+        # and what we want as output. Ideally this part of the code should be as short as possible. Fix as much as possible
+        # upstream, i.e. before this code.
+        #
         text = text.replace('\t', ' ')
         text = spaces.sub(' ', text)
         text = dots.sub('...', text)
@@ -954,8 +959,8 @@ class Extractor(object):
             text = text.replace('|', '')
         text = re.sub(r'\n!\s.*\n', '', text, re.DOTALL) #remove all '! data-sort-type=number | Area(km²)'
         if not options.cleaned:
-            text = re.sub(r'[(]\s*[)]', '', text) # removes all '()' and '( )'
-            text = spaces.sub(' ', text)
+            text = re.sub(r'[(]\s*[)]', '', text) # removes all '()' and '( )' # this may have a negative effect on math articles
+            text = spaces.sub(' ', text) # removing text, without removing a space before or after, puts two spaces next to each other.
         text = re.sub(r'\n\s*\n', '\n', text) #remove empty lines, mostly affects .json, because .txt cleaned after this function
         if options.toHTML:
             text = html_escape(text, quote=False)
