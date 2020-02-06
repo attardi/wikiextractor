@@ -1854,6 +1854,7 @@ def lcfirst(string):
 # Takes an unformatted number (Arabic, no group separators and . as decimal separator) and outputs it in the localized digit script and formatted with decimal and decimal group separators, according to the wiki's default locale
 # The |R parameter can be used to reverse the behavior, for use in mathematical situations: it's reliable and should be used only to deformat numbers which are known to be formatted exactly as formatnum formats them with the wiki's locale.
 def formatnum(string):
+    return(string) # disable function until fixed, actually works this way
     formatnum_reverse = False
     string = string.strip() #strip whitespace before and after, if any
     if re.search(r'\.', string):
