@@ -1874,8 +1874,8 @@ def formatnum(string):
         string = string.lstrip('0') # strip leading zeroes, if any, but not if |R, because formated number may be 00,001 which is 1 parsed {{formatnum:00001}}
     newstring = string
     
-    If formatnum_reverse and comma_first: # a limited |R function; note need for fix above
-        newstring = re.sub(r'[,\s], '', newstring) # remove commas and space in number like 123,456.789 or 123 456.789, but not in 123,456 which we do not know what it is
+    if formatnum_reverse and comma_first: # a limited |R function; note need for fix above
+        newstring = re.sub(r'[,\s]', '', newstring) # remove commas and space in number like 123,456.789 or 123 456.789, but not in 123,456 which we do not know what it is
                                    
     if options.decimalcomma and has_dot: # if there is a dot and we want to change dot to comma; note need for fix above
         if comma_first: # check first if there are commas as group separators
