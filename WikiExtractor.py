@@ -1849,19 +1849,44 @@ def lcfirst(string):
             return string.lower()
     else:
         return ''
-    
-   
-def formatnum(string): #function for parsing 'formatnum:xxx.yyy|zzz' where zzz can be '|R', '|NOSEP': https://www.mediawiki.org/wiki/Help:Magic_words
-    string = string.strip()
+
+# Function for parsing 'formatnum:xxx.yyy|zzz' where zzz can be '|R', '|NOSEP': https://www.mediawiki.org/wiki/Help:Magic_words
+# Takes an unformatted number (Arabic, no group separators and . as decimal separator) and outputs it in the localized digit script and formatted with decimal and decimal group separators, according to the wiki's default locale
+# The |R parameter can be used to reverse the behavior, for use in mathematical situations: it's reliable and should be used only to deformat numbers which are known to be formatted exactly as formatnum formats them with the wiki's locale.
+def formatnum(string):
+    formatnum_reverse = False
+    string = string.strip() #strip whitespace before and after, if any
+    if re.search(r'\.', string):
+        has_dot = True
+    else:
+        has_dot = False
+    if re.search(r',', string):
+        has_comma = True
+        if has_dot and re.search(r',[^\.]*\.', string): #fix: check for locales with dot first
+            comma_first = True # true if there is both dot and a comma and comma comes first
+        else:
+            comma_first = False
+    else:
+        has_comma = False
+    if re.search(r'|R', string): #check for |R in which case number is already formated and should be unformated
+        formatnum_reverse = True
+    if not formatnum_reverse:
+        string = string.lstrip('0') # strip leading zeroes, if any, but not if |R, because formated number may be 00,001 which is 1 parsed {{formatnum:00001}}
     newstring = string
-    if options.decimalcomma:
-        newstring = re.sub(r'^(?P<integer>\d*)\.(?P<fraction>\d*).*$','\g<integer>,\g<fraction>', string) 
-        # fixme: for the special case that comma is a thousands separator that needs to be removed
-    if not options.decimalcomma:
-        newstring = re.sub(r'^(?P<integer>\d*)\.(?P<fraction>\d*).*$','\g<integer>.\g<fraction>', string)   
+    
+    If formatnum_reverse and comma_first: # a limited |R function; note need for fix above
+        newstring = re.sub(r'[,\s], '', newstring) # remove commas and space in number like 123,456.789 or 123 456.789, but not in 123,456 which we do not know what it is
+                                   
+    if options.decimalcomma and has_dot: # if there is a dot and we want to change dot to comma; note need for fix above
+        if comma_first: # check first if there are commas as group separators
+            newstring = re.sub(r',', '', newstring) # remove group separator comma(s) before changing to decimal separator comma, not caring for |R
+        newstring = re.sub(r'^(?P<integer>\d*)\.(?P<fraction>\d*).*$','\g<integer>,\g<fraction>', newstring) 
+
+    #if not options.decimalcomma: fix: add commas as group separator here, or something locale specific: this may never be implemented
+           
     if newstring==string: #maybe not needed, but just in case something irregular comes in, at least arguments are removed
-        newstring = re.sub(r'^(?P<number>[^|]*)\|.*','\g<number>', string) # look for pipe (|), remove all from pipe and after
-    return newstring.strip() # if no dot or no pipe then following should be true: newstring == string
+        newstring = re.sub(r'^(?P<number>[^|]*)\|.*','\g<number>', newstring) # look for pipe (|), remove all from pipe and after
+    return newstring.strip() 
 
 # function for parsing '#dateformat', '#formatdate'; #dateformat:2009-12-25; #formatdate:2009 dec 25
 def formatdate(string): # |dmy, |mdy, |ISO 8601
