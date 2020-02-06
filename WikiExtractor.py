@@ -281,7 +281,7 @@ templateKeys = set(['10', '828'])
 
 ##
 # Regex for identifying disambig pages
-filter_disambig_page_pattern = re.compile("{{disambig(uation)?(\|[^}]*)?}}|__DISAMBIG__")
+filter_disambig_page_pattern = re.compile(r"{{[Dd]isambig(uation)?(\|[^}]*)?}}|__DISAMBIG__")
 
 ##
 g_page_total = 0
@@ -1947,10 +1947,10 @@ def sharp_expr(extr, expr):
     """Tries converting a lua expr into a Python expr."""
     try:
         expr = extr.expand(expr)
-        expr = re.sub('(?<![!<>])=', '==', expr) # negative lookbehind
-        expr = re.sub('mod', '%', expr)          # no \b here
-        expr = re.sub('\bdiv\b', '/', expr)
-        expr = re.sub('\bround\b', '|ROUND|', expr)
+        expr = re.sub(r'(?<![!<>])=', '==', expr) # negative lookbehind
+        expr = re.sub(r'mod', '%', expr)          # no \b here
+        expr = re.sub(r'\bdiv\b', '/', expr)
+        expr = re.sub(r'\bround\b', '|ROUND|', expr)
         return text_type(eval(expr))
     except:
         return '<span class="error">%s</span>' % expr
