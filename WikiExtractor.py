@@ -1494,6 +1494,9 @@ def findBalanced(text, openDelim=['[['], closeDelim=[']]']):
 
 # Only minimal support
 # FIXME: import Lua modules.
+# https://commons.wikimedia.org/wiki/Commons:Lua/Modules, https://en.wikipedia.org/wiki/Wikipedia:Lua
+# https://en.wikipedia.org/wiki/Category:Lua_metamodules
+# 
 
 def if_empty(*rest):
     """
@@ -1689,7 +1692,7 @@ modules = {
     'Roman': {
         'main': roman_main
     },
-
+    # localised to Italian
     'Numero romano': {
         'main': roman_main
     }
@@ -1813,13 +1816,13 @@ class MagicWords(object):
         '__NOCC__',
         '__NOTITLECONVERT__',
         '__NOTC__',
-        '__START__', # keep for now, but removed in r1695 and completely removed in r24784
-        '__END__', # keep for now, but removed in 19213. 
+        '__START__', # keep, but removed in r1695 and completely removed in r24784
+        '__END__', # keep, but removed in 19213. 
         '__INDEX__',
         '__NOINDEX__',
         '__STATICREDIRECT__',
         '__DISAMBIG__',
-        '__NOGLOBAL__' #added 200126
+        '__NOGLOBAL__'
     )
 
 
@@ -1853,6 +1856,10 @@ def lcfirst(string):
 # Function for parsing 'formatnum:xxx.yyy|zzz' where zzz can be '|R', '|NOSEP': https://www.mediawiki.org/wiki/Help:Magic_words
 # Takes an unformatted number (Arabic, no group separators and . as decimal separator) and outputs it in the localized digit script and formatted with decimal and decimal group separators, according to the wiki's default locale
 # The |R parameter can be used to reverse the behavior, for use in mathematical situations: it's reliable and should be used only to deformat numbers which are known to be formatted exactly as formatnum formats them with the wiki's locale.
+# Note: Lua function in Lua language: formatted_string = formatnum.formatNum(value, lang, prec, compact): 
+# Note: "Language:formatNum()" in MediaWiki's core libraries for Lua: 
+# Note: Templates: {{formatnum|1=value|2=lang|prec=prec|sep=compact}}: https://commons.wikimedia.org/wiki/Template:Formatnum, https://commons.wikimedia.org/wiki/Module:Formatnum
+# Note: Template:Formatnum4: https://commons.wikimedia.org/wiki/Template:Formatnum4: example: {{Formatnum4|1|es}} → 1
 def formatnum(string):
     return(string) # disable function until fixed, actually works this way
     formatnum_reverse = False
@@ -2151,6 +2158,7 @@ def callParserFunction(functionName, args, extractor):
 
     :param: args not yet expanded (see branching functions).
     https://www.mediawiki.org/wiki/Help:Extension:ParserFunctions
+    https://en.wikipedia.org/wiki/Module:Fun
     """
 
     try:
