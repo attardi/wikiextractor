@@ -1,14 +1,27 @@
 # WikiExtractor
 [WikiExtractor.py](http://medialab.di.unipi.it/wiki/Wikipedia_Extractor) is a Python script that extracts and cleans text from a [Wikipedia database dump](http://download.wikimedia.org/).
 
-The tool is written in Python and requires Python 2.7 or Python 3.3+ but no additional library.
+The tool is written in Python and requires Python 2.7 or Python 3.3+ but no additional library. Python 2 may not work properly any longer, testing may be needed.
 
 For further information, see the [project Home Page](http://medialab.di.unipi.it/wiki/Wikipedia_Extractor) or the [Wiki](https://github.com/attardi/wikiextractor/wiki).
 
 # Wikipedia Cirrus Extractor
 
 `cirrus-extractor.py` is a version of the script that performs extraction from a Wikipedia Cirrus dump.
-Cirrus dumps contain text with already expanded templates.
+Cirrus dumps contain text with already expanded templates. The Cirrus extractor does not suffer fron somewhat inadequate template expansion. Until WikiExtractors template expansion has been fixed this may be used instead.
+
+<b>Examples:</b><br>
+json output: python3 cirrus-extract.py -o wiki/test wiki/wiki-20191104-cirrussearch-content.json.gz<br>
+text output: python3 cirrus-extract.py -o wiki/test -t wiki/wiki-20191104-cirrussearch-content.json.gz
+
+Text output is without titles, etc. It contains only the article texts separated with empty lines.
+
+<b>Some additional switches are:</b><br>
+--raw       : basically no cleaning.<br>
+--sentences : basic sentence based cleaning, based on dot and space, producing at least two sentences ending with a dot - but can be tricked by dots in names, etc.
+
+<b>If you want every article in a separate file</b><br>
+Change line 53 to False. Note that if you want something else than ./ab/abcd/abcd as directory structure you need to change in the code. I have commented where (lines 117-119). Please, also look at line 247 for file name variations.
 
 Cirrus dumps are available at:
 [cirrussearch](http://dumps.wikimedia.org/other/cirrussearch/).
@@ -24,25 +37,65 @@ In order to speed up processing:
 
 ## Installation
 
-The script may be invoked directly, however it can be installed by doing:
-
-    (sudo) python setup.py install
+Currently no installation. The script may be invoked directly.
 
 ## Usage
 The script is invoked with a Wikipedia dump file as an argument.
 The output is stored in several files of similar size in a given directory.
 Each file will contains several documents in this [document format](http://medialab.di.unipi.it/wiki/Document_Format).
 
-    usage: WikiExtractor.py [-h] [-o OUTPUT] [-b n[KMG]] [-c] [--json] [--html]
-                            [-l] [-s] [--lists] [-ns ns1,ns2]
-                            [--templates TEMPLATES] [--no-templates] [-r]
-                            [--min_text_length MIN_TEXT_LENGTH]
-                            [--filter_category path_of_categories_file]
-                            [--filter_disambig_pages] [-it abbr,b,big]
-                            [-de gallery,timeline,noinclude] [--keep_tables]
-                            [--processes PROCESSES] [-q] [--debug] [-a] [-v]
-                            [--log_file]
-                            input
+usage: WikiExtractor.py <br>
+                        [-h] [-o OUTPUT] [-b n[KMG]] [-c] [--json] [--html]<br>
+                        [-l] [-s] [--headersfooters] [--noLineAfterHeader]<br>
+                        [-no-title] [--squeeze_blank] [--for-bert]<br>
+                        [--remove-special-tokens] [--remove-html-tags]<br>
+                        [--point-separated]<br>
+                        [--restrict_pages_to RESTRICT_PAGES_TO]<br>
+                        [--max_articles MAX_ARTICLES] [--verbose] [--lists]<br>
+                        [-ns ns1,ns2] [--templates TEMPLATES] [--no-templates]<br>
+                        [-r] [--min_text_length MIN_TEXT_LENGTH]<br>
+                        [--filter_disambig_pages] [-it abbr,b,big]<br>
+                        [-de gallery,timeline,noinclude] [--keep_tables]<br>
+                        [--processes PROCESSES] [-q] [--debug] [-a]<br>
+                        [--log_file LOG_FILE] [-v]<br>
+                        [--filter_category FILTER_CATEGORY]<br>
+                        input
+
+## Examples (tested for "correct" output)
+<b>Debug and testing (short and fast):</b>
+python3 WikiExtractor.py -o wiki/test --templates templat.txt --max_articles 10 --verbose wiki/wiki-20191101-pages-articles.xml<br>
+<b>Debug and testing (more info on screen and a log):</b> python3 WikiExtractor.py -o wiki/test --templates templat.txt --max_articles 10 --verbose --debug --log_file log.txt wiki/wiki-20191101-pages-articles.xml
+
+<b>JSON (most extracted information):</b>
+python3 WikiExtractor.py -o wiki/test --filter_disambig_pages --templates templat.txt --titlefree --json --min_text_length 100 wiki/wiki-20191101-pages-articles.xml<br>
+python3 WikiExtractor.py -o wiki/test --filter_disambig_pages --templates templat.txt --json --for-bert --min_text_length 100 wiki/wiki-20191101-pages-articles.xml
+
+<b>Text only with "extra cleaning" (change --min_text_length to suit your use cases):</b>
+python3 WikiExtractor.py -o wiki/test --filter_disambig_pages --no_templates --remove-html-tags --remove-special-tokens --min_text_length 100 wiki/wiki-20191101-pages-articles.xml
+
+<b>Other combinations:</b>
+python3 WikiExtractor.py -o wiki/test --headersfooters --titlefree --squeeze-blank wiki/wiki-20191101-pages-articles.xml<br>
+python3 WikiExtractor.py -o wiki/test --titlefree --squeeze-blank wiki/wiki-20191101-pages-articles.xml<br>
+python3 WikiExtractor.py -o wiki/test --noLineAfterHeader --squeeze-blank wiki/wiki-20191101-pages-articles.xml<br>
+python3 WikiExtractor.py -o wiki/test --for-bert wiki/wiki-20191101-pages-articles.xml<br>
+python3 WikiExtractor.py -o wiki/test --filter_disambig_pages --no_templates --for-bert --min_text_length 100 wiki/wiki-20191101-pages-articles.xml<br>
+python3 WikiExtractor.py -o wiki/test --filter_disambig_pages --templates templat.txt --titlefree --json --for-bert --min_text_length 100 wiki/wiki-20191101-pages-articles.xml<br>
+python3 WikiExtractor.py -o wiki/test --filter_disambig_pages --templates templat.txt --squeeze-blank --titlefree --max_articles 10 --remove-html-tags --min_text_length 100 wiki/wiki-20191101-pages-articles.xml<br>
+
+<b>Postprocessing</b>
+After running the extractor there may be a need for cleaning the output. In linux you may use any of the following examples. Please copy all the files to a safe place first. ANY ERROR IN THE CODE WILL DESTROY YOUR TEXT. You can be sure your text will be destroyed many times before you find the right cleaning scripts.<br>
+left trim on one file: sed -i 's/^[ ]*//g' YOURTEXT<br>
+right trim on one file: sed -i 's/[ ]*$//g' YOURTEXT<br>
+If you want to work many files at a time use (do NOT have any othe files in the folder or subfolders):<br>
+left trim on all files in folder or subfolder: find wiki/* -type f -exec sed -i 's/^[ ]*//g' {} \;<br>
+right trim on all files in folder or subfolder: find wiki/* -type f -exec sed -i 's/[ ]*$//g' {} \;<br>
+remove a line that starts with < and ends with > on all files in folder or subfolder: find wiki/* -type f -exec sed -E -i '/^<[^<]*>$/d' {} \;<br>
+remove a line that starts with ( and ends with ) on all files in folder or subfolder: find wiki/* -type f -exec sed -E -i '/^[(][^(]*[)]$/d' {} \;<br>
+Search Internet for variations and how to use with other operating systems. One variation would be to remove option "-i" and write changes to new files, instead of -i[nline] - although not very useful if you do more than one cleaning operation.
+
+For those use cases where only on large file is needed, in linux use: cat --squeeze-blank wiki/\*/\* > wiki/wiki.txt
+
+
 
     Wikipedia Extractor:
     Extracts and cleans text from a Wikipedia database dump and stores output in a
@@ -115,6 +168,14 @@ Each file will contains several documents in this [document format](http://media
                             comma separated list of elements that will be removed
                             from the article text
       --keep_tables         Preserve tables in the output article text
+                            (default=False)
+      --headersfooters      Adds header and footer to each article
+                            (default=False)
+      --noLineAfterHeader   Does not add line below title. Title is directly on article.
+                            (default=False)
+      --titlefree           No titles on articles
+                            (default=False)
+      --squeeze-blank       Minimize empty lines, that is, only empty lines are before/after title.
                             (default=False)
 
     Special:
