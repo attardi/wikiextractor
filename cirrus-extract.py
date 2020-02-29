@@ -2,8 +2,9 @@
 # -*- coding: utf-8 -*-
 #
 # =============================================================================
-#  Version: 1.00 (December 15, 2015)
-#  Author: Giuseppe Attardi (attardi@di.unipi.it), University of Pisa
+#  Version: 1.1 (February 29, 2020)
+#  Author(s): Giuseppe Attardi (attardi@di.unipi.it), University of Pisa
+#             HjalmarrSv
 #
 # =============================================================================
 #  Copyright (c) 2015. Giuseppe Attardi (attardi@di.unipi.it).
@@ -43,10 +44,13 @@ import gzip
 import logging
 
 # Program version
-version = '1.00'
+version = '1.10'
 
-urlbase = 'http://it.wikipedia.org/'
+# Urlbase
+urlbase = 'http://sv.wikipedia.org/'
 
+# Numbered files is default output. Change to False if you want article files in "articled" directories.
+numbered = True
 
 # ----------------------------------------------------------------------
 
@@ -57,27 +61,70 @@ class NextFile(object):
 
     filesPerDir = 100
 
-    def __init__(self, path_name):
+    def __init__(self, path_name, title):
         self.path_name = path_name
-        self.dir_index = -1
-        self.file_index = -1
+        self.dir_index = -1       # for enumerated file names
+        self.file_index = -1      # 
+        self.title = title        # for article file names
 
     def next(self):
-        self.file_index = (self.file_index + 1) % NextFile.filesPerDir
-        if self.file_index == 0:
-            self.dir_index += 1
-        dirname = self._dirname()
-        if not os.path.isdir(dirname):
-            os.makedirs(dirname)
-        return self._filepath()
+        if numbered:
+            self.file_index = (self.file_index + 1) % NextFile.filesPerDir
+            if self.file_index == 0:
+                self.dir_index += 1
+            dirname = self._dirname()
+            if not os.path.isdir(dirname):
+                os.makedirs(dirname)
+            return self._filepath()
+        else:
+            dirname = self._dirname()
+            if not os.path.isdir(dirname):
+                os.makedirs(dirname)
+            return self._filepath()
 
     def _dirname(self):
-        char1 = self.dir_index % 26
-        char2 = self.dir_index // 26 % 26
-        return os.path.join(self.path_name, '%c%c' % (ord('A') + char2, ord('A') + char1))
+        if numbered:
+            char1 = self.dir_index % 26
+            char2 = self.dir_index // 26 % 26
+            return os.path.join(self.path_name, '%c%c' % (ord('A') + char2, ord('A') + char1))
+        else:
+            # Remove punctuation from title, for keeping paths from failing (both from path name and filename)
+            self.title = self.title.replace('.', '')
+            self.title = self.title.replace('\\', '')
+            self.title = self.title.replace('/', '')
+            title = self.title                        # if you want to limit the amount of symbols, clean title accordingly
+            if len(title)==0:                         # same for caps and non caps in directory names (now gw Gw and GW are possible)
+                return self.path_name                 # this can happen if "clean" title and title is only "." or other that is removed above
+            else:
+                dirname2 = dirname3 = dirname4 = "" # initialize before use (short titles will fail otherwise)
+                title = re.sub(r'_.*$', "", title)  # do not add version nr, etc to directory structure
+                if title=="":
+                    #title = "____"        # replace (./__/____/____[_1234]) with your choice, for the possible few articles consisting
+                    return self.path_name  # of only the few forbidden file characters if uncommenting previous line and commenting this one.
+                dirname1 = title[0]       
+                if len(title)==1:
+                    dirname2 = dirname3 = "" # note "a" not in ./aa/aa but in ./a/a (both ./a/a and ./aa/aa will exist, change 
+                else:                        # with: dirname2 = dirname3 = dirname1 (also below), then "a" will be in ./aa/aa
+                    dirname2 = title[1]      # present choice for machine readability
+                    if len(title)==2:        
+                        dirname3 = ""
+                    else:
+                        dirname3 = title[2]
+                        if len(title)==3:
+                            dirname4 = ""
+                        else:
+                            dirname4 = title[3]
+            d1 = dirname1 + dirname2                       # first level directory - first two letter (change to your needs)
+            d2 = dirname1 + dirname2 + dirname3 + dirname4 # second level directory - all four first letters (could be next two letters)
+            p = d1 + "/" + d2                              # two directories deep, change if needed
+            return os.path.join(self.path_name, p) 
+
 
     def _filepath(self):
-        return '%s/wiki_%02d' % (self._dirname(), self.file_index)
+        if numbered: 
+            return '%s/wiki_%02d' % (self._dirname(), self.file_index)
+        else:
+            return '%s/%s' % (self._dirname(), self.title)
 
 class OutputSplitter(object):
     """
@@ -154,8 +201,9 @@ def process_dump(input_file, out_file, file_size, file_compress, text_only, sent
         output = sys.stdout
         if file_compress:
             logging.warn("writing to stdout, so no output compression (use external tool)")
-    else:
-        nextFile = NextFile(out_file)
+    elif numbered:
+        title = ""
+        nextFile = NextFile(out_file, title)
         output = OutputSplitter(nextFile, file_size, file_compress)
 
     # process dump
@@ -172,6 +220,7 @@ def process_dump(input_file, out_file, file_size, file_compress, text_only, sent
         id = index['index']['_id']
         language = content['language']
         revision = content['version']
+        # date could be useful, fix date
         if type == 'page' and content['namespace'] == 0:
             title = content['title']
             text = content['text']
@@ -179,12 +228,12 @@ def process_dump(input_file, out_file, file_size, file_compress, text_only, sent
 		# drop references:
                 # ^ The Penguin Dictionary
                 text = re.sub(r' \^ .*', '', text) # only one space before caret to catch malformed tags
-            text = re.sub(r'\s*$', '', text) # remove all trailing white space
             if sentences_only:
-                text = re.sub(r'\. [^.]*$', '.', text) # remove incomplete last sentence (replaced by below?)
-		text = re.sub(r'\.\s(.(?!\.\s))*[^.]$', '.', text) # remove incomplete last sentence, no dot and space found as separator and no ending dot
-                text = re.sub(r'^[^.]*$', '', text) # remove incomplete sentence, even if only sentence in article
-		text = re.sub(r'^(.(?!\.\s))*$', '', text) # remove if only one sentence in article, no dot and space found as separator
+                #text = re.sub(r'\. [^.]*$', '.', text) # remove incomplete last sentence, no ending dot
+                text = re.sub(r'\.\s(.(?!\.\s))*[^.]$', '.', text) # remove incomplete last sentence, no dot and space found as separator and no ending dot
+                text = re.sub(r'^[^.]*$', '', text) # remove incomplete sentence, even if only sentence in article, no dot at all
+
+                text = re.sub(r'^(.(?!\.\s))*$', '', text) # remove if only one sentence in article, no dot and space found as separator
             if text != "" and text != " ": # do not create empty articles
                 url = urlbase + 'wiki?curid=' + id
                 header = '<doc id="%s" url="%s" title="%s" language="%s" revision="%s">\n' % (id, url, title, language, revision)
@@ -192,7 +241,13 @@ def process_dump(input_file, out_file, file_size, file_compress, text_only, sent
                     page = header + title + '\n\n' + text + '\n</doc>\n'
                 else:
                     page = text + '\n\n'
-                output.write(page.encode('utf-8'))
+                if numbered:
+                    output.write(page.encode('utf-8'))
+                else:
+                    title = title + "_" + id # + "_" + revision # remove this line if clean articles wanted (note the 
+                    nextFile = NextFile(out_file, title)      # increased risk for overwriting articles). If you want all revisions, 
+                    output = OutputSplitter(nextFile, file_size, file_compress) # for all your wiki runs, remove appropriate comment
+                    output.write(page.encode('utf-8'))
                 page = ""
             
 
@@ -221,6 +276,8 @@ def main():
                         help="Only at least two complete point separated sentences.")
     groupO.add_argument("-r", "--raw", action="store_true",
                         help="No filtering.")	
+    # groupO.add_argument("-a", "--articles", action="store_true",
+    #                     help="Output as separate articles.")
 	
     groupP = parser.add_argument_group('Processing')
     groupP.add_argument("-ns", "--namespaces", default="", metavar="ns1,ns2",
@@ -234,7 +291,10 @@ def main():
                         help="print program version")
 
     args = parser.parse_args()
-
+    
+    # numbered = True
+    # if args.articles:
+    #     numbered = False
 
     try:
         power = 'kmg'.find(args.bytes[-1].lower()) + 1
