@@ -1860,7 +1860,7 @@ def lcfirst(string):
 # Note: "Language:formatNum()" in MediaWiki's core libraries for Lua: 
 # Note: Templates: {{formatnum|1=value|2=lang|prec=prec|sep=compact}}: https://commons.wikimedia.org/wiki/Template:Formatnum, https://commons.wikimedia.org/wiki/Module:Formatnum
 # Note: Template:Formatnum4: https://commons.wikimedia.org/wiki/Template:Formatnum4: example: {{Formatnum4|1|es}} → 1
-def formatnum(string):
+# Use: >>> '{:,}'.format(1234567890) -> '1,234,567,890'
     return(string) # disable function until fixed, actually works this way
     formatnum_reverse = False
     string = string.strip() #strip whitespace before and after, if any
@@ -1897,6 +1897,8 @@ def formatnum(string):
     return newstring.strip() 
 
 # function for parsing '#dateformat', '#formatdate'; #dateformat:2009-12-25; #formatdate:2009 dec 25
+# Use: >>> import datetime >>> d = datetime.datetime(2010, 7, 4, 12, 15, 58) 
+#      >>> '{:%Y-%m-%d %H:%M:%S}'.format(d)'2010-07-04 12:15:58'def formatnum(string):
 def formatdate(string): # |dmy, |mdy, |ISO 8601
     string = re.sub(r'^(?P<date>[^|])\|(?P<rest>.*)','\g<date>', string) # leave date "as is" for now, strip rest
     return string
