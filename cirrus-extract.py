@@ -116,9 +116,9 @@ class NextFile(object):
                             dirname4 = title[3]
             d1 = dirname1 + dirname2                       # first level directory - first two letter (change to your needs)
             d2 = dirname1 + dirname2 + dirname3 + dirname4 # second level directory - all four first letters (could be next two letters)
-            p = d1 + "/" + d2                              # two directories deep, change if needed
-            return os.path.join(self.path_name, p) 
-
+            p = d1 + "/" + d2                              # two directories deep, change if needed. Note: Not tested on Win (where \).
+            return os.path.join(self.path_name, p)         # If problems with this code, consider using two consecutive os.path.join. In
+                                                           # theory Python should take care of os variations.
 
     def _filepath(self):
         if numbered: 
