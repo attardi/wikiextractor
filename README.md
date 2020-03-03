@@ -40,8 +40,8 @@ Each file will contains several documents in this [document format](http://media
                             [--filter_category path_of_categories_file]
                             [--filter_disambig_pages] [-it abbr,b,big]
                             [-de gallery,timeline,noinclude] [--keep_tables]
-                            [--processes PROCESSES] [-q] [--debug] [-a] [-v]
-                            [--log_file]
+                            [--processes PROCESSES] [--dir_count DIR_COUNT] 
+                            [-q] [--debug] [-a] [-v] [--log_file]
                             input
 
     Wikipedia Extractor:
@@ -69,6 +69,8 @@ Each file will contains several documents in this [document format](http://media
       -h, --help            show this help message and exit
       --processes PROCESSES
                             Number of processes to use (default 1)
+      --dir_count DIR_COUNT
+                            Force number of directories to distribute the files amongst (default is as many directories as needed with 100 files per directory)
 
     Output:
       -o OUTPUT, --output OUTPUT
