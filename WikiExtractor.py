@@ -16,6 +16,7 @@
 #   Radics Geza (radicsge@gmail.com)
 #   orangain (orangain@gmail.com)
 #   Seth Cleveland (scleveland@turnitin.com)
+#   Necmettin Carkaci (necmettin.carkaci@gmail.com)
 #   Bren Barn
 #
 # =============================================================================
@@ -70,7 +71,11 @@ import json
 from io import StringIO
 from multiprocessing import Queue, Process, Value, cpu_count
 from timeit import default_timer
+import os
 
+# Unicode encoding problem fix
+reload(sys)
+sys.setdefaultencoding('utf-8')
 
 PY2 = sys.version_info[0] == 2
 # Python 2.7 compatibiity
@@ -160,8 +165,17 @@ options = SimpleNamespace(
     toHTML = False,
 
     ##
+    # Whether to write file instead of the xml-like default output format
+    write_file=True,
+
+
+    ##
     # Whether to write json instead of the xml-like default output format
     write_json = False,
+
+    ##
+    # Output directory of the extracted wiki files
+    outputDir = 'output',
 
     ##
     # Whether to expand templates
@@ -562,6 +576,34 @@ class Extractor(object):
         :param text: the text of the page
         """
         url = get_url(self.id)
+
+        if options.write_file:
+
+            title = self.title
+
+            # Remove punctuation from title
+            title = title.replace('.', '')
+            title = title.replace('\\', '')
+            title = title.replace('/', '')
+
+            # Set first letter for directory name which include file
+            parent_dir = title[0].upper()
+
+            output_filename = os.getcwd()+os.sep+options.outputDir+os.sep+parent_dir+os.sep+title+'.txt'
+
+            if (os.path.exists(output_filename)): # if file exist add id front of the filename
+                output_filename = os.getcwd() + os.sep + options.outputDir + os.sep + parent_dir + os.sep +self.id+'_'+title + '.txt'
+
+            if (not os.path.exists(os.path.dirname(output_filename))):
+                os.makedirs(os.path.dirname(output_filename))
+
+            with open(output_filename,'w+') as output_file:
+
+                for line in text:
+                    line = line.encode('utf-8')
+                    output_file.write(line)
+                    output_file.write('\n')
+
         if options.write_json:
             json_data = {
                 'id': self.id,
@@ -578,7 +620,8 @@ class Extractor(object):
                 out_str = out_str.encode('utf-8')
             out.write(out_str)
             out.write('\n')
-        else:
+
+        if(not (options.write_file or options.write_json)):
             if options.print_revision:
                 header = '<doc id="%s" revid="%s" url="%s" title="%s">\n' % (self.id, self.revid, url, self.title)
             else:
@@ -646,8 +689,10 @@ class Extractor(object):
         text = self.transform(text)
         text = self.wiki2text(text)
         text = compact(self.clean(text))
-        # from zwChan
-        text = [title_str] + text
+        
+        # Write output into file
+        if not options.write_file:
+            text = [title_str] + text
 
         if sum(len(line) for line in text) < options.min_text_length:
             return
@@ -3058,9 +3103,10 @@ def reduce_process(opts, output_queue, spool_length,
     global options
     options = opts
 
+
     createLogger(options.quiet, options.debug, options.log_file)
 
-    if out_file:
+    if (out_file and (not options.write_file)):
         nextFile = NextFile(out_file)
         output = OutputSplitter(nextFile, file_size, file_compress)
     else:
@@ -3124,7 +3170,8 @@ def main():
                         help="compress output files using bzip")
     groupO.add_argument("--json", action="store_true",
                         help="write output in json format instead of the default one")
-
+    groupO.add_argument("--file", action="store_true",
+                        help="write each text into per file instead of the default one")
 
     groupP = parser.add_argument_group('Processing')
     groupP.add_argument("--html", action="store_true",
@@ -3179,6 +3226,8 @@ def main():
     options.keepLists = args.lists
     options.toHTML = args.html
     options.write_json = args.json
+    options.write_file = args.file
+    options.outputDir = args.output
     options.print_revision = args.revision
     options.min_text_length = args.min_text_length
     if args.html:
