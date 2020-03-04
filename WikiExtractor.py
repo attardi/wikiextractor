@@ -144,6 +144,11 @@ options = SimpleNamespace(
     keep_tables = False,
 
     ##
+    # Extract and save page categories
+    extract_categories = False,
+    category_surface = 'Category',
+
+    ##
     # Whether to preserve links in output
     keepLinks = False,
 
@@ -556,7 +561,7 @@ class Extractor(object):
         self.recursion_exceeded_3_errs = 0  # parameter recursion
         self.template_title_errs = 0
 
-    def write_output(self, out, text):
+    def write_output(self, out, text, categories=[]):
         """
         :param out: a memory file
         :param text: the text of the page
@@ -569,6 +574,9 @@ class Extractor(object):
                 'title': self.title,
                 'text': "\n".join(text)
             }
+            if options.extract_categories:
+                json_data['categories'] = categories
+
             if options.print_revision:
                 json_data['revid'] = self.revid
             # We don't use json.dump(data, out) because we want to be
@@ -583,6 +591,10 @@ class Extractor(object):
                 header = '<doc id="%s" revid="%s" url="%s" title="%s">\n' % (self.id, self.revid, url, self.title)
             else:
                 header = '<doc id="%s" url="%s" title="%s">\n' % (self.id, url, self.title)
+            if options.extract_categories:
+                categories_line = ', '.join(categories)
+                header = header[:-2] + ' categories="%s">\n' % (categories_line)
+
             footer = "\n</doc>\n"
             if out == sys.stdout:   # option -a or -o -
                 header = header.encode('utf-8')
@@ -644,6 +656,11 @@ class Extractor(object):
         # $text = $frame->expand( $dom );
         #
         text = self.transform(text)
+        categories = []
+        if options.extract_categories:
+            # Extract categories but not sortkeys
+            rgx_category = r'\[\[%s:([^|\]]+)(?:|[^\]]+)?\]\]' % options.category_surface
+            categories = re.findall(rgx_category, text)
         text = self.wiki2text(text)
         text = compact(self.clean(text))
         # from zwChan
@@ -652,7 +669,7 @@ class Extractor(object):
         if sum(len(line) for line in text) < options.min_text_length:
             return
 
-        self.write_output(out, text)
+        self.write_output(out, text, categories)
 
         errs = (self.template_title_errs,
                 self.recursion_exceeded_1_errs,
@@ -3153,6 +3170,10 @@ def main():
                         help="comma separated list of elements that will be removed from the article text")
     groupP.add_argument("--keep_tables", action="store_true", default=options.keep_tables,
                         help="Preserve tables in the output article text (default=%(default)s)")
+    groupP.add_argument("--extract_categories", action="store_true", default=options.extract_categories,
+                        help="Whether to extract page categories, when used, --category_surface is also required (default=%(default)s)")
+    groupP.add_argument("--category_surface", type=str, default=options.category_surface,
+                        help="How `Category` is written in the wiki namespace. E.g. for English: `Category`, for French: `Catégorie`")
     default_process_count = max(1, cpu_count() - 1)
     parser.add_argument("--processes", type=int, default=default_process_count,
                         help="Number of processes to use (default %(default)s)")
@@ -3187,6 +3208,8 @@ def main():
     options.expand_templates = args.no_templates
     options.filter_disambig_pages = args.filter_disambig_pages
     options.keep_tables = args.keep_tables
+    options.extract_categories = args.extract_categories
+    options.category_surface = args.category_surface
 
     try:
         power = 'kmg'.find(args.bytes[-1].lower()) + 1
