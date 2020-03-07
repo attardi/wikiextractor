@@ -2,7 +2,7 @@
 # -*- coding: utf-8 -*-
 #
 # =============================================================================
-#  Version: 1.1 (February 29, 2020)
+#  Version: 1.11 (Mars 7, 2020)
 #  Author(s): Giuseppe Attardi (attardi@di.unipi.it), University of Pisa
 #             HjalmarrSv
 #
@@ -44,13 +44,13 @@ import gzip
 import logging
 
 # Program version
-version = '1.10'
+version = '1.11'
 
 # Urlbase
-urlbase = 'http://sv.wikipedia.org/'
+urlbase = 'http://de.wikipedia.org/'
 
 # Numbered files is default output. Change to False if you want article files in "articled" directories.
-numbered = True
+numbered = False
 
 # ----------------------------------------------------------------------
 
@@ -89,12 +89,16 @@ class NextFile(object):
             return os.path.join(self.path_name, '%c%c' % (ord('A') + char2, ord('A') + char1))
         else:
             # Remove punctuation from title, for keeping paths from failing (both from path name and filename)
-            self.title = self.title.replace('.', '')
-            self.title = self.title.replace('\\', '')
-            self.title = self.title.replace('/', '')
-            title = self.title                        # if you want to limit the amount of symbols, clean title accordingly
-            if len(title)==0:                         # same for caps and non caps in directory names (now gw Gw and GW are possible)
-                return self.path_name                 # this can happen if "clean" title and title is only "." or other that is removed above
+            # self.title = self.title.replace('.', '') # should not be a problem in title/filename
+            # self.title = self.title.replace('\\', '') # not a problem in linux: 
+            self.title = self.title.replace('/', '÷') # replace '' or '÷' https://stackoverflow.com/questions/1976007/what-characters-are-forbidden-in-windows-and-linux-directory-names
+            title = self.title          # if you want to limit the amount of symbols, clean title accordingly
+            title = title.replace('.', '') # not dots in directory names
+            title = title.upper()       # same for caps and non caps in directory names (else gw Gw and GW are possible)
+            title = re.sub(r'["”]', "", title) # no citation marks in directory names
+            title = title.lstrip()      # remove space at beginning, since it may occur
+            if len(title)==0:           # this can happen if "clean" title and title is only "." or other that is removed above
+                return self.path_name                 
             else:
                 dirname2 = dirname3 = dirname4 = "" # initialize before use (short titles will fail otherwise)
                 title = re.sub(r'_.*$', "", title)  # do not add version nr, etc to directory structure
@@ -114,11 +118,12 @@ class NextFile(object):
                             dirname4 = ""
                         else:
                             dirname4 = title[3]
-            d1 = dirname1 + dirname2                       # first level directory - first two letter (change to your needs)
-            d2 = dirname1 + dirname2 + dirname3 + dirname4 # second level directory - all four first letters (could be next two letters)
-            p = d1 + "/" + d2                              # two directories deep, change if needed. Note: Not tested on Win (where \).
-            return os.path.join(self.path_name, p)         # If problems with this code, consider using two consecutive os.path.join. In
-                                                           # theory Python should take care of os variations.
+            d1 = dirname1                       # first level directory - first letter (change to your needs)
+            d2 = dirname1 + dirname2 + dirname3 # + dirname4 # second level directory - all three first letters (could be next two letters)
+            d2 = re.sub(r'[ ,]$', "", d2)       # remove ending space and comma
+            p = d1 + "/" + d2                   # two directories deep, change if needed
+            return os.path.join(self.path_name, p) # replace line above with two joins?
+
 
     def _filepath(self):
         if numbered: 
@@ -207,9 +212,18 @@ def process_dump(input_file, out_file, file_size, file_compress, text_only, sent
         output = OutputSplitter(nextFile, file_size, file_compress)
 
     # process dump
-    # format
+    # format (two lines: index and content)
     # {"index":{"_type":"page","_id":"3825914"}}
     # {"namespace":0,"title":TITLE,"timestamp":"2014-06-29T15:51:09Z","text":TEXT,...}
+    # or
+    # {"index":{"_type":"page","_id":"4274592"}}
+    # {"template":["Template:See also","Template:Studebaker","Template:Navbox","Template:Truck-stub","Template:Asbox","Module:Labelled list
+    # hatnote","Module:Hatnote","Module:Hatnote
+    # list","Module:Arguments","Module:Navbox","Module:Navbar","Module:Asbox","Module:Buffer"],
+    # "content_model":"wikitext","opening_text":"Transtar was ... 1963.","wiki":"enwiki","auxiliary_text":[
+    # "This truck-related article is a stub. You can help Wikipedia by expanding it. v t e","Transtar Truck Model 
+    # 3-E"],"language":"en","title":"Studebaker Transtar","text":"Transtar
+
     while True:
         line = input.readline()
         if not line:
@@ -218,10 +232,26 @@ def process_dump(input_file, out_file, file_size, file_compress, text_only, sent
         content = json.loads(input.readline())
         type = index['index']['_type']
         id = index['index']['_id']
-        language = content['language']
-        revision = content['version']
-        # date could be useful, fix date
-        if type == 'page' and content['namespace'] == 0:
+        try:
+            language = content['language'] # use try: because en errors out on some lines
+        except:
+            language = ""
+        try:
+            revision = content['version']
+        except:
+            revision = "0"
+        # date from timestamp
+        try:
+            time = content['timestamp'] 
+            date = re.sub(r'[^d]*(?P<y>\d{4})-(?P<m>\d{2})-(?P<d>\d{2}).*', '\g<y>\g<m>\g<d>', time) 
+        except:
+            time = "0"
+        try:
+            ns = content['namespace']
+        except:
+            ns = -1
+
+        if type == 'page' and ns == 0:
             title = content['title']
             text = content['text']
             if not raw_only:
@@ -244,9 +274,9 @@ def process_dump(input_file, out_file, file_size, file_compress, text_only, sent
                 if numbered:
                     output.write(page.encode('utf-8'))
                 else:
-                    title = title + "_" + id # + "_" + revision # remove this line if clean articles wanted (note the 
-                    nextFile = NextFile(out_file, title)      # increased risk for overwriting articles). If you want all revisions, 
-                    output = OutputSplitter(nextFile, file_size, file_compress) # for all your wiki runs, remove appropriate comment
+                    title = title + "_" + language + "_"+ id + "_" + str(revision) + "_" + date # remove this line if clean articles wanted (note the 
+                    nextFile = NextFile(out_file, title)      # increased risk for overwriting articles). Chose if you want all revisions, 
+                    output = OutputSplitter(nextFile, file_size, file_compress) # for all your wiki runs, by adding/removing #
                     output.write(page.encode('utf-8'))
                 page = ""
             
