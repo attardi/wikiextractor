@@ -21,7 +21,7 @@ Text output is without titles, etc. It contains only the article texts separated
 --sentences : basic sentence based cleaning, based on dot and space, producing at least two sentences ending with a dot - but can be tricked by dots in names, etc.
 
 <b>If you want every article in a separate file</b><br>
-Change line 53 to False. Note that if you want something else than ./ab/abcd/abcd as directory structure you need to change in the code. I have commented where (lines 117-119). Please, also look at line 247 for file name variations.
+Change line 53 to False. Note that if you want something else than ./ab/abcd/abcd as directory structure you need to change in the code. I have commented where (lines 121-125). Please, also look at line 277 for file name variations.
 
 Cirrus dumps are available at:
 [cirrussearch](http://dumps.wikimedia.org/other/cirrussearch/).
