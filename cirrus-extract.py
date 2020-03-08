@@ -2,7 +2,7 @@
 # -*- coding: utf-8 -*-
 #
 # =============================================================================
-#  Version: 1.11 (Mars 7, 2020)
+#  Version: 1.12 (Mars 8, 2020)
 #  Author(s): Giuseppe Attardi (attardi@di.unipi.it), University of Pisa
 #             HjalmarrSv
 #
@@ -92,16 +92,18 @@ class NextFile(object):
             # self.title = self.title.replace('.', '') # should not be a problem in title/filename
             # self.title = self.title.replace('\\', '') # not a problem in linux: 
             self.title = self.title.replace('/', '÷') # replace '' or '÷' https://stackoverflow.com/questions/1976007/what-characters-are-forbidden-in-windows-and-linux-directory-names
-            title = self.title          # if you want to limit the amount of symbols, clean title accordingly
-            title = title.replace('.', '') # not dots in directory names
-            title = title.upper()       # same for caps and non caps in directory names (else gw Gw and GW are possible)
-            title = re.sub(r'["”]', "", title) # no citation marks in directory names
-            title = title.lstrip()      # remove space at beginning, since it may occur
-            if len(title)==0:           # this can happen if "clean" title and title is only "." or other that is removed above
+            title = self.title          # If you want to limit the amount of symbols for directory names, clean title accordingly.
+            title = title.replace('.', '') # No dots in directory names.
+            title = title.upper()       # Use caps for directory names (G/GW, or else g/gw G/Gw and G/GW are possible, and likely).
+            #if len(title) > 0:         # Do not create directories for articles on (, [ (if any), by cleaning below.
+            if len(title) > 1:          # Create directories for articles on (, [ (if any) by not cleaning one character articles below.
+                title = re.sub(r'[’"”\(\[\)\]]', "", title) # No citation marks, or (, [ in directory names (no reason, but does not look nice).
+            title = title.lstrip()      # Remove space at beginning, since it may occur.
+            if len(title)==0:           # This can happen if "clean" title and title is only "." or other that is removed above.
                 return self.path_name                 
             else:
                 dirname2 = dirname3 = dirname4 = "" # initialize before use (short titles will fail otherwise)
-                title = re.sub(r'_.*$', "", title)  # do not add version nr, etc to directory structure
+                title = re.sub(r'_.*$', "", title)  # Do not add version nr, etc to directory structure (if added before).
                 if title=="":
                     #title = "____"        # replace (./__/____/____[_1234]) with your choice, for the possible few articles consisting
                     return self.path_name  # of only the few forbidden file characters if uncommenting previous line and commenting this one.
@@ -119,10 +121,11 @@ class NextFile(object):
                         else:
                             dirname4 = title[3]
             d1 = dirname1                       # first level directory - first letter (change to your needs)
+            dir_path_name = os.path.join(self.path_name, d1)
             d2 = dirname1 + dirname2 + dirname3 # + dirname4 # second level directory - all three first letters (could be next two letters)
-            d2 = re.sub(r'[ ,]$', "", d2)       # remove ending space and comma
-            p = d1 + "/" + d2                   # two directories deep, change if needed
-            return os.path.join(self.path_name, p) # replace line above with two joins?
+            d2 = re.sub(r'[ ,]$', "", d2)       # remove ending space and comma, if any.
+            dir_path_name = os.path.join(dir_path_name, d2) # two directories deep, change if needed
+            return dir_path_name 
 
 
     def _filepath(self):
@@ -245,7 +248,7 @@ def process_dump(input_file, out_file, file_size, file_compress, text_only, sent
             time = content['timestamp'] 
             date = re.sub(r'[^d]*(?P<y>\d{4})-(?P<m>\d{2})-(?P<d>\d{2}).*', '\g<y>\g<m>\g<d>', time) 
         except:
-            time = "0"
+            time = date = "0"
         try:
             ns = content['namespace']
         except:
@@ -274,6 +277,7 @@ def process_dump(input_file, out_file, file_size, file_compress, text_only, sent
                 if numbered:
                     output.write(page.encode('utf-8'))
                 else:
+                    title = re.sub(r'_', ' ', title) # Replace all _ since they are reserved for use below.
                     title = title + "_" + language + "_"+ id + "_" + str(revision) + "_" + date # remove this line if clean articles wanted (note the 
                     nextFile = NextFile(out_file, title)      # increased risk for overwriting articles). Chose if you want all revisions, 
                     output = OutputSplitter(nextFile, file_size, file_compress) # for all your wiki runs, by adding/removing #
