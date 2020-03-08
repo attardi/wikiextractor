@@ -8,7 +8,7 @@ For further information, see the [project Home Page](http://medialab.di.unipi.it
 # Wikipedia Cirrus Extractor
 
 `cirrus-extractor.py` is a version of the script that performs extraction from a Wikipedia Cirrus dump.
-Cirrus dumps contain text with already expanded templates. The Cirrus extractor does not suffer fron somewhat inadequate template expansion. Until WikiExtractors template expansion has been fixed this may be used instead.
+Cirrus dumps contain text with already expanded templates. The Cirrus extractor does not suffer fron somewhat inadequate template expansion. Until WikiExtractors template expansion has been fixed this may be used instead. Although some templates, such as the one for stub articles, is not useful expanded.
 
 <b>Examples:</b><br>
 json output: python3 cirrus-extract.py -o wiki/test wiki/wiki-20191104-cirrussearch-content.json.gz<br>
@@ -20,8 +20,9 @@ Text output is without titles, etc. It contains only the article texts separated
 --raw       : basically no cleaning.<br>
 --sentences : basic sentence based cleaning, based on dot and space, producing at least two sentences ending with a dot - but can be tricked by dots in names, etc.
 
-<b>If you want every article in a separate file</b><br>
-Change line 53 to False. Note that if you want something else than ./ab/abcd/abcd as directory structure you need to change in the code. I have commented where (lines 121-125). Please, also look at line 277 for file name variations.
+<b>If you want, or do not want, every article in a separate file</b><br>
+Change line 53 accordingly. Note that if you want something else than ./A/ABC/abc... as directory structure you need to change in the code. I have commented where (lines 123-127). Please, also look at line 281 for file name variations.<br>
+Example: python3 cirrus-extract.py -o wiki/test -t --sentences wiki/wiki-20191216-cirrussearch-content.json.gz
 
 Cirrus dumps are available at:
 [cirrussearch](http://dumps.wikimedia.org/other/cirrussearch/).
