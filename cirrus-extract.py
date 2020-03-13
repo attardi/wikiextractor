@@ -50,7 +50,9 @@ version = '1.11'
 urlbase = 'http://de.wikipedia.org/'
 
 # Numbered files is default output. Change to False if you want article files in "articled" directories.
-numbered = False
+numbered = True
+# When article output is chosen above, there will be global differences between text_only and jason_like output.
+textonly = False
 
 # ----------------------------------------------------------------------
 
@@ -91,6 +93,8 @@ class NextFile(object):
             # Remove punctuation from title, for keeping paths from failing (both from path name and filename)
             # self.title = self.title.replace('.', '') # should not be a problem in title/filename
             # self.title = self.title.replace('\\', '') # not a problem in linux: 
+            if textonly:                                  # less replacements needed for jason-like article titles
+                #
             self.title = self.title.replace('/', '÷') # replace '' or '÷' https://stackoverflow.com/questions/1976007/what-characters-are-forbidden-in-windows-and-linux-directory-names
             title = self.title          # If you want to limit the amount of symbols for directory names, clean title accordingly.
             title = title.replace('.', '') # No dots in directory names.
@@ -120,6 +124,10 @@ class NextFile(object):
                             dirname4 = ""
                         else:
                             dirname4 = title[3]
+            #if not textonly: # A/AB/abc for jason-like articles. Less articles expected in this format, maybe about a million,
+            # because basically one directory level is inside the article that contains many articles.
+		#
+            #else: # A/ABC/abc for text only output, because of the large number of articles, tens of millions.
             d1 = dirname1                       # first level directory - first letter (change to your needs)
             dir_path_name = os.path.join(self.path_name, d1)
             d2 = dirname1 + dirname2 + dirname3 # + dirname4 # second level directory - all three first letters (could be next two letters)
@@ -276,6 +284,8 @@ def process_dump(input_file, out_file, file_size, file_compress, text_only, sent
                     page = text + '\n\n'
                 if numbered:
                     output.write(page.encode('utf-8'))
+                #elif not text_only # json-like output, where every word only has one article, and this article has all variations in it
+                    # #check if article exists, and if article exists check for id and version, if not exist then add or create
                 else:
                     title = re.sub(r'_', ' ', title) # Replace all _ since they are reserved for use below.
                     title = title + "_" + language + "_"+ id + "_" + str(revision) + "_" + date # remove this line if clean articles wanted (note the 
