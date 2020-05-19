@@ -265,16 +265,20 @@ def process_dump(input_file, out_file, file_size, file_compress, text_only, sent
         if type == 'page' and ns == 0:
             title = content['title']
             text = content['text']
-            if not raw_only:
+            text = re.sub(r'\s', ' ', text)    # change different whitespace characters to conventional space, e.g. wikipedia contains tabs
+            text = re.sub(r' ( )+', ' ', text) # replace multiple consecutive spaces, if any (e.g.tab+space), with a single space
+            text = text.strip()                # remove space in beginning and end
+	    if not raw_only:
 		# drop references:
                 # ^ The Penguin Dictionary
                 text = re.sub(r' \^ .*', '', text) # only one space before caret to catch malformed tags
             if sentences_only:
+		text = re.sub(r'[.!?] [^.!?]*[^.!?]$', '.', text) # remove incomplete last sentence of at least two, no ending dot
+                text = re.sub(r'^.*[^.!?]$', '', text)            # now remove incomplete only sentence, no ending dot. this article will not be.
                 #text = re.sub(r'\. [^.]*$', '.', text) # remove incomplete last sentence, no ending dot
-                text = re.sub(r'\.\s(.(?!\.\s))*[^.]$', '.', text) # remove incomplete last sentence, no dot and space found as separator and no ending dot
-                text = re.sub(r'^[^.]*$', '', text) # remove incomplete sentence, even if only sentence in article, no dot at all
-
-                text = re.sub(r'^(.(?!\.\s))*$', '', text) # remove if only one sentence in article, no dot and space found as separator
+                #text = re.sub(r'\.\s(.(?!\.\s))*[^.]$', '.', text) # remove incomplete last sentence, no dot and space found as separator and no ending dot
+                #text = re.sub(r'^[^.]*$', '', text) # remove incomplete sentence, even if only sentence in article, no dot at all
+                #text = re.sub(r'^(.(?!\.\s))*$', '', text) # remove if only one sentence in article, no dot and space found as separator
             if text != "" and text != " ": # do not create empty articles
                 url = urlbase + 'wiki?curid=' + id
                 header = '<doc id="%s" url="%s" title="%s" language="%s" revision="%s">\n' % (id, url, title, language, revision)
