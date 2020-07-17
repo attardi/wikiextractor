@@ -60,7 +60,7 @@ import sys
 import argparse
 import bz2
 import codecs
-import cgi
+import html
 import fileinput
 import logging
 import os.path
