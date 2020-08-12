@@ -2873,6 +2873,14 @@ def process_dump(input_file, template_file, out_file, file_size, file_compress,
                 return gzip.open(filename, mode, encoding=encoding)
             elif ext == '.bz2':
                 import bz2
+                # FileInput by default assumes a read mode ('r') and bz2.open assumes a read mode for binary files ('rb'). However, the wiki files are textual and the correct read mode is 'rt'.
+                try:
+                    if mode != 'r':
+                        raise ValueError()
+                    mode = mode +'t'
+                except ValueError:
+                    logging.error('File read mode is invalid %s', mode)
+                    return
                 return bz2.open(filename, mode, encoding=encoding)
             else:
                 return open(filename, mode, encoding=encoding)
