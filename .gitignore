@@ -91,3 +91,8 @@ ENV/
 
 # Editor files
 *.idea
+
+#Wikipedia Test Files
+
+*.xml
+*.xml.bz2
