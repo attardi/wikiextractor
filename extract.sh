@@ -14,7 +14,17 @@ PROCESSES=$2
 TEMPLATES=$3
 OUTPUT=$4
 
-python WikiExtractor.py $INPUT \
+
+#tests the return code of  wikiextractor to valid if cmd is installed
+if ! command -v wikiextractor &> /dev/null
+then
+
+    echo "WikiExtractor is not installed. Please install it to use the script."
+    echo "More details on the installation process can be found in README."
+    exit 1
+fi
+
+wikiextractor $INPUT \
        --json \
        --processes $PROCESSES \
        --templates $TEMPLATES \
