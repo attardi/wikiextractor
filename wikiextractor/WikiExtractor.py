@@ -203,7 +203,7 @@ def load_templates(file, output_file=None):
     if output_file:
         output = codecs.open(output_file, 'wb', 'utf-8')
     for line in file:
-        line = line.decode('utf-8')
+        line = line
         if '<' not in line:  # faster than doing re.search()
             if inText:
                 page.append(line)
@@ -280,7 +280,7 @@ def process_dump(input_file, template_file, out_file, file_size, file_compress,
 
     # collect siteinfo
     for line in input:
-        line = line.decode('utf-8')
+        line = line
         m = tagRE.search(line)
         if not m:
             continue
@@ -368,7 +368,7 @@ def process_dump(input_file, template_file, out_file, file_size, file_compress,
     inText = False
     redirect = False
     for line in input:
-        line = line.decode('utf-8')
+        line = line
         if '<' not in line:  # faster than doing re.search()
             if inText:
                 page.append(line)
