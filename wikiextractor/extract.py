@@ -868,8 +868,8 @@ class Extractor(object):
 
         for line in text:
             out.write(line.encode('utf-8'))
-            out.write('\n')
-        out.write(footer)
+            out.write('\n'.encode('utf-8'))
+        out.write(footer.encode('utf-8'))
         errs = (self.template_title_errs,
                 self.recursion_exceeded_1_errs,
                 self.recursion_exceeded_2_errs,
