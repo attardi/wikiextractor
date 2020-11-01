@@ -350,7 +350,7 @@ def process_dump(input_file, template_file, out_file, file_size, file_compress,
     # start worker processes
     logging.info("Using %d extract processes.", process_count)
     workers = []
-    for _ in xrange(max(1, process_count)):
+    for _ in range(max(1, process_count)):
         extractor = Process(target=extract_process,
                             args=(jobs_queue, output_queue))
         extractor.daemon = True  # only live while parent process lives
