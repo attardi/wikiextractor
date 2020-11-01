@@ -56,6 +56,7 @@ import os.path
 import re  # TODO use regex when it will be standard
 import sys
 from io import StringIO
+from io import BytesIO
 from multiprocessing import Queue, Process, cpu_count
 from timeit import default_timer
 
@@ -443,7 +444,7 @@ def extract_process(jobs_queue, output_queue):
     while True:
         job = jobs_queue.get()  # job is (id, title, page, ordinal)
         if job:
-            out = StringIO()  # memory buffer
+            out = BytesIO()  # memory buffer
             Extractor(*job[:3]).extract(out)  # (id, title, page)
             text = out.getvalue()
             output_queue.put((job[3], text))  # (ordinal, extracted_text)
