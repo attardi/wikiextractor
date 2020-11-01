@@ -63,7 +63,7 @@ acceptedNamespaces = ['w', 'wiktionary', 'wikt']
 
 
 def get_url(uid):
-    return "%s?curid=%s" % (options.urlbase, uid)
+    return "%s?curid=%s" % (urlbase, uid)
 
 
 # ======================================================================
