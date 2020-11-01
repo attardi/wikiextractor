@@ -269,7 +269,7 @@ def compact(text, mark_headers=False):
         elif len(headers):
             if Extractor.keepSections:
                 items = headers.items()
-                items.sort()
+                sorted(items)
                 for (i, v) in items:
                     page.append(v)
             headers.clear()
@@ -351,7 +351,7 @@ def dropSpans(spans, text):
     """
     Drop from text the blocks identified in :param spans:, possibly nested.
     """
-    spans.sort()
+    sorted(spans)
     res = ''
     offset = 0
     for s, e in spans:
