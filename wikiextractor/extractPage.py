@@ -94,7 +94,7 @@ def process_data(input_file, id, templates=False):
         elif tag == '/page':
             if page:
                 page.append(line)
-                print ''.join(page).encode('utf-8')
+                print(''.join(page).encode('utf-8'))
                 if not templates:
                     break
             page = []
