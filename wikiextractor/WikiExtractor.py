@@ -56,10 +56,11 @@ import os.path
 import re  # TODO use regex when it will be standard
 import sys
 from io import StringIO
+from io import BytesIO
 from multiprocessing import Queue, Process, cpu_count
 from timeit import default_timer
 
-from .extract import Extractor, ignoreTag
+from extract import Extractor, ignoreTag
 
 # ===========================================================================
 
@@ -138,7 +139,7 @@ class NextFile(object):
     def _dirname(self):
         char1 = self.dir_index % 26
         char2 = self.dir_index / 26 % 26
-        return os.path.join(self.path_name, '%c%c' % (ord('A') + char2, ord('A') + char1))
+        return os.path.join(self.path_name, '{}{}'.format(ord('A') + char2, ord('A') + char1))
 
     def _filepath(self):
         return '%s/wiki_%02d' % (self._dirname(), self.file_index)
@@ -176,9 +177,9 @@ class OutputSplitter(object):
 
     def open(self, filename):
         if self.compress:
-            return bz2.BZ2File(filename + '.bz2', 'w')
+            return bz2.BZ2File(filename + '.bz2', 'wb')
         else:
-            return open(filename, 'w')
+            return open(filename, 'wb')
 
 
 # ----------------------------------------------------------------------
@@ -203,7 +204,7 @@ def load_templates(file, output_file=None):
     if output_file:
         output = codecs.open(output_file, 'wb', 'utf-8')
     for line in file:
-        line = line.decode('utf-8')
+        line = line
         if '<' not in line:  # faster than doing re.search()
             if inText:
                 page.append(line)
@@ -280,7 +281,7 @@ def process_dump(input_file, template_file, out_file, file_size, file_compress,
 
     # collect siteinfo
     for line in input:
-        line = line.decode('utf-8')
+        line = line
         m = tagRE.search(line)
         if not m:
             continue
@@ -350,7 +351,7 @@ def process_dump(input_file, template_file, out_file, file_size, file_compress,
     # start worker processes
     logging.info("Using %d extract processes.", process_count)
     workers = []
-    for _ in xrange(max(1, process_count)):
+    for _ in range(max(1, process_count)):
         extractor = Process(target=extract_process,
                             args=(jobs_queue, output_queue))
         extractor.daemon = True  # only live while parent process lives
@@ -368,7 +369,7 @@ def process_dump(input_file, template_file, out_file, file_size, file_compress,
     inText = False
     redirect = False
     for line in input:
-        line = line.decode('utf-8')
+        line = line
         if '<' not in line:  # faster than doing re.search()
             if inText:
                 page.append(line)
@@ -443,7 +444,7 @@ def extract_process(jobs_queue, output_queue):
     while True:
         job = jobs_queue.get()  # job is (id, title, page, ordinal)
         if job:
-            out = StringIO()  # memory buffer
+            out = BytesIO()  # memory buffer
             Extractor(*job[:3]).extract(out)  # (id, title, page)
             text = out.getvalue()
             output_queue.put((job[3], text))  # (ordinal, extracted_text)
@@ -555,6 +556,8 @@ def main():
 
     if args.namespaces:
         acceptedNamespaces = set(args.namespaces.split(','))
+    else:
+        acceptedNamespaces = []
 
     FORMAT = '%(levelname)s: %(message)s'
     logging.basicConfig(format=FORMAT)

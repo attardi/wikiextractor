@@ -63,7 +63,7 @@ acceptedNamespaces = ['w', 'wiktionary', 'wikt']
 
 
 def get_url(uid):
-    return "%s?curid=%s" % (options.urlbase, uid)
+    return "%s?curid=%s" % (urlbase, uid)
 
 
 # ======================================================================
@@ -212,7 +212,7 @@ def compact(text, mark_headers=False):
 
             headers[lev] = title
             # drop previous headers
-            for i in headers.keys():
+            for i in list(headers.keys()):
                 if i > lev:
                     del headers[i]
             emptySection = True
@@ -269,7 +269,7 @@ def compact(text, mark_headers=False):
         elif len(headers):
             if Extractor.keepSections:
                 items = headers.items()
-                items.sort()
+                sorted(items)
                 for (i, v) in items:
                     page.append(v)
             headers.clear()
@@ -351,7 +351,7 @@ def dropSpans(spans, text):
     """
     Drop from text the blocks identified in :param spans:, possibly nested.
     """
-    spans.sort()
+    sorted(spans)
     res = ''
     offset = 0
     for s, e in spans:
@@ -868,8 +868,8 @@ class Extractor(object):
 
         for line in text:
             out.write(line.encode('utf-8'))
-            out.write('\n')
-        out.write(footer)
+            out.write('\n'.encode('utf-8'))
+        out.write(footer.encode('utf-8'))
         errs = (self.template_title_errs,
                 self.recursion_exceeded_1_errs,
                 self.recursion_exceeded_2_errs,
