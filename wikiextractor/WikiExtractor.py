@@ -255,7 +255,7 @@ def load_templates(file, output_file=None):
                 logging.info("Preprocessed %d pages", articles)
     if output_file:
         output.close()
-        logging.info("Saved %d templates to '%s'", len(templates), output_file)
+        logging.info("Saved templates to '%s'", output_file)
 
 
 def process_dump(input_file, template_file, out_file, file_size, file_compress,
