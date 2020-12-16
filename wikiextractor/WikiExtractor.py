@@ -337,7 +337,8 @@ def process_dump(input_file, template_file, out_file, file_size, file_compress,
         logging.info("Loaded %d templates in %.1fs", templates, template_load_elapsed)
 
     if out_file == '-':
-        output = sys.stdout
+        # sys.stdout, but we should postpone assigning output to sys.stdout after forking
+        output = None
         if file_compress:
             logging.warn("writing to stdout, so no output compression (use an external tool)")
     else:
@@ -471,7 +472,10 @@ def reduce_process(output_queue, output):
     :param output_queue: text to be output.
     :param output: file object where to print.
     """
-    output.open_file()
+    if isinstance(output, OutputSplitter):
+        output.open_file()
+    else:
+        output = sys.stdout
     interval_start = default_timer()
     period = 100000
     # FIXME: use a heap
@@ -494,7 +498,8 @@ def reduce_process(output_queue, output):
                 break
             ordinal, text = pair
             ordering_buffer[ordinal] = text
-    output.file.close()
+    if isinstance(output, OutputSplitter):
+        output.file.close()
 
 
 # ----------------------------------------------------------------------
