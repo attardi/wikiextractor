@@ -192,14 +192,21 @@ def compact(text, mark_headers=False):
     """
 
     page = []  # list of paragraph
+    summary = [] # introduction/summary
     headers = {}  # Headers for unfilled sections
     emptySection = False  # empty sections are discarded
     listLevel = ''  # nesting of lists
-
+    summary_opened=True
+    summary_finished=False
     for line in text.split('\n'):
 
         if not line:
             continue
+        if line.startswith('=='):
+            summary_finished=True
+        if summary_finished and summary_opened:
+            summary = [i for i in page]
+            page = []
         # Handle section titles
         m = section.match(line)
         if m:
@@ -282,7 +289,7 @@ def compact(text, mark_headers=False):
             # elif line[0] == ' ':
             #     continue
 
-    return page
+    return summary, page
 
 
 # ----------------------------------------------------------------------
@@ -844,8 +851,8 @@ class Extractor():
         text = clean(self, text, expand_templates=expand_templates,
                      html_safe=html_safe)
 
-        text = compact(text, mark_headers=mark_headers)
-        return text
+        summary, content = compact(text, mark_headers=mark_headers)
+        return summary, content
 
     def extract(self, out, html_safe=True):
         """
@@ -854,7 +861,7 @@ class Extractor():
         """
         logging.debug("%s\t%s", self.id, self.title)
         text = ''.join(self.page)
-        text = self.clean_text(text, html_safe=html_safe)
+        summary, content = self.clean_text(text, html_safe=html_safe)
 
         if self.to_json:
             json_data = {
@@ -862,7 +869,8 @@ class Extractor():
                 'revid': self.revid,
                 'url': self.url,
                 'title': self.title,
-                'text': "\n".join(text)
+                'text': "\n".join(content),
+                'summary': '\n'.join(summary)
             }
             out_str = json.dumps(json_data)
             out.write(out_str)
@@ -873,7 +881,8 @@ class Extractor():
             header += self.title + '\n\n'
             footer = "\n</doc>\n"
             out.write(header)
-            out.write('\n'.join(text))
+            out.write('\n'.join(summary))
+            out.write('\n'.join(content))
             out.write('\n')
             out.write(footer)
 
