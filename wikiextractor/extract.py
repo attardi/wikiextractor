@@ -205,7 +205,7 @@ def compact(text, mark_headers=False):
         if line.startswith('=='):
             summary_finished=True
         if summary_finished and summary_opened:
-            summary = [i for i in page]
+            summary = page
             page = []
         # Handle section titles
         m = section.match(line)
