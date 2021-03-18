@@ -63,7 +63,7 @@ from io import StringIO
 from multiprocessing import Queue, Process, cpu_count
 from timeit import default_timer
 
-from .extract import Extractor, ignoreTag, define_template, acceptedNamespaces
+from extract import Extractor, ignoreTag, define_template, acceptedNamespaces
 
 # ===========================================================================
 
