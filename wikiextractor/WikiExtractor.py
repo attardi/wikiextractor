@@ -86,6 +86,13 @@ templatePrefix = ''
 # It is the name associated with namespace key=828 in the siteinfo header.
 moduleNamespace = ''
 
+# The alias and pseudo-namespaces
+additionalNamespaces = [
+    "WP", "Project", "WT", "Project talk", "Image", "Image talk",
+    "CAT", "H", "MOS", "P", "T"
+]
+
+
 # ----------------------------------------------------------------------
 # Modules
 
@@ -339,6 +346,10 @@ def process_dump(input_file, template_file, out_file, file_size, file_compress,
         template_load_elapsed = default_timer() - template_load_start
         logging.info("Loaded %d templates in %.1fs", templates, template_load_elapsed)
 
+    # add alias and pseude-Namespaces 
+    knownNamespaces.update(additionalNamespaces)
+
+
     if out_file == '-':
         output = sys.stdout
         if file_compress:
@@ -421,7 +432,8 @@ def process_dump(input_file, template_file, out_file, file_size, file_compress,
             page.append(line)
         elif tag == '/page':
             colon = title.find(':')
-            if (colon < 0 or (title[:colon] in acceptedNamespaces) and id != last_id and
+            if (colon < 0 or title[:colon] not in knownNamespaces or 
+                    (title[:colon] in acceptedNamespaces) and id != last_id and
                     not redirect and not title.startswith(templateNamespace)):
                 job = (id, revid, urlbase, title, page, ordinal)
                 jobs_queue.put(job)  # goes to any available extract_process
