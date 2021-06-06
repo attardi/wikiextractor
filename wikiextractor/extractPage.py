@@ -107,7 +107,7 @@ def main():
     parser.add_argument("--template", action="store_true",
                         help="template number")
     parser.add_argument("-v", "--version", action="version",
-                        version='%(prog)s ' + version,
+                        version='%(prog)s ' + __version__,
                         help="print program version")
 
     args = parser.parse_args()
