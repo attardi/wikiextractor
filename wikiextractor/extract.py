@@ -856,7 +856,7 @@ class Extractor():
         text = ''.join(self.page)
         text = self.clean_text(text, html_safe=html_safe)
 
-        if self.to_json:
+        if self.toJson:
             json_data = {
 		'id': self.id,
                 'revid': self.revid,
