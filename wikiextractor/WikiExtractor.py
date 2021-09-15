@@ -43,8 +43,8 @@ Each file will contain several documents in the format:
         ...
         </doc>
 
-If the program is invoked with the --json flag, then each file will                                            
-contain several documents formatted as json ojects, one per line, with                                         
+If the program is invoked with the --json flag, then each file will
+contain several documents formatted as json ojects, one per line, with
 the following structure
 
     {"id": "", "revid": "", "url": "", "title": "", "text": "..."}
@@ -63,7 +63,7 @@ from io import StringIO
 from multiprocessing import Queue, get_context, cpu_count
 from timeit import default_timer
 
-from .extract import Extractor, ignoreTag, define_template, acceptedNamespaces
+from extract import Extractor, ignoreTag, define_template, acceptedNamespaces
 
 # ===========================================================================
 
@@ -160,7 +160,8 @@ class OutputSplitter():
         self.nextFile = nextFile
         self.compress = compress
         self.max_file_size = max_file_size
-        self.file = self.open(self.nextFile.next())
+        self.file = self.nextFile.next()
+        self.file_is_open = False
 
     def reserve(self, size):
         if self.file.tell() + size > self.max_file_size:
@@ -168,6 +169,9 @@ class OutputSplitter():
             self.file = self.open(self.nextFile.next())
 
     def write(self, data):
+        if not self.file_is_open:
+            self.file = self.open(self.file)
+            self.file_is_open = True
         self.reserve(len(data))
         if self.compress:
             self.file.write(data)
@@ -175,7 +179,8 @@ class OutputSplitter():
             self.file.write(data)
 
     def close(self):
-        self.file.close()
+        if self.file_is_open:
+            self.file.close()
 
     def open(self, filename):
         if self.compress:
@@ -483,7 +488,6 @@ def reduce_process(output_queue, output):
     :param output_queue: text to be output.
     :param output: file object where to print.
     """
-
     interval_start = default_timer()
     period = 100000
     # FIXME: use a heap
