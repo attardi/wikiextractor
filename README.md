@@ -113,7 +113,7 @@ For those use cases where only on large file is needed, in linux use: cat --sque
 
         {"id": "", "revid": "", "url":"", "title": "", "text": "..."}
 
-    Template expansion requires preprocesssng first the whole dump and
+    Template expansion requires preprocessing first the whole dump and
     collecting template definitions.
 
     positional arguments:
