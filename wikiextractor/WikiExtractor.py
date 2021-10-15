@@ -424,7 +424,7 @@ def process_dump(input_file, template_file, out_file, file_size, file_compress,
             page.append(line)
         elif tag == '/page':
             colon = title.find(':')
-            if (colon < 0 or (title[:colon] in acceptedNamespaces) and id != last_id and
+            if (colon < 0 or (title[:colon] in acceptedNamespaces)) and (id != last_id and
                     not redirect and not title.startswith(templateNamespace)):
                 job = (id, revid, urlbase, title, page, ordinal)
                 jobs_queue.put(job)  # goes to any available extract_process
