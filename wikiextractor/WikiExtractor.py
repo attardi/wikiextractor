@@ -190,7 +190,7 @@ tagRE = re.compile(r'(.*?)<(/?\w+)[^>]*>(?:([^<]*)(<.*?>)?)?')
 #                    1     2               3      4
 
 
-def load_templates(file, output_file=None):
+def load_templates(file, output_file=None, encoding='utf-8'):
     """
     Load templates from :param file:.
     :param output_file: file where to save templates and modules.
@@ -204,7 +204,7 @@ def load_templates(file, output_file=None):
     page = []
     inText = False
     if output_file:
-        output = open(output_file, 'w')
+        output = open(output_file, 'w', encoding=encoding)
     for line in file:
         #line = line.decode('utf-8')
         if '<' not in line:  # faster than doing re.search()
