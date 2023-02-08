@@ -57,7 +57,6 @@ def process_data(input_file, id, templates=False):
 
     page = []
     for line in input:
-        line = line
         if '<' not in line:         # faster than doing re.search()
             if page:
                 page.append(line)
