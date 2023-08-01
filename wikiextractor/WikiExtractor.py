@@ -546,8 +546,13 @@ def main():
                         metavar="n[KMG]")
     groupO.add_argument("-c", "--compress", action="store_true",
                         help="compress output files using bzip")
-    groupO.add_argument("--json", action="store_true",
-                        help="write output in json format instead of the default <doc> format")
+    groupOFormat = groupO.add_mutually_exclusive_group()
+    groupOFormat.add_argument("--json", action="store_true",
+                              help="write output in json format instead of the default <doc> format")
+    groupOFormat.add_argument("--text", action="store_true",
+                              help="write output in text format (body only, no title) instead of the default <doc> format")
+    groupO.add_argument("--discard_empty", action="store_true",
+                        help="discard empty articles (such as redirects) rather than writing just the title")
 
     groupP = parser.add_argument_group('Processing')
     groupP.add_argument("--html", action="store_true",
@@ -584,6 +589,8 @@ def main():
     if args.html:
         Extractor.keepLinks = True
     Extractor.to_json = args.json
+    Extractor.to_text = args.text
+    Extractor.discard_empty = args.discard_empty
 
     try:
         power = 'kmg'.find(args.bytes[-1].lower()) + 1
@@ -606,6 +613,13 @@ def main():
         logger.setLevel(logging.INFO)
     if args.debug:
         logger.setLevel(logging.DEBUG)
+
+    if args.json:
+        logger.debug("Outputting to json format")
+    elif args.text:
+        logger.debug("Outputting to text format")
+    else:
+        logger.debug("Outputting to <doc> format")
 
     input_file = args.input
 

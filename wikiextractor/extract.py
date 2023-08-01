@@ -974,7 +974,9 @@ class Extractor():
         text = ''.join(self.page)
         text = self.clean_text(text, html_safe=html_safe)
 
-        if self.to_json:
+        if self.discard_empty and not text:
+            pass
+        elif self.to_json:
             json_data = {
 		'id': self.id,
                 'revid': self.revid,
@@ -985,6 +987,9 @@ class Extractor():
             out_str = json.dumps(json_data)
             out.write(out_str)
             out.write('\n')
+        elif self.to_text:
+            out.write('\n'.join(text))
+            out.write('\n\n\n')
         else:
             header = '<doc id="%s" url="%s" title="%s">\n' % (self.id, self.url, self.title)
             # Separate header from text with a newline.
