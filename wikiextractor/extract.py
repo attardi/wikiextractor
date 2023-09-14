@@ -65,8 +65,7 @@ def get_url(urlbase, uid):
 
 
 # ======================================================================
-
-
+# TODO: Review this function
 def clean(extractor, text, expand_templates=False, html_safe=True):
     """
     Transforms wiki markup. If the command line flag --escapedoc is set then the text is also escaped

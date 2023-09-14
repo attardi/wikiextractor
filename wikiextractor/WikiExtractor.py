@@ -63,7 +63,7 @@ from io import StringIO
 from multiprocessing import Queue, get_context, cpu_count
 from timeit import default_timer
 
-from .extract import Extractor, ignoreTag, define_template, acceptedNamespaces
+from extract import Extractor, ignoreTag, define_template, acceptedNamespaces
 
 # ===========================================================================
 
@@ -185,7 +185,9 @@ class OutputSplitter():
 
 # ----------------------------------------------------------------------
 # READER
-
+# this regular expression pattern is designed to capture different parts of an HTML-like tag structure. 
+# It captures the content before the opening tag, the tag itself (including any attributes), 
+# and the content between the opening and closing tags (including any nested tags).
 tagRE = re.compile(r'(.*?)<(/?\w+)[^>]*>(?:([^<]*)(<.*?>)?)?')
 #                    1     2               3      4
 
@@ -353,6 +355,7 @@ def process_dump(input_file, template_file, out_file, file_size, file_compress,
 
     urlbase = ''                # This is obtained from <siteinfo>
 
+    # unzip if needed
     input = decode_open(input_file)
 
     # collect siteinfo
@@ -536,7 +539,7 @@ def main():
     parser = argparse.ArgumentParser(prog=os.path.basename(sys.argv[0]),
                                      formatter_class=argparse.RawDescriptionHelpFormatter,
                                      description=__doc__)
-    parser.add_argument("input",
+    parser.add_argument("--input", default="test.xml",
                         help="XML wiki dump file")
     groupO = parser.add_argument_group('Output')
     groupO.add_argument("-o", "--output", default="text",
@@ -571,7 +574,7 @@ def main():
                         help="suppress reporting progress info")
     groupS.add_argument("--debug", action="store_true",
                         help="print debug info")
-    groupS.add_argument("-a", "--article", action="store_true",
+    groupS.add_argument("-a", "--article", action="store_true", default=True,
                         help="analyze a file containing a single article (debug option)")
     groupS.add_argument("-v", "--version", action="version",
                         version='%(prog)s ' + __version__,
@@ -586,10 +589,12 @@ def main():
     Extractor.to_json = args.json
 
     try:
+        
+        # Check the input maximum bytes is K (Kilo), M (Mega) or G (Giga) and define power
         power = 'kmg'.find(args.bytes[-1].lower()) + 1
-        # 0 bytes means put a single article per file.
+        # Convert file size to bytes, 0 bytes means put a single article per file.
         file_size = 0 if args.bytes == '0' else int(args.bytes[:-1]) * 1024 ** power
-        if file_size and file_size < minFileSize:
+        if file_size and file_size < minFileSize: # check if file size is less than minimum size (200 KB)
             raise ValueError()
     except ValueError:
         logging.error('Insufficient or invalid size: %s', args.bytes)
@@ -616,7 +621,9 @@ def main():
     # manager = Manager()
     # templateCache = manager.dict()
 
+    # Enable single article for debugging
     if args.article:
+        # Load template
         if args.templates:
             if os.path.exists(args.templates):
                 with open(args.templates) as file:
