@@ -184,7 +184,7 @@ listClose = {'*': '</ul>', '#': '</ol>', ';': '</dl>', ':': '</dl>'}
 listItem = {'*': '<li>%s</li>', '#': '<li>%s</<li>', ';': '<dt>%s</dt>',
             ':': '<dd>%s</dd>'}
 
-
+# TODO: Review this function
 def compact(text, mark_headers=False):
     """Deal with headers, lists, empty sections, residuals of tables.
     :param text: convert to HTML
