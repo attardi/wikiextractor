@@ -57,7 +57,7 @@ import argparse
 import bz2
 import logging
 import os.path
-import re  # TODO use regex when it will be standard
+import re
 import sys
 from io import StringIO
 from multiprocessing import Queue, get_context, cpu_count
@@ -185,11 +185,32 @@ class OutputSplitter():
 
 # ----------------------------------------------------------------------
 # READER
-# this regular expression pattern is designed to capture different parts of an HTML-like tag structure. 
-# It captures the content before the opening tag, the tag itself (including any attributes), 
-# and the content between the opening and closing tags (including any nested tags).
-tagRE = re.compile(r'(.*?)<(/?\w+)[^>]*>(?:([^<]*)(<.*?>)?)?')
-#                    1     2               3      4
+# Regular Expression to match HTML/XML-like tags and their content.
+# This regex can capture:
+# 1. Content before the tag (if exists)
+# 2. The tag name
+# 3. Content after the tag (if exists) up to another tag or end of string
+# 4. The next tag (if exists)
+
+# Example:
+# "Text before <tag>Text inside</tag>" will have the output as
+    # Before Tag: Text before 
+    # Tag Name: tag
+    # After Tag: Text inside
+    # Next Tag: </tag>
+
+tagRE = re.compile(
+    r"""
+    (?P<before_tag>.*?)           # Content before the tag
+    <                             # Opening bracket of a tag
+    (?P<tag_name>/?\w+)           # The tag name (with optional / for closing tags)
+    [^>]*>                        # Any other characters till closing bracket
+    (?:                           # Non-capturing group for content after the tag
+        (?P<after_tag>[^<]*)      # Content after the tag (till another tag or end of string)
+        (?P<next_tag><.*?>)?      # The next tag (if exists)
+    )?
+    """, re.VERBOSE)
+
 
 
 def load_templates(file, output_file=None):
@@ -364,19 +385,20 @@ def process_dump(input_file, template_file, out_file, file_size, file_compress,
         m = tagRE.search(line)
         if not m:
             continue
-        tag = m.group(2)
+        tag = m.group('tag_name')
         if tag == 'base':
             # discover urlbase from the xml dump file
             # /mediawiki/siteinfo/base
-            base = m.group(3)
+            base = m.group('after_tag')
             urlbase = base[:base.rfind("/")]
         elif tag == 'namespace':
-            knownNamespaces.add(m.group(3))
-            if re.search('key="10"', line):
-                templateNamespace = m.group(3)
+            after_tag = m.group('after_tag')
+            knownNamespaces.add(after_tag)            
+            if re.search('key="10"', line):   # '10' is the key for the Template namespace in MediaWiki.
+                templateNamespace = after_tag
                 Extractor.templatePrefix = templateNamespace + ':'
-            elif re.search('key="828"', line):
-                moduleNamespace = m.group(3)
+            elif re.search('key="828"', line):   # '828' is the key for the Module namespace in MediaWiki.
+                moduleNamespace = m.group('after_tag')
                 modulePrefix = moduleNamespace + ':'
         elif tag == '/siteinfo':
             break
@@ -574,7 +596,7 @@ def main():
                         help="suppress reporting progress info")
     groupS.add_argument("--debug", action="store_true",
                         help="print debug info")
-    groupS.add_argument("-a", "--article", action="store_true", default=True,
+    groupS.add_argument("-a", "--article", action="store_true", default=False,
                         help="analyze a file containing a single article (debug option)")
     groupS.add_argument("-v", "--version", action="version",
                         version='%(prog)s ' + __version__,
