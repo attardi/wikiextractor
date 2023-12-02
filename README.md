@@ -186,7 +186,7 @@ If you find this code useful, please refer it in publications as:
 
 ~~~
 @misc{Wikiextractor2015,
-  author = {Giusepppe Attardi},
+  author = {Giuseppe Attardi},
   title = {WikiExtractor},
   year = {2015},
   publisher = {GitHub},
